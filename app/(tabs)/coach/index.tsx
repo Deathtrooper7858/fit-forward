@@ -1,7 +1,8 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TextInput,
-  TouchableOpacity, KeyboardAvoidingView, Platform, ActivityIndicator, Image
+  TouchableOpacity, KeyboardAvoidingView, Platform,
+  ActivityIndicator, Image, Alert,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -22,8 +23,14 @@ const SUGGESTIONS = [
   'Am I eating enough protein? 📊',
 ];
 
+// ─── Message bubble ───────────────────────────────────────────────────────────
 function MessageBubble({ msg }: { msg: CoachMessage }) {
   const isUser = msg.role === 'user';
+
+  // Format bold markdown **text** simply
+  const formatContent = (content: string) =>
+    content.replace(/\*\*(.*?)\*\*/g, '$1');
+
   return (
     <View style={[bubble.row, isUser && bubble.rowUser]}>
       {!isUser && (
@@ -33,10 +40,16 @@ function MessageBubble({ msg }: { msg: CoachMessage }) {
       )}
       <View style={[bubble.box, isUser ? bubble.boxUser : bubble.boxBot]}>
         {msg.imageUrl && (
-          <Image source={{ uri: msg.imageUrl }} style={{ width: 180, height: 180, borderRadius: 8, marginBottom: 8 }} />
+          <Image
+            source={{ uri: msg.imageUrl }}
+            style={{ width: 180, height: 180, borderRadius: 8, marginBottom: 8 }}
+            resizeMode="cover"
+          />
         )}
-        <Text style={[bubble.text, isUser && bubble.textUser]}>{msg.content}</Text>
-        <Text style={bubble.time}>
+        <Text style={[bubble.text, isUser && bubble.textUser]}>
+          {formatContent(msg.content)}
+        </Text>
+        <Text style={[bubble.time, isUser && { color: 'rgba(255,255,255,0.6)' }]}>
           {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
       </View>
@@ -45,23 +58,38 @@ function MessageBubble({ msg }: { msg: CoachMessage }) {
 }
 
 const bubble = StyleSheet.create({
-  row:       { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginVertical: 4, paddingHorizontal: Spacing.base },
-  rowUser:   { flexDirection: 'row-reverse' },
-  avatar:    { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
-  avatarText:{ color: '#fff', fontWeight: '700', fontSize: 14 },
-  box:       { maxWidth: '78%', borderRadius: Radius.lg, padding: 12 },
-  boxBot:    { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderBottomLeftRadius: 4 },
-  boxUser:   { backgroundColor: Colors.primary, borderBottomRightRadius: 4 },
-  text:      { fontSize: 15, color: Colors.textPrimary, lineHeight: 22 },
-  textUser:  { color: '#fff' },
-  time:      { fontSize: 10, color: Colors.textMuted, marginTop: 4, textAlign: 'right' },
+  row:        { flexDirection: 'row', alignItems: 'flex-end', gap: 8, marginVertical: 4, paddingHorizontal: Spacing.base },
+  rowUser:    { flexDirection: 'row-reverse' },
+  avatar:     { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
+  avatarText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  box:        { maxWidth: '78%', borderRadius: Radius.lg, padding: 12 },
+  boxBot:     { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderBottomLeftRadius: 4 },
+  boxUser:    { backgroundColor: Colors.primary, borderBottomRightRadius: 4 },
+  text:       { fontSize: 15, color: Colors.textPrimary, lineHeight: 22 },
+  textUser:   { color: '#fff' },
+  time:       { fontSize: 10, color: Colors.textMuted, marginTop: 4, textAlign: 'right' },
 });
+
+// ─── Typing indicator ─────────────────────────────────────────────────────────
+function TypingIndicator() {
+  return (
+    <View style={[bubble.row, { paddingHorizontal: Spacing.base, marginTop: 4 }]}>
+      <LinearGradient colors={['#7C5CFC', '#4338CA']} style={bubble.avatar}>
+        <Text style={bubble.avatarText}>F</Text>
+      </LinearGradient>
+      <View style={[bubble.box, bubble.boxBot, { paddingHorizontal: 16, paddingVertical: 14 }]}>
+        <ActivityIndicator color={Colors.primary} size="small" />
+      </View>
+    </View>
+  );
+}
 
 // ─── Coach Screen ─────────────────────────────────────────────────────────────
 export default function CoachScreen() {
-  const [input, setInput]         = useState('');
+  const [input, setInput]               = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const flatRef                   = useRef<FlatList>(null);
+  const [isSending, setIsSending]       = useState(false); // local send guard
+  const flatRef                         = useRef<FlatList<CoachMessage>>(null);
 
   const {
     messages, isTyping, msgCount,
@@ -72,79 +100,103 @@ export default function CoachScreen() {
   const isPro   = profile?.isPro ?? false;
   const atLimit = !isPro && msgCount >= FREE_MSG_LIMIT;
 
-  // Reset isTyping (can get stuck across hot reloads) + daily reset
+  // On mount: reset stuck isTyping + check daily message reset
   useEffect(() => {
     setTyping(false);
+    setIsSending(false);
     checkAndResetDaily();
   }, []);
 
   // Load coach history from Supabase
   useEffect(() => {
-    async function loadHistory() {
-      if (!profile?.id) return;
+    if (!profile?.id) return;
 
+    async function loadHistory() {
       const { data, error } = await supabase
         .from('coach_conversations')
-        .select('*')
-        .eq('user_id', profile.id)
+        .select('id, role, content, created_at')
+        .eq('user_id', profile!.id)
         .order('created_at', { ascending: true })
-        .limit(50); // only last 50 messages for performance
+        .limit(50);
 
       if (data && !error && data.length > 0) {
-        const formatted = data.map((m: any) => ({
-          id:        m.id,
+        const formatted: CoachMessage[] = data.map((m: any) => ({
+          id:        String(m.id),
           role:      m.role as 'user' | 'model',
-          content:   m.content,
+          content:   m.content ?? '',
           timestamp: m.created_at,
         }));
         setMessages(formatted);
       } else if (messages.length === 0) {
+        const firstName = profile?.name?.split(' ')[0] ?? '';
         addMessage({
           id:        'welcome',
           role:      'model',
-          content:   `Hi${profile?.name ? ` ${profile.name.split(' ')[0]}` : ''}! I'm **Fitz**, your AI nutrition coach 🤖\n\nI'm here to help you reach your goals. Ask me anything about nutrition, meals, or your progress!`,
+          content:   `Hi${firstName ? ` ${firstName}` : ''}! I'm Fitz, your AI nutrition coach 🤖\n\nI'm here to help you reach your goals. Ask me anything about nutrition, meals, or your progress!`,
           timestamp: new Date().toISOString(),
         });
       }
     }
+
     loadHistory();
   }, [profile?.id]);
 
-  // Scroll to bottom on new message
+  // Scroll to bottom on new message or typing change
   useEffect(() => {
     if (messages.length > 0) {
-      setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
+      const timer = setTimeout(
+        () => flatRef.current?.scrollToEnd({ animated: true }),
+        120
+      );
+      return () => clearTimeout(timer);
     }
-  }, [messages, isTyping]);
+  }, [messages.length, isTyping]);
 
-  const handlePickImage = async () => {
-    const { granted } = await ImagePicker.requestCameraPermissionsAsync();
-    if (!granted) {
-      ImagePicker.requestMediaLibraryPermissionsAsync(); // fallback: gallery
-      const result2 = await ImagePicker.launchImageLibraryAsync({ base64: true, quality: 0.6 });
-      if (!result2.canceled && result2.assets?.[0]?.base64) {
-        setSelectedImage(result2.assets[0].base64);
+  // ─── Pick image (camera or gallery) ─────────────────────────────────────────
+  const handlePickImage = useCallback(async () => {
+    try {
+      const { granted } = await ImagePicker.requestCameraPermissionsAsync();
+
+      if (!granted) {
+        // Fallback to gallery
+        const { granted: galleryGranted } =
+          await ImagePicker.requestMediaLibraryPermissionsAsync();
+        if (!galleryGranted) {
+          Alert.alert('Permission needed', 'Please allow photo library access in Settings.');
+          return;
+        }
+        const result = await ImagePicker.launchImageLibraryAsync({
+          base64: true, quality: 0.6, mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        });
+        if (!result.canceled && result.assets?.[0]?.base64) {
+          setSelectedImage(result.assets[0].base64!);
+        }
+        return;
       }
-      return;
-    }
-    const result = await ImagePicker.launchCameraAsync({ base64: true, quality: 0.6 });
-    if (!result.canceled && result.assets?.[0]?.base64) {
-      setSelectedImage(result.assets[0].base64);
-    }
-  };
 
-  const handleSend = async (overrideText?: string) => {
-    const text = overrideText ?? input.trim();
+      const result = await ImagePicker.launchCameraAsync({
+        base64: true, quality: 0.6,
+      });
+      if (!result.canceled && result.assets?.[0]?.base64) {
+        setSelectedImage(result.assets[0].base64!);
+      }
+    } catch {
+      Alert.alert('Error', 'Could not open camera. Please try again.');
+    }
+  }, []);
 
-    // Guard: nothing to send
+  // ─── Send message ─────────────────────────────────────────────────────────────
+  const handleSend = useCallback(async (overrideText?: string) => {
+    const text = (overrideText ?? input).trim();
+
     if (!text && !selectedImage) return;
-    if (isTyping) return;
+    if (isTyping || isSending) return;
+
     if (atLimit) {
       router.push('/modals/paywall');
       return;
     }
 
-    // Guard: no profile — show message instead of silently failing
     if (!profile) {
       addMessage({
         id:        `err-${Date.now()}`,
@@ -155,56 +207,64 @@ export default function CoachScreen() {
       return;
     }
 
+    const currentImg = selectedImage;
+
+    // Optimistic UI: add user message immediately
     const userMsg: CoachMessage = {
       id:        `u-${Date.now()}`,
       role:      'user',
       content:   text || '📷 [Image]',
-      imageUrl:  selectedImage ? `data:image/jpeg;base64,${selectedImage}` : undefined,
+      imageUrl:  currentImg ? `data:image/jpeg;base64,${currentImg}` : undefined,
       timestamp: new Date().toISOString(),
     };
-
-    const currentImg = selectedImage;
     addMessage(userMsg);
     incrementCount();
     setInput('');
     setSelectedImage(null);
+    setIsSending(true);
     setTyping(true);
 
-    // Save user message to Supabase (non-blocking, best-effort)
-    if (profile.id) {
-      supabase.from('coach_conversations').insert({
-        user_id: profile.id,
-        role:    'user',
-        content: text || '[Image]',
-      }).then(() => {}).catch(() => {});
-    }
+    // Persist user message to Supabase (best-effort, fire-and-forget)
+    void supabase.from('coach_conversations').insert({
+      user_id: profile.id,
+      role:    'user',
+      content: text || '[Image]',
+    });
 
     try {
-      // Build Gemini history — must start with 'user' role
-      let rawHistory = messages
+      // Build valid Gemini history:
+      // 1. Filter the welcome message
+      // 2. Must start with 'user' role
+      // 3. Must alternate user/model (no consecutive same roles)
+      let raw = messages
         .filter((m) => m.id !== 'welcome')
         .slice(-20)
-        .map((m) => ({ role: m.role as 'user' | 'model', parts: [{ text: m.content }] }));
+        .map((m) => ({
+          role:  m.role as 'user' | 'model',
+          parts: [{ text: m.content || ' ' }],
+        }));
 
-      // Gemini API requires alternating user/model roles starting with 'user'
-      // Drop leading model messages if any
-      while (rawHistory.length > 0 && rawHistory[0].role !== 'user') {
-        rawHistory = rawHistory.slice(1);
+      // Strip leading model messages
+      while (raw.length > 0 && raw[0].role !== 'user') {
+        raw = raw.slice(1);
       }
-      // Ensure proper alternation (remove consecutive same-role messages)
-      const history: typeof rawHistory = [];
-      for (const msg of rawHistory) {
-        if (history.length === 0 || history[history.length - 1].role !== msg.role) {
+
+      // Remove consecutive same-role messages (keep last of each run)
+      const history: typeof raw = [];
+      for (const msg of raw) {
+        if (history.length > 0 && history[history.length - 1].role === msg.role) {
+          history[history.length - 1] = msg; // replace with latest
+        } else {
           history.push(msg);
         }
       }
 
       const systemPrompt = buildCoachSystemPrompt({
-        name:           profile.name ?? 'User',
-        goal:           profile.goal ?? 'maintain',
-        tdee:           profile.tdee ?? 2000,
+        name:           profile.name           ?? 'User',
+        goal:           profile.goal           ?? 'maintain',
+        tdee:           profile.tdee           ?? 2000,
         targetCalories: profile.targetCalories ?? 2000,
-        macros:         profile.macros ?? { protein: 150, carbs: 200, fat: 67 },
+        macros:         profile.macros         ?? { protein: 150, carbs: 200, fat: 67 },
         restrictions:   profile.restrictions,
       });
 
@@ -218,28 +278,28 @@ export default function CoachScreen() {
       };
       addMessage(botMsg);
 
-      // Save bot response (non-blocking)
-      if (profile.id) {
-        supabase.from('coach_conversations').insert({
-          user_id: profile.id,
-          role:    'model',
-          content: reply,
-        }).then(() => {}).catch(() => {});
-      }
+      // Persist bot response (best-effort, fire-and-forget)
+      void supabase.from('coach_conversations').insert({
+        user_id: profile.id,
+        role:    'model',
+        content: reply,
+      });
 
     } catch (err: any) {
-      console.error('[Coach] sendCoachMessage error:', err);
+      console.error('[Coach] Error:', err?.message ?? err);
       addMessage({
         id:        `err-${Date.now()}`,
         role:      'model',
-        content:   `Sorry, I had trouble connecting. ${err?.message ?? 'Please try again.'}`,
+        content:   `Sorry, I couldn't connect right now. ${err?.message ?? 'Please try again.'}`,
         timestamp: new Date().toISOString(),
       });
     } finally {
       setTyping(false);
+      setIsSending(false);
     }
-  };
+  }, [input, selectedImage, isTyping, isSending, atLimit, profile, messages]);
 
+  const canSend        = (input.trim().length > 0 || !!selectedImage) && !isTyping && !isSending;
   const showSuggestions = messages.length <= 1 && !isTyping;
 
   return (
@@ -258,45 +318,38 @@ export default function CoachScreen() {
         </View>
         {!isPro && (
           <View style={s.countBadge}>
-            <Text style={s.countText}>{Math.max(FREE_MSG_LIMIT - msgCount, 0)}/{FREE_MSG_LIMIT}</Text>
+            <Text style={s.countText}>
+              {Math.max(FREE_MSG_LIMIT - msgCount, 0)}/{FREE_MSG_LIMIT}
+            </Text>
           </View>
         )}
       </View>
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={90}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
-        <FlatList
+        <FlatList<CoachMessage>
           ref={flatRef}
           data={messages}
           keyExtractor={(m) => m.id}
           renderItem={({ item }) => <MessageBubble msg={item} />}
           contentContainerStyle={s.messages}
+          keyboardShouldPersistTaps="handled"
           ListFooterComponent={
             <>
-              {isTyping && (
-                <View style={[bubble.row, { paddingHorizontal: Spacing.base, marginTop: 4 }]}>
-                  <LinearGradient colors={['#7C5CFC', '#4338CA']} style={bubble.avatar}>
-                    <Text style={bubble.avatarText}>F</Text>
-                  </LinearGradient>
-                  <View style={[bubble.box, bubble.boxBot, { paddingHorizontal: 16 }]}>
-                    <ActivityIndicator color={Colors.primary} size="small" />
-                  </View>
-                </View>
-              )}
-              {/* Suggestions */}
-              {showSuggestions && (
+              {isTyping && <TypingIndicator />}
+              {showSuggestions && !isTyping && (
                 <View style={s.suggestionsWrap}>
-                  {SUGGESTIONS.map((s_) => (
+                  {SUGGESTIONS.map((suggestion) => (
                     <TouchableOpacity
-                      key={s_}
+                      key={suggestion}
                       style={s.chip}
-                      onPress={() => handleSend(s_)}
+                      onPress={() => handleSend(suggestion)}
                       activeOpacity={0.75}
                     >
-                      <Text style={s.chipText}>{s_}</Text>
+                      <Text style={s.chipText}>{suggestion}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -305,11 +358,17 @@ export default function CoachScreen() {
           }
         />
 
-        {/* Input area */}
+        {/* ── Input area ── */}
         {atLimit ? (
           <View style={s.limitBanner}>
-            <Text style={s.limitText}>🔒 Daily limit reached. Upgrade to Pro for unlimited coaching.</Text>
-            <TouchableOpacity style={s.upgradeBtn} onPress={() => router.push('/modals/paywall')}>
+            <Text style={s.limitText}>
+              🔒 Daily limit reached. Upgrade to Pro for unlimited coaching.
+            </Text>
+            <TouchableOpacity
+              style={s.upgradeBtn}
+              onPress={() => router.push('/modals/paywall')}
+              activeOpacity={0.8}
+            >
               <LinearGradient colors={['#F59E0B', '#D97706']} style={s.upgradeGrad}>
                 <Text style={s.upgradeText}>Upgrade to Pro</Text>
               </LinearGradient>
@@ -319,16 +378,30 @@ export default function CoachScreen() {
           <View style={s.inputAreaContainer}>
             {selectedImage && (
               <View style={s.imagePreviewContainer}>
-                <Image source={{ uri: `data:image/jpeg;base64,${selectedImage}` }} style={s.imagePreview} />
-                <TouchableOpacity onPress={() => setSelectedImage(null)} style={s.removeImageBtn}>
+                <Image
+                  source={{ uri: `data:image/jpeg;base64,${selectedImage}` }}
+                  style={s.imagePreview}
+                  resizeMode="cover"
+                />
+                <TouchableOpacity
+                  onPress={() => setSelectedImage(null)}
+                  style={s.removeImageBtn}
+                  hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                >
                   <Text style={s.removeImageText}>✕</Text>
                 </TouchableOpacity>
               </View>
             )}
             <View style={s.inputArea}>
-              <TouchableOpacity onPress={handlePickImage} style={s.cameraBtn}>
+              <TouchableOpacity
+                onPress={handlePickImage}
+                style={s.cameraBtn}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                activeOpacity={0.7}
+              >
                 <Text style={s.cameraEmoji}>📷</Text>
               </TouchableOpacity>
+
               <TextInput
                 style={s.input}
                 value={input}
@@ -337,14 +410,17 @@ export default function CoachScreen() {
                 placeholderTextColor={Colors.textMuted}
                 multiline
                 maxLength={500}
+                returnKeyType="send"
                 blurOnSubmit={false}
                 onSubmitEditing={() => handleSend()}
               />
+
               <TouchableOpacity
-                style={[s.sendBtn, ((!input.trim() && !selectedImage) || isTyping) && s.sendBtnDisabled]}
+                style={[s.sendBtn, !canSend && s.sendBtnDisabled]}
                 onPress={() => handleSend()}
-                disabled={(!input.trim() && !selectedImage) || isTyping}
+                disabled={!canSend}
                 activeOpacity={0.8}
+                hitSlop={{ top: 4, bottom: 4, left: 4, right: 4 }}
               >
                 <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.sendGrad}>
                   <Text style={s.sendText}>↑</Text>
@@ -358,37 +434,38 @@ export default function CoachScreen() {
   );
 }
 
+// ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  safe:             { flex: 1, backgroundColor: Colors.background },
-  header:           { flexDirection: 'row', alignItems: 'center', gap: 12, padding: Spacing.base, borderBottomWidth: 1, borderBottomColor: Colors.border },
-  headerAvatar:     { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center' },
-  headerAvatarText: { color: '#fff', fontWeight: '800', fontSize: 16 },
-  headerName:       { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
-  onlineRow:        { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  onlineDot:        { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.success },
-  onlineText:       { fontSize: 11, color: Colors.success },
-  countBadge:       { backgroundColor: Colors.surfaceAlt, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: Colors.border },
-  countText:        { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
-  messages:         { paddingVertical: Spacing.base, paddingBottom: 8 },
-  suggestionsWrap:  { padding: Spacing.base, gap: 8 },
-  chip:             { backgroundColor: Colors.surface, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: Colors.border },
-  chipText:         { color: Colors.textSecondary, fontSize: 14 },
-  inputAreaContainer:{ borderTopWidth: 1, borderTopColor: Colors.border },
+  safe:                 { flex: 1, backgroundColor: Colors.background },
+  header:               { flexDirection: 'row', alignItems: 'center', gap: 12, padding: Spacing.base, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  headerAvatar:         { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center' },
+  headerAvatarText:     { color: '#fff', fontWeight: '800', fontSize: 16 },
+  headerName:           { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+  onlineRow:            { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
+  onlineDot:            { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.success },
+  onlineText:           { fontSize: 11, color: Colors.success },
+  countBadge:           { backgroundColor: Colors.surfaceAlt, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: Colors.border },
+  countText:            { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
+  messages:             { paddingVertical: Spacing.base, paddingBottom: 16 },
+  suggestionsWrap:      { padding: Spacing.base, gap: 8 },
+  chip:                 { backgroundColor: Colors.surface, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: Colors.border },
+  chipText:             { color: Colors.textSecondary, fontSize: 14 },
+  inputAreaContainer:   { borderTopWidth: 1, borderTopColor: Colors.border },
   imagePreviewContainer:{ padding: Spacing.base, paddingBottom: 0, flexDirection: 'row', alignItems: 'flex-start' },
-  imagePreview:     { width: 60, height: 60, borderRadius: Radius.md },
-  removeImageBtn:   { marginLeft: 8, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 12, width: 24, height: 24, justifyContent: 'center', alignItems: 'center' },
-  removeImageText:  { color: '#fff', fontSize: 12, fontWeight: '700' },
-  inputArea:        { flexDirection: 'row', gap: 8, padding: Spacing.base, alignItems: 'flex-end' },
-  cameraBtn:        { padding: 8, justifyContent: 'center', alignItems: 'center' },
-  cameraEmoji:      { fontSize: 24 },
-  input:            { flex: 1, backgroundColor: Colors.surface, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: Colors.textPrimary, borderWidth: 1.5, borderColor: Colors.border, maxHeight: 120 },
-  sendBtn:          { borderRadius: Radius.md, overflow: 'hidden' },
-  sendBtnDisabled:  { opacity: 0.4 },
-  sendGrad:         { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
-  sendText:         { color: '#fff', fontSize: 22, fontWeight: '700' },
-  limitBanner:      { padding: Spacing.base, borderTopWidth: 1, borderTopColor: Colors.border, gap: 10 },
-  limitText:        { fontSize: 13, color: Colors.textSecondary, textAlign: 'center' },
-  upgradeBtn:       { borderRadius: Radius.md, overflow: 'hidden' },
-  upgradeGrad:      { padding: 14, alignItems: 'center' },
-  upgradeText:      { color: '#fff', fontWeight: '700', fontSize: 15 },
+  imagePreview:         { width: 64, height: 64, borderRadius: Radius.md },
+  removeImageBtn:       { marginLeft: 8, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12, width: 24, height: 24, justifyContent: 'center', alignItems: 'center' },
+  removeImageText:      { color: '#fff', fontSize: 12, fontWeight: '700' },
+  inputArea:            { flexDirection: 'row', gap: 8, padding: Spacing.base, alignItems: 'flex-end' },
+  cameraBtn:            { padding: 8, justifyContent: 'center', alignItems: 'center' },
+  cameraEmoji:          { fontSize: 24 },
+  input:                { flex: 1, backgroundColor: Colors.surface, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: Colors.textPrimary, borderWidth: 1.5, borderColor: Colors.border, maxHeight: 120 },
+  sendBtn:              { borderRadius: Radius.md, overflow: 'hidden' },
+  sendBtnDisabled:      { opacity: 0.35 },
+  sendGrad:             { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
+  sendText:             { color: '#fff', fontSize: 22, fontWeight: '700' },
+  limitBanner:          { padding: Spacing.base, borderTopWidth: 1, borderTopColor: Colors.border, gap: 10 },
+  limitText:            { fontSize: 13, color: Colors.textSecondary, textAlign: 'center' },
+  upgradeBtn:           { borderRadius: Radius.md, overflow: 'hidden' },
+  upgradeGrad:          { padding: 14, alignItems: 'center' },
+  upgradeText:          { color: '#fff', fontWeight: '700', fontSize: 15 },
 });
