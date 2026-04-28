@@ -1,0 +1,35 @@
+/**
+ * Supabase client singleton para Fit-Forward.
+ * Lee credenciales de variables de entorno (definidas en .env o EAS secrets).
+ */
+import 'react-native-url-polyfill/auto';
+import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
+const supabaseUrl     = process.env.EXPO_PUBLIC_SUPABASE_URL     ?? '';
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? '';
+
+if (__DEV__ && (!supabaseUrl || !supabaseAnonKey)) {
+  console.warn(
+    '[Supabase] ⚠️  Variables de entorno faltantes.\n' +
+    'Crea un archivo .env en la raíz del proyecto con:\n' +
+    '  EXPO_PUBLIC_SUPABASE_URL=...\n' +
+    '  EXPO_PUBLIC_SUPABASE_ANON_KEY=...'
+  );
+}
+
+// Usamos placeholders válidos en desarrollo para evitar crash en module init.
+// La app mostrará un error de auth si las claves son inválidas, pero no crasheará.
+export const supabase = createClient(
+  supabaseUrl  || 'https://placeholder.supabase.co',
+  supabaseAnonKey || 'placeholder-key',
+  {
+    auth: {
+      storage:          AsyncStorage,
+      autoRefreshToken: true,
+      persistSession:   true,
+      detectSessionInUrl: false,
+    },
+  }
+);
+
