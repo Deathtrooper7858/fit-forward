@@ -1,7 +1,7 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView,
-  TouchableOpacity, Dimensions, Alert
+  TouchableOpacity, Dimensions, Alert, Image
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -203,7 +203,11 @@ export default function DashboardScreen() {
           </View>
           <TouchableOpacity style={s.avatar} onPress={() => router.push('/(tabs)/profile')}>
             <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.avatarGrad}>
-              <Text style={s.avatarText}>{name[0]?.toUpperCase()}</Text>
+              {profile?.avatarUrl ? (
+                <Image source={{ uri: profile.avatarUrl }} style={s.avatarImage} />
+              ) : (
+                <Text style={s.avatarText}>{name[0]?.toUpperCase()}</Text>
+              )}
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -286,6 +290,7 @@ const s = StyleSheet.create({
   avatar:       { width: 44, height: 44, borderRadius: 22, overflow: 'hidden' },
   avatarGrad:   { flex: 1, justifyContent: 'center', alignItems: 'center' },
   avatarText:   { fontSize: 18, fontWeight: '700', color: '#fff' },
+  avatarImage:  { width: 44, height: 44, borderRadius: 22 },
   card:         { margin: Spacing.base, borderRadius: Radius.xl, backgroundColor: Colors.surface, padding: Spacing.base, ...Shadow.md },
   sectionTitle: { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.md },
   macros:       { gap: Spacing.md, marginTop: Spacing.lg },
