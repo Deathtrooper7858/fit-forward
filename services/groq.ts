@@ -1,36 +1,54 @@
 /**
- * Gemini AI service for Fit-Forward.
- * - Coach chat (gemini-2.0-flash)
- * - Food photo analysis (gemini-2.0-flash with vision — gemini-1.5-pro is deprecated)
- * - Plan generation
+ * AI service for Fit-Forward — powered by Groq (using native fetch for React Native compatibility).
+ * Maintains the same exported API as the previous Gemini service so the
+ * rest of the app requires zero changes.
+ *
+ * Functions:
+ *  - buildCoachSystemPrompt
+ *  - sendCoachMessage
+ *  - analyzeFoodPhoto
+ *  - generateMealPlan
+ *  - generateWeeklyAnalysis
  */
-import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from '@google/generative-ai';
 
-const apiKey = process.env.EXPO_PUBLIC_GEMINI_API_KEY ?? '';
+// ─── Client ───────────────────────────────────────────────────────────────────
+const apiKey = process.env.EXPO_PUBLIC_GROQ_API_KEY ?? '';
 
 if (!apiKey) {
-  console.warn('[Gemini] Missing EXPO_PUBLIC_GEMINI_API_KEY in .env');
+  console.warn('[Groq] Missing EXPO_PUBLIC_GROQ_API_KEY in .env. Please restart your Metro Bundler.');
 }
 
-const genAI = new GoogleGenerativeAI(apiKey);
+const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-const safetySettings = [
-  { category: HarmCategory.HARM_CATEGORY_HARASSMENT,        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-  { category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,       threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-  { category: HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT, threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE },
-];
+// ─── Model IDs ────────────────────────────────────────────────────────────────
+const CHAT_MODEL   = 'llama-3.3-70b-versatile';
+const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'; // Groq's official vision model
 
-// ─── Models ───────────────────────────────────────────────────────────────────
-// gemini-2.0-flash: stable, supports vision + system_instruction via v1beta SDK
-export const flashModel = genAI.getGenerativeModel({
-  model: 'gemini-2.0-flash',
-  safetySettings,
-});
+// Helper to make fetch calls to Groq API
+async function fetchGroq(payload: any) {
+  if (!apiKey) {
+    throw new Error('Groq API Key is missing. Make sure EXPO_PUBLIC_GROQ_API_KEY is in your .env file and restart the app.');
+  }
 
-// Use flash for everything — 1.5-pro is deprecated on v1beta
-export const proModel = flashModel;
+  const response = await fetch(GROQ_API_URL, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify(payload),
+  });
 
-// ─── Coach system prompt ───────────────────────────────────────────────────────
+  if (!response.ok) {
+    const errText = await response.text();
+    throw new Error(`API Error (${response.status}): ${errText}`);
+  }
+
+  const data = await response.json();
+  return data;
+}
+
+// ─── Coach system prompt ──────────────────────────────────────────────────────
 export function buildCoachSystemPrompt(userProfile: {
   name: string;
   goal: string;
@@ -65,31 +83,40 @@ export async function sendCoachMessage(
   systemPrompt: string,
   base64Image?: string
 ): Promise<string> {
-  // SDK v0.24: systemInstruction must be set on the model, not in startChat()
-  // Pass it as a Content object (parts array), NOT a raw string
-  const modelWithSystem = genAI.getGenerativeModel({
-    model: 'gemini-2.0-flash',
-    safetySettings,
-    systemInstruction: {
-      role: 'user',
-      parts: [{ text: systemPrompt }],
-    },
-  });
+  // Convert Gemini-style history → OpenAI-style messages
+  const messages: any[] = [
+    { role: 'system', content: systemPrompt },
+    ...history.map((turn) => ({
+      role: turn.role === 'model' ? 'assistant' : 'user',
+      content: turn.parts.map((p: any) => p.text ?? '').join(''),
+    })),
+  ];
 
-  const chat = modelWithSystem.startChat({
-    history,
-    generationConfig: { maxOutputTokens: 600, temperature: 0.7 },
-  });
-
-  const msgParts: any[] = [{ text: userMessage || 'Analyze this image.' }];
+  // Current user message — with optional image
   if (base64Image) {
-    msgParts.push({ inlineData: { mimeType: 'image/jpeg', data: base64Image } });
+    messages.push({
+      role: 'user',
+      content: [
+        { type: 'text', text: userMessage || 'Analyze this image.' },
+        {
+          type: 'image_url',
+          image_url: { url: `data:image/jpeg;base64,${base64Image}` },
+        },
+      ],
+    });
+  } else {
+    messages.push({ role: 'user', content: userMessage });
   }
 
-  const result = await chat.sendMessage(msgParts);
-  return result.response.text();
-}
+  const data = await fetchGroq({
+    model: base64Image ? VISION_MODEL : CHAT_MODEL,
+    messages,
+    max_tokens: 600,
+    temperature: 0.7,
+  });
 
+  return data.choices[0]?.message?.content ?? '';
+}
 
 // ─── Food photo analysis ───────────────────────────────────────────────────────
 export async function analyzeFoodPhoto(base64Image: string): Promise<{
@@ -115,39 +142,41 @@ Structure:
 }`;
 
   try {
-    const result = await flashModel.generateContent({
-      contents: [{ role: 'user', parts: [
-        { inlineData: { mimeType: 'image/jpeg', data: base64Image } },
-        { text: prompt }
-      ]}],
-      generationConfig: {
-        temperature: 0.4,
-        topP: 1,
-        maxOutputTokens: 1024,
-        responseMimeType: 'application/json',
-      },
+    const data = await fetchGroq({
+      model: VISION_MODEL,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: prompt },
+            {
+              type: 'image_url',
+              image_url: { url: `data:image/jpeg;base64,${base64Image.replace(/\n|\r/g, '')}` },
+            },
+          ],
+        },
+      ],
+      max_tokens: 1024,
+      temperature: 0.4,
     });
 
-    let text = result.response.text().trim();
-    // Strip any accidental markdown fences
-    text = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
-
-    try {
-      return JSON.parse(text);
-    } catch (parseError) {
-      console.error('[Gemini] JSON Parse Error. Raw text:', text);
-      throw new Error('Failed to parse AI response. Please try again.');
+    let text = (data.choices[0]?.message?.content ?? '').trim();
+    
+    // Robust JSON extraction (find first { and last })
+    const startIndex = text.indexOf('{');
+    const endIndex = text.lastIndexOf('}');
+    if (startIndex !== -1 && endIndex !== -1) {
+      text = text.slice(startIndex, endIndex + 1);
     }
+    
+    return JSON.parse(text);
   } catch (error: any) {
-    console.error('[Gemini] Analyze food photo error:', error);
-    if (error.message?.includes('SAFETY')) {
-      throw new Error('Image blocked by safety filters. Please take a clearer photo of the food.');
-    }
-    throw error;
+    console.error('[Groq] Analyze food photo error:', error);
+    throw new Error(error.message || 'Failed to parse AI response. Please try again.');
   }
 }
 
-// ─── Generate weekly meal plan (returns structured JSON) ──────────────────────
+// ─── Generate weekly meal plan ─────────────────────────────────────────────────
 export async function generateMealPlan(userProfile: {
   targetCalories: number;
   macros: { protein: number; carbs: number; fat: number };
@@ -170,24 +199,23 @@ Return ONLY valid JSON (no markdown). Use this exact structure:
     { "meal": "dinner", "name": "Salmon with vegetables", "calories": 500, "protein": 45, "carbs": 25, "fat": 20 },
     { "meal": "snack", "name": "Greek yogurt", "calories": 150, "protein": 15, "carbs": 12, "fat": 3 }
   ],
-  "Tue": [...],
-  "Wed": [...],
-  "Thu": [...],
-  "Fri": [...],
-  "Sat": [...],
-  "Sun": [...]
+  "Tue": [],
+  "Wed": [],
+  "Thu": [],
+  "Fri": [],
+  "Sat": [],
+  "Sun": []
 }`;
 
-  const result = await flashModel.generateContent({
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
-    generationConfig: {
-      temperature: 0.6,
-      maxOutputTokens: 4096,
-      responseMimeType: 'application/json',
-    },
+  const data = await fetchGroq({
+    model: CHAT_MODEL,
+    messages: [{ role: 'user', content: prompt }],
+    max_tokens: 4096,
+    temperature: 0.6,
+    response_format: { type: 'json_object' },
   });
 
-  let text = result.response.text().trim();
+  let text = (data.choices[0]?.message?.content ?? '').trim();
   text = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
 
   try {
@@ -214,6 +242,12 @@ export async function generateWeeklyAnalysis(data: {
 - Average macros: ${data.avgProtein}g protein, ${data.avgCarbs}g carbs, ${data.avgFat}g fat
 Give 2-3 specific, actionable tips for next week. Be encouraging.`;
 
-  const result = await flashModel.generateContent(prompt);
-  return result.response.text();
+  const responseData = await fetchGroq({
+    model: CHAT_MODEL,
+    messages: [{ role: 'user', content: prompt }],
+    max_tokens: 300,
+    temperature: 0.7,
+  });
+
+  return responseData.choices[0]?.message?.content ?? '';
 }

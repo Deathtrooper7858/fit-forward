@@ -10,7 +10,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Colors, Spacing, Radius } from '../../../constants';
 import { useAuthStore, useCoachStore, CoachMessage } from '../../../store';
-import { sendCoachMessage, buildCoachSystemPrompt } from '../../../services/gemini';
+import { sendCoachMessage, buildCoachSystemPrompt } from '../../../services/groq';
 import { supabase } from '../../../services/supabase';
 
 const FREE_MSG_LIMIT = 10;
@@ -232,7 +232,7 @@ export default function CoachScreen() {
     });
 
     try {
-      // Build valid Gemini history:
+      // Build valid history:
       // 1. Filter the welcome message
       // 2. Must start with 'user' role
       // 3. Must alternate user/model (no consecutive same roles)
@@ -313,7 +313,7 @@ export default function CoachScreen() {
           <Text style={s.headerName}>Fitz · AI Coach</Text>
           <View style={s.onlineRow}>
             <View style={s.onlineDot} />
-            <Text style={s.onlineText}>Online · Powered by Gemini</Text>
+            <Text style={s.onlineText}>Online · Powered by Groq</Text>
           </View>
         </View>
         {!isPro && (
@@ -469,3 +469,4 @@ const s = StyleSheet.create({
   upgradeGrad:          { padding: 14, alignItems: 'center' },
   upgradeText:          { color: '#fff', fontWeight: '700', fontSize: 15 },
 });
+

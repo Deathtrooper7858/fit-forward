@@ -5,7 +5,7 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, Radius } from '../../../constants';
 import { useAuthStore } from '../../../store';
-import { generateMealPlan } from '../../../services/gemini';
+import { generateMealPlan } from '../../../services/groq';
 import { supabase } from '../../../services/supabase';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];

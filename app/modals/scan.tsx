@@ -5,7 +5,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, Radius } from '../../constants';
 import { getFoodByBarcode } from '../../services/foodDatabase';
-import { analyzeFoodPhoto } from '../../services/gemini';
+import { analyzeFoodPhoto } from '../../services/groq';
 import { useNutritionStore } from '../../store';
 
 type ScanMode = 'barcode' | 'photo';
@@ -72,7 +72,8 @@ export default function ScanModal() {
     try {
       const photo = await cameraRef.current.takePictureAsync({
         base64: true,
-        quality: 0.6,
+        quality: 0.2,
+        exif: false,
       });
 
       setCapturedUri(photo.uri);
