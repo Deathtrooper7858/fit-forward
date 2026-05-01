@@ -135,3 +135,8 @@ export default function RootLayout() {
 const styles = StyleSheet.create({
   root: { flex: 1, backgroundColor: Colors.background },
 });
+
+// Notes:
+// - The NavigationGuard component ensures users are always on the correct flow based on their auth and onboarding status.
+// - The RootLayout initializes auth state from Supabase and listens for changes, updating the global store accordingly.
+// - Splash screen is shown until we determine the user's session and profile, preventing any flicker of the wrong screens.
