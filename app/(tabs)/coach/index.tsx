@@ -176,7 +176,7 @@ export default function CoachScreen() {
           return;
         }
         const result = await ImagePicker.launchImageLibraryAsync({
-          base64: true, quality: 0.2, mediaTypes: ImagePicker.MediaTypeOptions.Images, // Lower quality for Groq
+          base64: true, quality: 0.2, mediaTypes: ['images'], // Lower quality for Groq
         });
         if (!result.canceled && result.assets?.[0]?.base64) {
           setSelectedImage(result.assets[0].base64!);

@@ -9,6 +9,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Colors, Spacing, Radius } from '../../../constants';
 import { useAuthStore, useBodyStore } from '../../../store';
+import { decode } from 'base64-arraybuffer';
 import { supabase } from '../../../services/supabase';
 import { calculateTDEE, calculateMacros } from '../../../services/foodDatabase';
 
@@ -187,14 +188,17 @@ export default function ProfileScreen() {
   const handlePickImage = async () => {
     try {
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.5,
+        base64: true,
       });
 
-      if (!result.canceled && result.assets && result.assets[0].uri) {
-        const uri = result.assets[0].uri;
+      if (!result.canceled && result.assets && result.assets[0].base64) {
+        const asset = result.assets[0];
+        const base64 = asset.base64;
+        const uri = asset.uri;
         const fileExt = uri.split('.').pop()?.toLowerCase() ?? 'jpg';
         
         let userId = profile?.id;
@@ -208,12 +212,9 @@ export default function ProfileScreen() {
         const fileName = `${userId}/${Date.now()}.${fileExt}`;
         const filePath = fileName;
 
-        const response = await fetch(uri);
-        const blob = await response.blob();
-
         const { error: uploadError } = await supabase.storage
           .from('avatars')
-          .upload(filePath, blob, {
+          .upload(filePath, decode(base64), {
             contentType: `image/${fileExt}`,
             upsert: true,
           });

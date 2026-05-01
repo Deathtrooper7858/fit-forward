@@ -9,6 +9,7 @@ import { router } from 'expo-router';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, Spacing, Radius } from '../../constants';
 import { useBodyStore, useAuthStore, BodyMeasurement, useProgressStore } from '../../store';
+import { decode } from 'base64-arraybuffer';
 import { supabase } from '../../services/supabase';
 
 interface Field {
@@ -45,10 +46,12 @@ export default function BodyMeasurementsModal() {
     }
     
     const result = await ImagePicker.launchCameraAsync({
+      mediaTypes: ['images'],
       quality: 0.5,
+      base64: true,
     });
-    if (!result.canceled) {
-      setPhoto(result.assets[0].uri);
+    if (!result.canceled && result.assets && result.assets[0].base64) {
+      setPhoto(result.assets[0].base64);
     }
   };
 
@@ -80,8 +83,22 @@ export default function BodyMeasurementsModal() {
       if (profile?.id) {
         // Save photo if exists
         if (photo) {
-          addPhoto({ id: `p-${Date.now()}`, uri: photo, date: today });
-          // Note: In a real app, upload to Supabase Storage here
+          const fileExt = 'jpg';
+          const fileName = `${profile.id}/progress_${Date.now()}.${fileExt}`;
+          
+          const { data: uploadData, error: uploadError } = await supabase.storage
+            .from('progress-photos')
+            .upload(fileName, decode(photo), {
+              contentType: `image/${fileExt}`,
+            });
+
+          if (!uploadError && uploadData) {
+            const { data: { publicUrl } } = supabase.storage
+              .from('progress-photos')
+              .getPublicUrl(fileName);
+            
+            addPhoto({ id: `p-${Date.now()}`, uri: publicUrl, date: today });
+          }
         }
 
         await supabase.from('body_measurements').insert({

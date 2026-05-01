@@ -258,11 +258,16 @@ Give 2-3 specific, actionable tips for next week. Be encouraging.`;
 
 // ─── Transcribe Audio ─────────────────────────────────────────────────────────
 export async function transcribeAudio(uri: string): Promise<string> {
-  const fileData = await fetch(uri);
-  const blob = await fileData.blob();
-
+  const fileExt = uri.split('.').pop() || 'm4a';
   const formData = new FormData();
-  formData.append('file', blob, 'audio.m4a');
+  
+  // En React Native, para subir archivos con fetch/FormData se usa este formato de objeto:
+  formData.append('file', {
+    uri,
+    name: `audio.${fileExt}`,
+    type: `audio/${fileExt}`,
+  } as any);
+  
   formData.append('model', AUDIO_MODEL);
 
   const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
