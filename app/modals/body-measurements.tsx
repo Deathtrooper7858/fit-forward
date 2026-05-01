@@ -6,8 +6,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { Colors, Spacing, Radius } from '../../constants';
-import { useBodyStore, useAuthStore, BodyMeasurement } from '../../store';
+import { useBodyStore, useAuthStore, BodyMeasurement, useProgressStore } from '../../store';
 import { supabase } from '../../services/supabase';
 
 interface Field {
@@ -31,8 +32,25 @@ const FIELDS: Field[] = [
 export default function BodyMeasurementsModal() {
   const { profile } = useAuthStore();
   const { measurements, addMeasurement } = useBodyStore();
+  const { addPhoto } = useProgressStore();
   const [values, setValues] = useState<Partial<Record<keyof BodyMeasurement, string>>>({});
+  const [photo, setPhoto] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const pickImage = async () => {
+    const { granted } = await ImagePicker.requestCameraPermissionsAsync();
+    if (!granted) {
+      Alert.alert('Permission needed', 'Please allow camera access to take progress photos.');
+      return;
+    }
+    
+    const result = await ImagePicker.launchCameraAsync({
+      quality: 0.5,
+    });
+    if (!result.canceled) {
+      setPhoto(result.assets[0].uri);
+    }
+  };
 
   const handleSave = async () => {
     const hasAtLeastOne = FIELDS.some(f => values[f.key]?.trim());
@@ -60,6 +78,12 @@ export default function BodyMeasurementsModal() {
       addMeasurement(measurement);
 
       if (profile?.id) {
+        // Save photo if exists
+        if (photo) {
+          addPhoto({ id: `p-${Date.now()}`, uri: photo, date: today });
+          // Note: In a real app, upload to Supabase Storage here
+        }
+
         await supabase.from('body_measurements').insert({
           user_id:  profile.id,
           date:     today,
@@ -152,6 +176,24 @@ export default function BodyMeasurementsModal() {
             );
           })}
 
+          {/* Photo Section */}
+          <View style={s.photoSection}>
+            <Text style={s.historyTitle}>Progress Photo</Text>
+            <TouchableOpacity style={s.photoBtn} onPress={pickImage}>
+              {photo ? (
+                <View style={{ position: 'relative' }}>
+                  <Text style={{ fontSize: 40 }}>📸</Text>
+                  <Text style={{ fontSize: 12, color: Colors.success, fontWeight: '700' }}>Photo Attached!</Text>
+                </View>
+              ) : (
+                <View style={{ alignItems: 'center' }}>
+                  <Text style={{ fontSize: 32 }}>📷</Text>
+                  <Text style={{ fontSize: 13, color: Colors.textSecondary, marginTop: 4 }}>Add Today's Photo</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          </View>
+
           {/* History */}
           {measurements.length > 0 && (
             <View style={s.historySection}>
@@ -202,4 +244,6 @@ const s = StyleSheet.create({
   historyDate:   { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
   historyStats:  { flexDirection: 'row', gap: 10 },
   historyStat:   { fontSize: 13, color: Colors.textPrimary, fontWeight: '600' },
+  photoSection:  { marginTop: Spacing.lg, alignItems: 'center' },
+  photoBtn:      { width: '100%', height: 120, borderRadius: Radius.lg, borderStyle: 'dashed', borderWidth: 2, borderColor: Colors.border, backgroundColor: Colors.surface, justifyContent: 'center', alignItems: 'center', marginTop: 10 },
 });

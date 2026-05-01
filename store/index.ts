@@ -70,6 +70,29 @@ export interface BodyMeasurement {
   notes?:      string;
 }
 
+export interface Recipe {
+  id:           string;
+  name:         string;
+  description:  string;
+  calories:     number;
+  protein:      number;
+  carbs:        number;
+  fat:          number;
+  ingredients:  string[];
+  instructions: string[];
+  imageUrl?:    string;
+  prepTime:     number; // minutes
+  goal:         'lose' | 'maintain' | 'gain';
+  isFavorite:   boolean;
+}
+
+export interface ProgressPhoto {
+  id:        string;
+  uri:       string;
+  date:      string; // YYYY-MM-DD
+  notes?:    string;
+}
+
 // ─── Auth store ───────────────────────────────────────────────────────────────
 interface AuthState {
   session:     any | null;
@@ -232,6 +255,54 @@ export const useBodyStore = create<BodyState>()(
     }),
     {
       name: 'ff-body',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
+
+// ─── Recipes store ────────────────────────────────────────────────────────────
+interface RecipesState {
+  recipes:     Recipe[];
+  favorites:   string[]; // IDs
+  setRecipes:  (recipes: Recipe[]) => void;
+  toggleFav:   (id: string) => void;
+}
+
+export const useRecipesStore = create<RecipesState>()(
+  persist(
+    (set) => ({
+      recipes:    [],
+      favorites:  [],
+      setRecipes: (recipes) => set({ recipes }),
+      toggleFav:  (id) => set((s) => ({
+        favorites: s.favorites.includes(id)
+          ? s.favorites.filter(fid => fid !== id)
+          : [...s.favorites, id],
+      })),
+    }),
+    {
+      name: 'ff-recipes',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
+
+// ─── Progress photos store ────────────────────────────────────────────────────
+interface ProgressState {
+  photos:     ProgressPhoto[];
+  addPhoto:   (p: ProgressPhoto) => void;
+  setPhotos:  (ps: ProgressPhoto[]) => void;
+}
+
+export const useProgressStore = create<ProgressState>()(
+  persist(
+    (set) => ({
+      photos:   [],
+      addPhoto: (p) => set((s) => ({ photos: [p, ...s.photos] })),
+      setPhotos:(photos) => set({ photos }),
+    }),
+    {
+      name: 'ff-progress',
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

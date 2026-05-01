@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   TextInput, ActivityIndicator, Alert, Animated,
@@ -6,9 +6,11 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAudioRecorder, useAudioRecorderState, RecordingPresets, setAudioModeAsync, requestRecordingPermissionsAsync } from 'expo-audio';
 import { Colors, Spacing, Radius, Shadow } from '../../../constants';
 import { useAuthStore, useNutritionStore } from '../../../store';
 import { searchFood, FoodItem } from '../../../services/foodDatabase';
+import { transcribeAudio, parseVoiceLog } from '../../../services/groq';
 import { supabase } from '../../../services/supabase';
 
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
@@ -99,9 +101,93 @@ export default function TrackerScreen() {
   const [loading, setLoading]     = useState(false);
   const [activeMeal, setActiveMeal] = useState<Meal>('lunch');
   const [showFavorites, setShowFavorites] = useState(false);
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(audioRecorder, 500);
+  const isRecording   = recorderState.isRecording;
 
   const { profile }   = useAuthStore();
-  const { todayLogs, removeLog, favoriteFoods, addFavorite, removeFavorite } = useNutritionStore();
+  const { todayLogs, removeLog, favoriteFoods, addFavorite, removeFavorite, addLog } = useNutritionStore();
+
+  useEffect(() => {
+    return () => {
+      if (audioRecorder.isRecording) {
+        audioRecorder.stop().catch(() => {});
+      }
+    };
+  }, []);
+
+  const startRecording = async () => {
+    try {
+      const permission = await requestRecordingPermissionsAsync();
+      if (permission.status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow microphone access to use voice logging.');
+        return;
+      }
+      
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+      });
+
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
+    } catch (err: any) {
+      console.error('Failed to start recording', err);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!isRecording) return;
+    
+    try {
+      await audioRecorder.stop();
+      const uri = audioRecorder.uri;
+
+      if (uri) {
+        setLoading(true);
+        try {
+          const text = await transcribeAudio(uri);
+          const items = await parseVoiceLog(text);
+          
+          for (const item of items) {
+            const log = {
+              id: `v-${Date.now()}-${Math.random()}`,
+              foodItem: { ...item, id: `v-${Date.now()}`, source: 'ai' },
+              grams: item.grams,
+              meal: activeMeal,
+              loggedAt: new Date().toISOString(),
+              calories: item.calories,
+              protein: item.protein,
+              carbs: item.carbs,
+              fat: item.fat,
+            };
+            addLog(log as any);
+            if (profile?.id) {
+              await supabase.from('food_logs').insert({
+                user_id: profile.id,
+                food_name: item.name,
+                calories: item.calories,
+                protein: item.protein,
+                carbs: item.carbs,
+                fat: item.fat,
+                grams: item.grams,
+                meal: activeMeal,
+              });
+            }
+          }
+          if (items.length > 0) {
+            Alert.alert('Success', `Logged ${items.length} items from your voice!`);
+          }
+        } catch (err) {
+          Alert.alert('Voice Log Failed', 'Could not parse your voice. Try again.');
+        } finally {
+          setLoading(false);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to stop recording', err);
+    }
+  };
 
   const isFavorite = (id: string) => favoriteFoods.some(f => f.id === id);
 
@@ -202,6 +288,13 @@ export default function TrackerScreen() {
               />
               <TouchableOpacity style={s.searchBtn} onPress={doSearch}>
                 <Text style={s.searchBtnText}>🔍</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[s.searchBtn, isRecording && { backgroundColor: '#EF444422', borderColor: '#EF4444' }]}
+                onPressIn={startRecording}
+                onPressOut={stopRecording}
+              >
+                <Text style={s.searchBtnText}>{isRecording ? '🛑' : '🎙️'}</Text>
               </TouchableOpacity>
               {favoriteFoods.length > 0 && (
                 <TouchableOpacity

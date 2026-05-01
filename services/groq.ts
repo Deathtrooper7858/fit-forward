@@ -1,6 +1,6 @@
 /**
  * AI service for Fit-Forward — powered by Groq (using native fetch for React Native compatibility).
- * Maintains the same exported API as the previous Gemini service so the
+ * Maintains the same exported API as the previous service so the
  * rest of the app requires zero changes.
  *
  * Functions:
@@ -9,6 +9,9 @@
  *  - analyzeFoodPhoto
  *  - generateMealPlan
  *  - generateWeeklyAnalysis
+ *  - transcribeAudio
+ *  - generateRecipes
+ *  - parseVoiceLog
  */
 
 // ─── Client ───────────────────────────────────────────────────────────────────
@@ -23,6 +26,7 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 // ─── Model IDs ────────────────────────────────────────────────────────────────
 const CHAT_MODEL   = 'llama-3.3-70b-versatile';
 const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'; // Groq's official vision model
+const AUDIO_MODEL  = 'whisper-large-v3';
 
 // Helper to make fetch calls to Groq API
 async function fetchGroq(payload: any) {
@@ -83,7 +87,7 @@ export async function sendCoachMessage(
   systemPrompt: string,
   base64Image?: string
 ): Promise<string> {
-  // Convert Gemini-style history → OpenAI-style messages
+  // Convert history → OpenAI-style messages
   const messages: any[] = [
     { role: 'system', content: systemPrompt },
     ...history.map((turn) => ({
@@ -250,4 +254,100 @@ Give 2-3 specific, actionable tips for next week. Be encouraging.`;
   });
 
   return responseData.choices[0]?.message?.content ?? '';
+}
+
+// ─── Transcribe Audio ─────────────────────────────────────────────────────────
+export async function transcribeAudio(uri: string): Promise<string> {
+  const fileData = await fetch(uri);
+  const blob = await fileData.blob();
+
+  const formData = new FormData();
+  formData.append('file', blob, 'audio.m4a');
+  formData.append('model', AUDIO_MODEL);
+
+  const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+    },
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Transcription error: ${err}`);
+  }
+
+  const data = await response.json();
+  return data.text ?? '';
+}
+
+// ─── Generate Recipes ─────────────────────────────────────────────────────────
+export async function generateRecipes(userGoal: string, count: number = 3): Promise<any[]> {
+  const prompt = `Generate ${count} healthy recipe ideas for someone with the goal: ${userGoal}.
+Return ONLY valid JSON (no markdown). Structure:
+[
+  {
+    "id": "unique_id",
+    "name": "Recipe Name",
+    "description": "Short description",
+    "calories": 400,
+    "protein": 30,
+    "carbs": 40,
+    "fat": 12,
+    "ingredients": ["item 1", "item 2"],
+    "instructions": ["step 1", "step 2"],
+    "prepTime": 20,
+    "goal": "${userGoal}"
+  }
+]`;
+
+  const data = await fetchGroq({
+    model: CHAT_MODEL,
+    messages: [{ role: 'user', content: prompt }],
+    max_tokens: 2048,
+    temperature: 0.7,
+    response_format: { type: 'json_object' },
+  });
+
+  let text = (data.choices[0]?.message?.content ?? '').trim();
+  // Strip markdown if present
+  text = text.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
+  try {
+    const parsed = JSON.parse(text);
+    return Array.isArray(parsed) ? parsed : (parsed.recipes || []);
+  } catch {
+    return [];
+  }
+}
+
+// ─── Parse Voice/Text Log ─────────────────────────────────────────────────────
+export async function parseVoiceLog(text: string): Promise<any[]> {
+  const prompt = `Extract food items and estimated portions from this description: "${text}"
+Return ONLY valid JSON. Structure:
+{
+  "items": [
+    { "name": "Apple", "grams": 180, "calories": 95, "protein": 0, "carbs": 25, "fat": 0 },
+    { "name": "Black Coffee", "grams": 250, "calories": 2, "protein": 0, "carbs": 0, "fat": 0 }
+  ]
+}`;
+
+  const data = await fetchGroq({
+    model: CHAT_MODEL,
+    messages: [{ role: 'user', content: prompt }],
+    max_tokens: 1024,
+    temperature: 0.3,
+    response_format: { type: 'json_object' },
+  });
+
+  let content = (data.choices[0]?.message?.content ?? '').trim();
+  content = content.replace(/^```json\s*/i, '').replace(/^```\s*/i, '').replace(/```\s*$/i, '').trim();
+
+  try {
+    const parsed = JSON.parse(content);
+    return parsed.items || [];
+  } catch {
+    return [];
+  }
 }

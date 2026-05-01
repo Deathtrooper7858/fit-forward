@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, Radius } from '../../../constants';
-import { useAuthStore } from '../../../store';
-import { generateMealPlan } from '../../../services/groq';
+import { useAuthStore, useNutritionStore } from '../../../store';
+import { generateMealPlan, generateWeeklyAnalysis } from '../../../services/groq';
 import { supabase } from '../../../services/supabase';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
@@ -23,7 +23,10 @@ export default function PlannerScreen() {
   const [activeDay, setActiveDay] = useState('Mon');
   const [loading, setLoading]     = useState(false);
   const [plans, setPlans]         = useState<Record<string, PlanItem[]>>({});
+  const [analysis, setAnalysis]   = useState<string | null>(null);
+  const [analyzing, setAnalyzing] = useState(false);
   const { profile }               = useAuthStore();
+  const { streakDays, totals }    = useNutritionStore();
   const isPro                     = profile?.isPro ?? false;
 
   // Load saved plan from Supabase
@@ -130,6 +133,28 @@ export default function PlannerScreen() {
     Alert.alert('🛒 Shopping List', list);
   };
 
+  const handleWeeklyAnalysis = async () => {
+    if (!isPro) { router.push('/modals/paywall'); return; }
+    setAnalyzing(true);
+    try {
+      const stats = totals();
+      const res = await generateWeeklyAnalysis({
+        avgCalories:    stats.calories, // In a real app, calculate actual weekly avg
+        targetCalories: profile?.targetCalories ?? 2000,
+        avgProtein:     stats.protein,
+        avgCarbs:       stats.carbs,
+        avgFat:         stats.fat,
+        goal:           profile?.goal ?? 'maintain',
+        daysLogged:     streakDays,
+      });
+      setAnalysis(res);
+    } catch (err) {
+      Alert.alert('Analysis Failed', 'Could not generate weekly review.');
+    } finally {
+      setAnalyzing(false);
+    }
+  };
+
   return (
     <SafeAreaView style={s.safe}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -149,6 +174,25 @@ export default function PlannerScreen() {
         </View>
 
         <DayPicker active={activeDay} onSelect={setActiveDay} />
+
+        {/* Weekly Analysis Section */}
+        <View style={s.analysisWrap}>
+          <View style={s.analysisHeader}>
+            <Text style={s.analysisTitle}>AI Weekly Review</Text>
+            <TouchableOpacity onPress={handleWeeklyAnalysis} disabled={analyzing}>
+              <Text style={s.analysisBtnText}>{analysis ? 'Regenerate' : 'Analyze'}</Text>
+            </TouchableOpacity>
+          </View>
+          {analyzing ? (
+            <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 10 }} />
+          ) : analysis ? (
+            <View style={s.analysisContent}>
+              <Text style={s.analysisText}>{analysis}</Text>
+            </View>
+          ) : (
+            <Text style={s.analysisPlaceholder}>Get a summary of your week and custom tips.</Text>
+          )}
+        </View>
 
         {meals.length > 0 && (
           <View style={s.summary}>
@@ -285,4 +329,11 @@ const s = StyleSheet.create({
   teaserSub:   { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
   proBadge:    { backgroundColor: '#F59E0B22', borderRadius: Radius.sm, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: '#F59E0B66' },
   proBadgeText:{ color: Colors.pro, fontWeight: '800', fontSize: 11 },
+  analysisWrap: { margin: Spacing.base, backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.base, borderWidth: 1, borderColor: Colors.border },
+  analysisHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
+  analysisTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
+  analysisBtnText: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
+  analysisContent: { backgroundColor: Colors.surfaceAlt, borderRadius: Radius.md, padding: 12, marginTop: 4 },
+  analysisText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20 },
+  analysisPlaceholder: { fontSize: 13, color: Colors.textMuted, fontStyle: 'italic' },
 });

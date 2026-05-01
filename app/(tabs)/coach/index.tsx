@@ -8,9 +8,10 @@ import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
+import { useAudioRecorder, useAudioRecorderState, RecordingPresets, setAudioModeAsync, requestRecordingPermissionsAsync } from 'expo-audio';
 import { Colors, Spacing, Radius } from '../../../constants';
 import { useAuthStore, useCoachStore, CoachMessage } from '../../../store';
-import { sendCoachMessage, buildCoachSystemPrompt } from '../../../services/groq';
+import { sendCoachMessage, buildCoachSystemPrompt, transcribeAudio } from '../../../services/groq';
 import { supabase } from '../../../services/supabase';
 
 const FREE_MSG_LIMIT = 10;
@@ -89,6 +90,9 @@ export default function CoachScreen() {
   const [input, setInput]               = useState('');
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSending, setIsSending]       = useState(false); // local send guard
+  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(audioRecorder, 500);
+  const isRecording   = recorderState.isRecording;
   const flatRef                         = useRef<FlatList<CoachMessage>>(null);
 
   const {
@@ -105,6 +109,12 @@ export default function CoachScreen() {
     setTyping(false);
     setIsSending(false);
     checkAndResetDaily();
+
+    return () => {
+      if (audioRecorder.isRecording) {
+        audioRecorder.stop().catch(() => {});
+      }
+    };
   }, []);
 
   // Load coach history from Supabase
@@ -166,7 +176,7 @@ export default function CoachScreen() {
           return;
         }
         const result = await ImagePicker.launchImageLibraryAsync({
-          base64: true, quality: 0.6, mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          base64: true, quality: 0.2, mediaTypes: ImagePicker.MediaTypeOptions.Images, // Lower quality for Groq
         });
         if (!result.canceled && result.assets?.[0]?.base64) {
           setSelectedImage(result.assets[0].base64!);
@@ -175,7 +185,7 @@ export default function CoachScreen() {
       }
 
       const result = await ImagePicker.launchCameraAsync({
-        base64: true, quality: 0.6,
+        base64: true, quality: 0.2, // Lower quality for Groq
       });
       if (!result.canceled && result.assets?.[0]?.base64) {
         setSelectedImage(result.assets[0].base64!);
@@ -184,6 +194,52 @@ export default function CoachScreen() {
       Alert.alert('Error', 'Could not open camera. Please try again.');
     }
   }, []);
+
+  // ─── Voice Recording ────────────────────────────────────────────────────────
+  const startRecording = async () => {
+    try {
+      const permission = await requestRecordingPermissionsAsync();
+      if (permission.status !== 'granted') {
+        Alert.alert('Permission needed', 'Please allow microphone access to use voice features.');
+        return;
+      }
+
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+      });
+
+      await audioRecorder.prepareToRecordAsync();
+      audioRecorder.record();
+    } catch (err: any) {
+      console.error('Failed to start recording', err);
+    }
+  };
+
+  const stopRecording = async () => {
+    if (!isRecording) return;
+    
+    try {
+      await audioRecorder.stop();
+      const uri = audioRecorder.uri;
+
+      if (uri) {
+        setTyping(true);
+        try {
+          const text = await transcribeAudio(uri);
+          if (text.trim()) {
+            setInput(text);
+          }
+        } catch (err) {
+          Alert.alert('Transcription failed', 'Could not convert voice to text.');
+        } finally {
+          setTyping(false);
+        }
+      }
+    } catch (err) {
+      console.error('Failed to stop recording', err);
+    }
+  };
 
   // ─── Send message ─────────────────────────────────────────────────────────────
   const handleSend = useCallback(async (overrideText?: string) => {
@@ -402,6 +458,15 @@ export default function CoachScreen() {
                 <Text style={s.cameraEmoji}>📷</Text>
               </TouchableOpacity>
 
+              <TouchableOpacity
+                onPressIn={startRecording}
+                onPressOut={stopRecording}
+                style={[s.micBtn, isRecording && s.micBtnActive]}
+                activeOpacity={0.7}
+              >
+                <Text style={s.cameraEmoji}>{isRecording ? '🛑' : '🎙️'}</Text>
+              </TouchableOpacity>
+
               <TextInput
                 style={s.input}
                 value={input}
@@ -457,6 +522,8 @@ const s = StyleSheet.create({
   removeImageText:      { color: '#fff', fontSize: 12, fontWeight: '700' },
   inputArea:            { flexDirection: 'row', gap: 8, padding: Spacing.base, alignItems: 'flex-end' },
   cameraBtn:            { padding: 8, justifyContent: 'center', alignItems: 'center' },
+  micBtn:               { padding: 8, justifyContent: 'center', alignItems: 'center' },
+  micBtnActive:         { backgroundColor: '#EF444422', borderRadius: Radius.full },
   cameraEmoji:          { fontSize: 24 },
   input:                { flex: 1, backgroundColor: Colors.surface, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: Colors.textPrimary, borderWidth: 1.5, borderColor: Colors.border, maxHeight: 120 },
   sendBtn:              { borderRadius: Radius.md, overflow: 'hidden' },

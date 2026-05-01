@@ -60,7 +60,14 @@
           "icon": "./assets/notification-icon.png",
           "color": "#7C5CFC"
         }
-      ]
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "Allow Fit-Forward to access your microphone to log food and talk with your AI coach."
+        }
+      ],
+      "expo-video"
     ],
     "experiments": {
       "typedRoutes": true
@@ -72,4 +79,3 @@
     }
   }
 }
-

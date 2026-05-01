@@ -148,6 +148,7 @@ export default function ProfileScreen() {
 
     try {
       const { error } = await supabase.from('users').update({
+        name:             newProfile.name,
         weight:           newProfile.weight,
         height:           newProfile.height,
         age:              newProfile.age,
@@ -182,6 +183,28 @@ export default function ProfileScreen() {
       { text: 'Build Muscle', onPress: () => updateProfileField('goal', 'gain') },
       { text: 'Cancel', style: 'cancel' },
     ]);
+  };
+
+  const handleEditSex = () => {
+    Alert.alert('Biological Sex', 'Used for calculating basal metabolic rate:', [
+      { text: 'Male',   onPress: () => updateProfileField('sex', 'male') },
+      { text: 'Female', onPress: () => updateProfileField('sex', 'female') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const handleEditActivity = () => {
+    Alert.alert('Activity Level', 'Select your daily activity level:', [
+      { text: 'Sedentary',   onPress: () => updateProfileField('activityLevel', 'sedentary') },
+      { text: 'Lightly Active', onPress: () => updateProfileField('activityLevel', 'light') },
+      { text: 'Moderately Active', onPress: () => updateProfileField('activityLevel', 'moderate') },
+      { text: 'Very Active', onPress: () => updateProfileField('activityLevel', 'active') },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const handleNotImplemented = () => {
+    Alert.alert('Coming Soon', 'This feature is currently in development and will be available in a future update.');
   };
 
   const handleLogout = async () => {
@@ -274,20 +297,23 @@ export default function ProfileScreen() {
           <Text style={s.sectionTitle}>Body & Health</Text>
           <MenuRow icon="📏" label="Height"       value={`${profile?.height ?? '--'} cm`} onPress={() => openEdit('height', 'Update Height', 'Enter height in cm', 'numeric')} />
           <MenuRow icon="⚖️" label="Weight"       value={`${profile?.weight ?? '--'} kg`} onPress={() => openEdit('weight', 'Update Weight', 'Enter weight in kg', 'numeric')} />
+          <MenuRow icon="🎂" label="Age"          value={`${profile?.age ?? '--'} yrs`}  onPress={() => openEdit('age', 'Update Age', 'Enter your age', 'numeric')} />
+          <MenuRow icon="⚧️" label="Sex"          value={profile?.sex ? profile.sex.charAt(0).toUpperCase() + profile.sex.slice(1) : '--'} onPress={handleEditSex} />
+          <MenuRow icon="🏃" label="Activity"     value={profile?.activityLevel ?? '--'} onPress={handleEditActivity} />
           <MenuRow icon="📊" label="Measurements" onPress={() => router.push('/modals/body-measurements')} />
           <MenuRow icon="🎯" label="Recalculate Macros" onPress={handleEditGoal} />
         </View>
 
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Account</Text>
+          <Text style={s.sectionTitle}>Account & App</Text>
           <MenuRow icon="👤" label="Edit Name"           onPress={() => openEdit('name', 'Update Name', 'Enter your name')} />
-          <MenuRow icon="🍽️" label="Dietary Preferences" onPress={() => {}} />
-          <MenuRow icon="🔔" label="Notifications"       onPress={() => {}} />
-          <MenuRow icon="🌙" label="Appearance"          value="Dark" onPress={() => {}} />
+          <MenuRow icon="🍽️" label="Dietary Preferences" onPress={handleNotImplemented} />
+          <MenuRow icon="🔔" label="Notifications"       onPress={handleNotImplemented} />
+          <MenuRow icon="🌙" label="Appearance"          value="Dark" onPress={handleNotImplemented} />
         </View>
 
         <View style={s.section}>
-          <Text style={s.sectionTitle}>Account</Text>
+          <Text style={s.sectionTitle}>Danger Zone</Text>
           <MenuRow icon="🚪" label="Sign Out" onPress={handleLogout} isDestructive />
         </View>
 

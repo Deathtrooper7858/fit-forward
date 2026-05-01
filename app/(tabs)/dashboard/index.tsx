@@ -227,12 +227,7 @@ export default function DashboardScreen() {
           <QuickAction emoji="🍽️" label="Log Meal"  onPress={() => router.push('/(tabs)/tracker')} />
           <QuickAction emoji="📷" label="Scan Food" onPress={() => router.push('/modals/scan')} />
           <QuickAction emoji="🤖" label="Ask Fitz"  onPress={() => router.push('/(tabs)/coach')} />
-          <QuickAction
-            emoji="💧"
-            label="Water"
-            onPress={handleAddWater}
-            subValue={`${waterGlasses}/${waterTarget} 🥤`}
-          />
+          <QuickAction emoji="🥗" label="Recipes"   onPress={() => router.push('/modals/recipes')} />
         </View>
 
         {/* Streak + water row */}
