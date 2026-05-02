@@ -74,7 +74,8 @@
     "lunch": "Lunch",
     "dinner": "Dinner",
     "snack": "Snack",
-    "emptySub": "Search for food above, scan a barcode, or use AI photo recognition"
+    "emptySub": "Search for food above, scan a barcode, or use AI photo recognition",
+    "photoRecognition": "Photo Recognition"
   },
   "planner": {
     "title": "Meal Planner",

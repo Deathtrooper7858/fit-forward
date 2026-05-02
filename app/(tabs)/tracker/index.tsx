@@ -261,7 +261,7 @@ export default function TrackerScreen() {
         <Text style={[s.title, { color: colors.textPrimary }]}>{t('tracker.title')}</Text>
         <TouchableOpacity style={s.scanBtn} onPress={() => router.push('/modals/scan')} activeOpacity={0.8}>
           <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.scanGrad}>
-            <Text style={s.scanText}>📷 {t('tracker.barcodeScan')}</Text>
+            <Text style={s.scanText}>📷 {t('tracker.photoRecognition')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>

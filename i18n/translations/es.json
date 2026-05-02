@@ -74,7 +74,8 @@
     "lunch": "Almuerzo",
     "dinner": "Cena",
     "snack": "Snack",
-    "emptySub": "Busca alimentos arriba, escanea un código o usa el reconocimiento por foto"
+    "emptySub": "Busca alimentos arriba, escanea un código o usa el reconocimiento por foto",
+    "photoRecognition": "Reconocimiento por Foto"
   },
   "planner": {
     "title": "Planificador",
