@@ -1,5 +1,5 @@
 /**
- * Fit-Forward Design System — Color Tokens
+ * FitGO Design System — Color Tokens
  * Supports light and dark modes.
  */
 

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TouchableOpacity, TextInput,
-  KeyboardAvoidingView, Platform, ScrollView, Alert
+  KeyboardAvoidingView, Platform, ScrollView, Alert, Image
 } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -41,11 +41,11 @@ export default function LoginScreen() {
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
     >
       <ScrollView contentContainerStyle={styles.scroll} keyboardShouldPersistTaps="handled">
-        {/* Header */}
         <View style={styles.header}>
-          <LinearGradient colors={['#7C5CFC', '#4338CA']} style={styles.logoCircle}>
-            <Text style={styles.logoText}>FF</Text>
-          </LinearGradient>
+          <Image 
+            source={require('../../assets/fitgo.jpeg')} 
+            style={styles.logoImage} 
+          />
           <Text style={[styles.title, { color: colors.textPrimary }]}>Welcome back</Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Log in to continue your journey</Text>
         </View>
@@ -114,8 +114,7 @@ const styles = StyleSheet.create({
   container:   { flex: 1 },
   scroll:      { flexGrow: 1, padding: Spacing.base },
   header:      { alignItems: 'center', paddingTop: 60, paddingBottom: 40 },
-  logoCircle:  { width: 72, height: 72, borderRadius: 22, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  logoText:    { fontSize: 28, fontWeight: '800', color: '#fff', letterSpacing: -1 },
+  logoImage:   { width: 80, height: 80, borderRadius: 24, marginBottom: 20 },
   title:       { fontSize: 28, fontWeight: '700', marginBottom: 6 },
   subtitle:    { fontSize: 15 },
   form:        { gap: Spacing.base },

@@ -1,5 +1,5 @@
 /**
- * Fit-Forward Design System — Spacing & Layout Tokens
+ * FitGO Design System — Spacing & Layout Tokens
  */
 export const Spacing = {
   xs:   4,

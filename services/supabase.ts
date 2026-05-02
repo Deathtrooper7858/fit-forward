@@ -1,5 +1,5 @@
 /**
- * Supabase client singleton para Fit-Forward.
+ * Supabase client singleton para FitGO.
  * Lee credenciales de variables de entorno (definidas en .env o EAS secrets).
  */
 import 'react-native-url-polyfill/auto';

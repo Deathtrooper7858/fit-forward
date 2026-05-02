@@ -1,5 +1,5 @@
 /**
- * Fit-Forward Design System — Typography
+ * FitGO Design System — Typography
  * Using Inter (body) + DM Sans (display) via expo-font / Google Fonts
  */
 export const Typography = {

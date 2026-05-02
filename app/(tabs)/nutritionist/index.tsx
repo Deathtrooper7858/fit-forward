@@ -32,7 +32,7 @@ function MessageBubble({ msg }: { msg: CoachMessage }) {
   return (
     <View style={[bubble.row, isUser && bubble.rowUser]}>
       {!isUser && (
-        <Image source={require('../../../assets/honoka.jpg')} style={bubble.avatar} resizeMode="cover" />
+        <Image source={require('../../../assets/fitgo.jpeg')} style={bubble.avatar} resizeMode="cover" />
       )}
       <View style={[bubble.box, isUser ? { backgroundColor: colors.primary, borderBottomRightRadius: 4 } : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4 }]}>
         {msg.imageUrl && (
@@ -69,7 +69,7 @@ function TypingIndicator() {
   const colors = useTheme();
   return (
     <View style={[bubble.row, { paddingHorizontal: Spacing.base, marginTop: 4 }]}>
-      <Image source={require('../../../assets/honoka.jpg')} style={bubble.avatar} resizeMode="cover" />
+      <Image source={require('../../../assets/fitgo.jpeg')} style={bubble.avatar} resizeMode="cover" />
       <View style={[bubble.box, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4, paddingHorizontal: 16, paddingVertical: 14 }]}>
         <ActivityIndicator color={colors.primary} size="small" />
       </View>
@@ -92,7 +92,7 @@ export default function NutritionistScreen() {
   const colors = useTheme();
   const { language } = useSettingsStore();
   const {
-    messages, isTyping, msgCount,
+    nutritionistMessages: messages, isTyping, msgCount,
     addMessage, setMessages, setTyping, incrementCount, checkAndResetDaily,
   } = useCoachStore();
   const { profile } = useAuthStore();
@@ -116,6 +116,7 @@ export default function NutritionistScreen() {
         .from('coach_conversations')
         .select('id, role, content, created_at')
         .eq('user_id', profile!.id)
+        .eq('coach_type', 'nutritionist')
         .order('created_at', { ascending: true })
         .limit(50);
 
@@ -126,7 +127,7 @@ export default function NutritionistScreen() {
           content:   m.content ?? '',
           timestamp: m.created_at,
         }));
-        setMessages(formatted);
+        setMessages(formatted, 'nutritionist');
       } else {
         // If no history or if the only message is the welcome message (and language changed), re-init
         const shouldInit = messages.length === 0 || (messages.length === 1 && messages[0].id === 'welcome');
@@ -136,7 +137,7 @@ export default function NutritionistScreen() {
             role:      'model',
             content:   t('nutritionist.welcome'),
             timestamp: new Date().toISOString(),
-          }]);
+          }], 'nutritionist');
         }
       }
     }
@@ -252,7 +253,7 @@ export default function NutritionistScreen() {
         role:      'model',
         content:   'Profile not loaded yet. Please wait a moment and try again.',
         timestamp: new Date().toISOString(),
-      });
+      }, 'nutritionist');
       return;
     }
 
@@ -266,7 +267,7 @@ export default function NutritionistScreen() {
       imageUrl:  currentImg ? `data:image/jpeg;base64,${currentImg}` : undefined,
       timestamp: new Date().toISOString(),
     };
-    addMessage(userMsg);
+    addMessage(userMsg, 'nutritionist');
     incrementCount();
     setInput('');
     setSelectedImage(null);
@@ -278,6 +279,7 @@ export default function NutritionistScreen() {
       user_id: profile.id,
       role:    'user',
       content: text || '[Image]',
+      coach_type: 'nutritionist',
     });
 
     try {
@@ -325,13 +327,14 @@ export default function NutritionistScreen() {
         content:   reply,
         timestamp: new Date().toISOString(),
       };
-      addMessage(botMsg);
+      addMessage(botMsg, 'nutritionist');
 
       // Persist bot response (best-effort, fire-and-forget)
       void supabase.from('coach_conversations').insert({
         user_id: profile.id,
         role:    'model',
         content: reply,
+        coach_type: 'nutritionist',
       });
 
     } catch (err: any) {
@@ -341,7 +344,7 @@ export default function NutritionistScreen() {
         role:      'model',
         content:   `Sorry, I couldn't connect right now. ${err?.message ?? 'Please try again.'}`,
         timestamp: new Date().toISOString(),
-      });
+      }, 'nutritionist');
     } finally {
       setTyping(false);
       setIsSending(false);
@@ -355,7 +358,7 @@ export default function NutritionistScreen() {
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[s.header, { borderBottomColor: colors.border }]}>
-        <Image source={require('../../../assets/honoka.jpg')} style={s.headerAvatar} resizeMode="cover" />
+        <Image source={require('../../../assets/fitgo.jpeg')} style={s.headerAvatar} resizeMode="cover" />
         <View style={{ flex: 1 }}>
           <Text style={[s.headerName, { color: colors.textPrimary }]}>{t('coach.nutritionist', 'Nutritionist')}</Text>
           <View style={s.onlineRow}>

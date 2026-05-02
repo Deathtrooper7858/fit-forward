@@ -1,5 +1,5 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Image } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Spacing, Radius } from '../../constants';
@@ -26,10 +26,11 @@ export default function WelcomeScreen() {
       <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         {/* Hero */}
         <View style={styles.hero}>
-          <LinearGradient colors={['#7C5CFC', '#4338CA']} style={styles.logoMark}>
-            <Text style={styles.logoText}>FF</Text>
-          </LinearGradient>
-          <Text style={[styles.brand, { color: colors.textPrimary }]}>Fit-Forward</Text>
+          <Image 
+            source={require('../../assets/fitgo.jpeg')} 
+            style={styles.logoImage} 
+          />
+          <Text style={[styles.brand, { color: colors.textPrimary }]}>FitGO</Text>
           <Text style={[styles.tagline, { color: colors.textSecondary }]}>
             {t('welcome.tagline')}
           </Text>
@@ -88,8 +89,7 @@ const styles = StyleSheet.create({
   },
   content:        { flexGrow: 1, padding: Spacing.base, paddingTop: 100 },
   hero:           { alignItems: 'center', marginBottom: 48 },
-  logoMark:       { width: 88, height: 88, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
-  logoText:       { fontSize: 36, fontWeight: '900', color: '#fff', letterSpacing: -1 },
+  logoImage:      { width: 100, height: 100, borderRadius: 32, marginBottom: 20 },
   brand:          { fontSize: 38, fontWeight: '800', letterSpacing: -1, marginBottom: 16 },
   tagline:        { fontSize: 17, textAlign: 'center', lineHeight: 26 },
   features:       { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center', marginBottom: 48 },

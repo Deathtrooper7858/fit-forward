@@ -1,5 +1,5 @@
 -- ============================================================
--- Fit-Forward — Supabase Database Schema
+-- FitGO — Supabase Database Schema
 -- Migration 001: Initial schema
 -- ============================================================
 

@@ -1,5 +1,5 @@
 {
-  "name": "fit-forward",
+  "name": "fitgo",
   "version": "1.0.0",
   "main": "expo-router/entry",
   "scripts": {
@@ -49,7 +49,7 @@
   "devDependencies": {
     "@types/react": "~19.2.10",
     "babel-preset-expo": "~55.0.19",
-    "typescript": "~5.9.2"
+    "typescript": "~5.3.3"
   },
   "private": true
 }

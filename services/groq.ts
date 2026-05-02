@@ -1,5 +1,5 @@
 /**
- * AI service for Fit-Forward — powered by Groq (using native fetch for React Native compatibility).
+ * AI service for FitGO — powered by Groq (using native fetch for React Native compatibility).
  * Maintains the same exported API as the previous service so the
  * rest of the app requires zero changes.
  *
@@ -65,7 +65,7 @@ export function buildCoachSystemPrompt(userProfile: {
   const targetLang = langNames[language] || 'English';
 
   if (coachType === 'trainer') {
-    return `You are Fitz, an expert AI personal trainer inside the Fit-Forward app.
+    return `You are Fitz, an expert AI personal trainer inside the FitGO app.
 IMPORTANT: You MUST respond in ${targetLang}.
 
 User profile:
@@ -81,7 +81,7 @@ Guidelines:
 6. If the user asks about diets, macros, or nutrition, gently remind them that you are currently in "Personal Trainer" mode and they should switch to the "Nutritionist" tab for dietary advice.`;
   }
 
-  return `You are Fitz, an expert AI nutritionist inside the Fit-Forward app.
+  return `You are Fitz, an expert AI nutritionist inside the FitGO app.
 IMPORTANT: You MUST respond in ${targetLang}.
 
 User profile:

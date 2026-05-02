@@ -2,7 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Spacing, Radius } from '../../constants';
+import { useTheme } from '../../hooks/useTheme';
+import { Spacing, Radius } from '../../constants';
 
 const PLANS = [
   {
@@ -54,7 +55,7 @@ export default function PaywallModal() {
         {/* Hero */}
         <LinearGradient colors={colors.theme === 'dark' ? ['#7C5CFC22', '#22D3EE11'] : [colors.primary + '15', colors.secondary + '08']} style={[s.hero, { borderColor: colors.primary + '33' }]}>
           <Text style={s.heroEmoji}>⭐</Text>
-          <Text style={[s.heroTitle, { color: colors.textPrimary }]}>Unlock Fit-Forward Pro</Text>
+          <Text style={[s.heroTitle, { color: colors.textPrimary }]}>Unlock FitGO Pro</Text>
           <Text style={[s.heroSub, { color: colors.textSecondary }]}>Everything you need to transform your body, powered by AI.</Text>
         </LinearGradient>
 

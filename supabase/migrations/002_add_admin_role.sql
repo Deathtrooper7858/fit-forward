@@ -1,5 +1,5 @@
 -- ============================================================
--- Fit-Forward — Add Admin Role
+-- FitGO — Add Admin Role
 -- Migration 002: Add role column and admin policies
 -- ============================================================
 

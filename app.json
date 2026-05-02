@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "Fit-Forward",
-    "slug": "fit-forward",
+    "name": "FitGO",
+    "slug": "fitgo",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
-    "scheme": "fitforward",
+    "scheme": "fitgo",
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -15,7 +15,7 @@
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.fitforward.app",
+      "bundleIdentifier": "com.fitgo.app",
       "infoPlist": {
         "NSCameraUsageDescription": "Scan food barcodes and take progress photos",
         "NSMicrophoneUsageDescription": "Use voice to log food and talk with your AI coach",
@@ -23,7 +23,7 @@
       }
     },
     "android": {
-      "package": "com.fitforward.app",
+      "package": "com.fitgo.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0D0F14"
@@ -48,7 +48,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow Fit-Forward to access your camera to scan food barcodes and take progress photos."
+          "cameraPermission": "Allow FitGO to access your camera to scan food barcodes and take progress photos."
         }
       ],
       [
@@ -61,7 +61,7 @@
       [
         "expo-audio",
         {
-          "microphonePermission": "Allow Fit-Forward to access your microphone to log food and talk with your AI coach."
+          "microphonePermission": "Allow FitGO to access your microphone to log food and talk with your AI coach."
         }
       ],
       "expo-video"

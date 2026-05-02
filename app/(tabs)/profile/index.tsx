@@ -33,7 +33,7 @@ function EditModal({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={[em.box, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[em.title, { color: colors.textPrimary }]}>{title}</Text>
+          <Text style={[em.title, { color: colors.textPrimary }]}>Unlock FitGO Pro</Text>
           <TextInput
             style={[em.input, { backgroundColor: colors.surfaceAlt, color: colors.textPrimary, borderColor: colors.border }]}
             value={value}
@@ -478,7 +478,7 @@ export default function ProfileScreen() {
           <MenuRow icon="🚪" label={t('profile.signOut')} onPress={handleLogout} isDestructive />
         </View>
 
-        <Text style={[s.version, { color: colors.textMuted }]}>Fit-Forward v1.0.1</Text>
+        <Text style={[s.version, { color: colors.textMuted }]}>FitGO v1.0.1</Text>
         <View style={{ height: 32 }} />
       </ScrollView>
     </SafeAreaView>

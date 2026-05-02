@@ -1,5 +1,5 @@
 /**
- * Fit-Forward Global State — Zustand stores with AsyncStorage persistence
+ * FitGO Global State — Zustand stores with AsyncStorage persistence
  */
 import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
@@ -198,32 +198,65 @@ export const useNutritionStore = create<NutritionState>()(
 );
 
 // ─── Coach store ──────────────────────────────────────────────────────────────
+interface CoachSession {
+  id: string;
+  title: string;
+  created_at: string;
+}
+
 interface CoachState {
-  messages:    CoachMessage[];
+  nutritionistMessages: CoachMessage[];
+  trainerMessages:      CoachMessage[];
+  nutritionistSessions: CoachSession[];
+  trainerSessions:      CoachSession[];
+  currentNutritionistSessionId: string | null;
+  currentTrainerSessionId:      string | null;
   isTyping:    boolean;
   msgCount:    number;
   lastResetDate: string;
-  setMessages: (msgs: CoachMessage[]) => void;
-  addMessage:  (msg: CoachMessage) => void;
+  setMessages: (msgs: CoachMessage[], type: 'nutritionist' | 'trainer') => void;
+  addMessage:  (msg: CoachMessage, type: 'nutritionist' | 'trainer') => void;
+  setSessions: (sessions: CoachSession[], type: 'nutritionist' | 'trainer') => void;
+  setCurrentSessionId: (id: string | null, type: 'nutritionist' | 'trainer') => void;
   setTyping:   (v: boolean) => void;
   incrementCount: () => void;
-  resetMessages:  () => void;
+  resetMessages:  (type: 'nutritionist' | 'trainer') => void;
   checkAndResetDaily: () => void;
 }
 
 export const useCoachStore = create<CoachState>()(
   persist(
     (set, get) => ({
-      messages:      [],
+      nutritionistMessages: [],
+      trainerMessages:      [],
+      nutritionistSessions: [],
+      trainerSessions:      [],
+      currentNutritionistSessionId: null,
+      currentTrainerSessionId:      null,
       isTyping:      false,
       msgCount:      0,
       lastResetDate: new Date().toISOString().split('T')[0],
 
-      setMessages:    (messages) => set({ messages }),
-      addMessage:     (msg) => set((s) => ({ messages: [...s.messages, msg] })),
+      setMessages: (messages, type) => set((s) => ({
+        [type === 'nutritionist' ? 'nutritionistMessages' : 'trainerMessages']: messages
+      })),
+      addMessage: (msg, type) => set((s) => ({
+        [type === 'nutritionist' ? 'nutritionistMessages' : 'trainerMessages']: [
+          ...(type === 'nutritionist' ? s.nutritionistMessages : s.trainerMessages),
+          msg
+        ]
+      })),
+      setSessions: (sessions, type) => set((s) => ({
+        [type === 'nutritionist' ? 'nutritionistSessions' : 'trainerSessions']: sessions
+      })),
+      setCurrentSessionId: (id, type) => set((s) => ({
+        [type === 'nutritionist' ? 'currentNutritionistSessionId' : 'currentTrainerSessionId']: id
+      })),
       setTyping:      (isTyping) => set({ isTyping }),
       incrementCount: () => set((s) => ({ msgCount: s.msgCount + 1 })),
-      resetMessages:  () => set({ messages: [], msgCount: 0 }),
+      resetMessages: (type) => set((s) => ({
+        [type === 'nutritionist' ? 'nutritionistMessages' : 'trainerMessages']: []
+      })),
       checkAndResetDaily: () => {
         const today = new Date().toISOString().split('T')[0];
         if (get().lastResetDate !== today) {

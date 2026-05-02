@@ -1,4 +1,4 @@
- FIT-FORWARD — Product Brief
+ FitGO — Product Brief
 **Cliente:** Antigravity  
 **Versión del documento:** 1.0  
 **Fecha:** Abril 2026  
@@ -8,7 +8,7 @@
 
 ## 1. Visión General del Producto
 
-**Fit-Forward** es una aplicación móvil multiplataforma (iOS & Android) orientada al fitness y la nutrición personalizada, desarrollada con tecnologías de primer nivel. Su propuesta de valor central es ofrecer una experiencia de seguimiento nutricional inteligente, asistida por IA, con un modelo freemium que incentiva la conversión a la suscripción Pro mediante funciones exclusivas de alto valor percibido.
+**FitGO** es una aplicación móvil multiplataforma (iOS & Android) orientada al fitness y la nutrición personalizada, desarrollada con tecnologías de primer nivel. Su propuesta de valor central es ofrecer una experiencia de seguimiento nutricional inteligente, asistida por IA, con un modelo freemium que incentiva la conversión a la suscripción Pro mediante funciones exclusivas de alto valor percibido.
 
 ---
 
@@ -32,7 +32,7 @@
 ## 3. Arquitectura de la Aplicación
 
 ```
-FitForward/
+FitGO/
 ├── app/                      # Expo Router (file-based routing)
 │   ├── (auth)/               # Flujos de autenticación
 │   ├── (tabs)/               # Navegación principal (Tab Bar)
@@ -241,5 +241,5 @@ Todas las tablas tienen políticas RLS activas: cada usuario solo accede a sus p
 
 ---
 
-*Documento preparado por Antigravity para el proyecto Fit-Forward.*  
+*Documento preparado por Antigravity para el proyecto FitGO.*  
 *Versión sujeta a revisión y aprobación del cliente.*
