@@ -3,14 +3,17 @@ import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Ima
 import { router } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Spacing, Radius } from '../../constants';
+import { Spacing, Radius } from '../../constants';
 import { getFoodByBarcode } from '../../services/foodDatabase';
 import { analyzeFoodPhoto } from '../../services/groq';
-import { useNutritionStore } from '../../store';
+import { useNutritionStore, useSettingsStore } from '../../store';
+import { useTheme } from '../../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 
 type ScanMode = 'barcode' | 'photo';
 
 export default function ScanModal() {
+  const { t } = useTranslation();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned]           = useState(false);
   const [loading, setLoading]           = useState(false);
@@ -23,6 +26,8 @@ export default function ScanModal() {
   } | null>(null);
   const [capturedUri, setCapturedUri]    = useState<string | null>(null);
   const cameraRef = useRef<any>(null);
+  const colors = useTheme();
+  const { language } = useSettingsStore();
   const { addLog } = useNutritionStore();
 
   useEffect(() => {
@@ -41,11 +46,11 @@ export default function ScanModal() {
 
       if (!food) {
         Alert.alert(
-          'Product not found',
-          `Barcode: ${data}\n\nThis product isn't in our database yet.`,
+          t('scan.productNotFound'),
+          `Barcode: ${data}\n\n${t('scan.productNotFoundSub')}`,
           [
-            { text: 'Try Again', onPress: () => setScanned(false) },
-            { text: 'Close', onPress: () => router.back() },
+            { text: t('scan.tryAgain'), onPress: () => setScanned(false) },
+            { text: t('common.cancel'), onPress: () => router.back() },
           ]
         );
         return;
@@ -58,7 +63,7 @@ export default function ScanModal() {
       });
     } catch {
       setLoading(false);
-      Alert.alert('Error', 'Failed to look up barcode. Please try again.', [
+      Alert.alert(t('common.error'), t('scan.lookupFailed') || 'Failed to look up barcode. Please try again.', [
         { text: 'OK', onPress: () => setScanned(false) },
       ]);
     }
@@ -78,7 +83,7 @@ export default function ScanModal() {
 
       setCapturedUri(photo.uri);
 
-      const result = await analyzeFoodPhoto(photo.base64);
+      const result = await analyzeFoodPhoto(photo.base64, language);
       setPhotoResult(result);
     } catch (err: any) {
       console.error('Analysis Error:', err);
@@ -117,8 +122,8 @@ export default function ScanModal() {
     });
 
     Alert.alert(
-      'Added! ✅',
-      `${photoResult.foods.length} item(s) added to ${getAutoMeal()}.`,
+      t('common.success') + ' ✅',
+      `${photoResult.foods.length} ${t('scan.itemsAdded')} ${t(`tracker.${getAutoMeal()}`)}.`,
       [{ text: 'OK', onPress: () => router.back() }]
     );
   };
@@ -139,8 +144,8 @@ export default function ScanModal() {
   // ─── Permission screens ────────────────────────────────────────────────────
   if (!permission) {
     return (
-      <View style={s.center}>
-        <ActivityIndicator color={Colors.primary} size="large" />
+      <View style={[s.center, { backgroundColor: colors.background }]}>
+        <ActivityIndicator color={colors.primary} size="large" />
       </View>
     );
   }
@@ -148,10 +153,10 @@ export default function ScanModal() {
   if (!permission.granted) {
     return (
       <View style={s.center}>
-        <Text style={s.noPermText}>Camera permission is required to scan food.</Text>
+        <Text style={s.noPermText}>{t('scan.noPermission')}</Text>
         <TouchableOpacity style={s.permBtn} onPress={requestPermission}>
           <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.permGrad}>
-            <Text style={s.permBtnText}>Grant Permission</Text>
+            <Text style={s.permBtnText}>{t('scan.grantPermission')}</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -161,18 +166,18 @@ export default function ScanModal() {
   // ─── Photo result screen ────────────────────────────────────────────────────
   if (photoResult && capturedUri) {
     const confidenceColor = photoResult.confidence === 'high'
-      ? Colors.success
+      ? colors.success
       : photoResult.confidence === 'medium'
-        ? Colors.warning
-        : Colors.error;
+        ? colors.warning
+        : colors.error;
 
     return (
-      <View style={s.container}>
-        <View style={s.resultHeader}>
+      <View style={[s.container, { backgroundColor: colors.background }]}>
+        <View style={[s.resultHeader, { backgroundColor: colors.background }]}>
           <TouchableOpacity style={s.closeBtn} onPress={() => router.back()}>
             <Text style={s.closeText}>✕</Text>
           </TouchableOpacity>
-          <Text style={s.title}>AI Food Analysis</Text>
+          <Text style={s.title}>{t('scan.analysisTitle')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
@@ -184,49 +189,49 @@ export default function ScanModal() {
           <View style={[s.confidenceBadge, { borderColor: confidenceColor }]}>
             <View style={[s.confidenceDot, { backgroundColor: confidenceColor }]} />
             <Text style={[s.confidenceText, { color: confidenceColor }]}>
-              {photoResult.confidence.toUpperCase()} confidence
+              {photoResult.confidence.toUpperCase()} {t('scan.confidence')}
             </Text>
           </View>
 
           {/* Detected foods */}
-          <Text style={s.sectionTitle}>Detected Foods</Text>
+          <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>{t('scan.detectedFoods')}</Text>
           {photoResult.foods.map((food, i) => (
-            <View key={i} style={s.foodCard}>
+            <View key={i} style={[s.foodCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={s.foodCardLeft}>
-                <Text style={s.foodName}>{food.name}</Text>
-                <Text style={s.foodGrams}>{food.grams}g</Text>
+                <Text style={[s.foodName, { color: colors.textPrimary }]}>{food.name}</Text>
+                <Text style={[s.foodGrams, { color: colors.textMuted }]}>{food.grams}g</Text>
               </View>
               <View style={s.foodCardRight}>
-                <Text style={s.foodCal}>{food.calories} kcal</Text>
+                <Text style={[s.foodCal, { color: colors.accent }]}>{food.calories} kcal</Text>
                 <View style={s.macroRow}>
-                  <Text style={[s.macroTag, { color: Colors.protein }]}>P {food.protein}g</Text>
-                  <Text style={[s.macroTag, { color: Colors.carbs }]}>C {food.carbs}g</Text>
-                  <Text style={[s.macroTag, { color: Colors.fat }]}>F {food.fat}g</Text>
+                  <Text style={[s.macroTag, { color: colors.protein }]}>P {food.protein}g</Text>
+                  <Text style={[s.macroTag, { color: colors.carbs }]}>C {food.carbs}g</Text>
+                  <Text style={[s.macroTag, { color: colors.fat }]}>F {food.fat}g</Text>
                 </View>
               </View>
             </View>
           ))}
 
           {/* Total */}
-          <LinearGradient colors={['#7C5CFC15', '#22D3EE11']} style={s.totalCard}>
-            <Text style={s.totalLabel}>Total Calories</Text>
-            <Text style={s.totalValue}>{photoResult.totalCalories} kcal</Text>
+          <LinearGradient colors={colors.theme === 'dark' ? ['#7C5CFC15', '#22D3EE11'] : [colors.primary + '10', colors.secondary + '05']} style={[s.totalCard, { borderColor: colors.primary + '33' }]}>
+            <Text style={[s.totalLabel, { color: colors.textSecondary }]}>{t('scan.totalCalories')}</Text>
+            <Text style={[s.totalValue, { color: colors.accent }]}>{photoResult.totalCalories} kcal</Text>
           </LinearGradient>
 
           {/* Notes */}
           {photoResult.notes && (
-            <Text style={s.notesText}>💡 {photoResult.notes}</Text>
+            <Text style={[s.notesText, { color: colors.textSecondary }]}>💡 {photoResult.notes}</Text>
           )}
         </ScrollView>
 
         {/* Action buttons */}
-        <View style={s.resultFooter}>
-          <TouchableOpacity style={s.retryBtn} onPress={resetPhoto}>
-            <Text style={s.retryText}>📷 Retake</Text>
+        <View style={[s.resultFooter, { backgroundColor: colors.background, borderTopColor: colors.border }]}>
+          <TouchableOpacity style={[s.retryBtn, { borderColor: colors.border }]} onPress={resetPhoto}>
+            <Text style={[s.retryText, { color: colors.textSecondary }]}>📷 {t('scan.retake')}</Text>
           </TouchableOpacity>
           <TouchableOpacity style={s.addAllBtn} onPress={handleAddAllFoods} activeOpacity={0.85}>
             <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.addAllGrad}>
-              <Text style={s.addAllText}>Add All to {getAutoMeal().charAt(0).toUpperCase() + getAutoMeal().slice(1)}</Text>
+              <Text style={s.addAllText}>{t('scan.addAll', { meal: t(`tracker.${getAutoMeal()}`) })}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -252,23 +257,23 @@ export default function ScanModal() {
           <TouchableOpacity style={s.closeBtn} onPress={() => router.back()}>
             <Text style={s.closeText}>✕</Text>
           </TouchableOpacity>
-          <Text style={s.title}>{mode === 'barcode' ? 'Scan Barcode' : 'Photo AI'}</Text>
+          <Text style={s.title}>{mode === 'barcode' ? t('scan.barcodeTitle') : t('scan.photoTitle')}</Text>
           <View style={{ width: 40 }} />
         </View>
 
         {/* Mode toggle */}
         <View style={s.modeRow}>
           <TouchableOpacity
-            style={[s.modePill, mode === 'barcode' && s.modePillActive]}
+            style={[s.modePill, mode === 'barcode' && { borderColor: colors.primary, backgroundColor: 'rgba(124,92,252,0.3)' }]}
             onPress={() => { setMode('barcode'); setScanned(false); }}
           >
-            <Text style={[s.modeText, mode === 'barcode' && s.modeTextActive]}>🔍 Barcode</Text>
+            <Text style={[s.modeText, mode === 'barcode' && s.modeTextActive]}>🔍 {t('scan.barcode')}</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[s.modePill, mode === 'photo' && s.modePillActive]}
+            style={[s.modePill, mode === 'photo' && { borderColor: colors.primary, backgroundColor: 'rgba(124,92,252,0.3)' }]}
             onPress={() => { setMode('photo'); setScanned(false); }}
           >
-            <Text style={[s.modeText, mode === 'photo' && s.modeTextActive]}>📸 Food Photo</Text>
+            <Text style={[s.modeText, mode === 'photo' && s.modeTextActive]}>📸 {t('scan.photo')}</Text>
           </TouchableOpacity>
         </View>
 
@@ -276,16 +281,16 @@ export default function ScanModal() {
         <View style={s.viewfinderWrap}>
           {mode === 'barcode' ? (
             <View style={s.viewfinder}>
-              <View style={[s.corner, s.tl]} />
-              <View style={[s.corner, s.tr]} />
-              <View style={[s.corner, s.bl]} />
-              <View style={[s.corner, s.br]} />
+              <View style={[s.corner, s.tl, { borderColor: colors.primary }]} />
+              <View style={[s.corner, s.tr, { borderColor: colors.primary }]} />
+              <View style={[s.corner, s.bl, { borderColor: colors.primary }]} />
+              <View style={[s.corner, s.br, { borderColor: colors.primary }]} />
             </View>
           ) : (
             <View style={s.photoInstructions}>
               <Text style={s.photoEmoji}>🍽️</Text>
-              <Text style={s.photoHint}>Point at your food and tap the button below</Text>
-              <Text style={s.photoHintSub}>AI will analyze the food and estimate nutrition</Text>
+              <Text style={s.photoHint}>{t('scan.photoHint')}</Text>
+              <Text style={s.photoHintSub}>{t('scan.photoHintSub')}</Text>
             </View>
           )}
         </View>
@@ -296,16 +301,16 @@ export default function ScanModal() {
             <>
               {loading ? (
                 <View style={s.statusPill}>
-                  <ActivityIndicator color={Colors.primary} size="small" />
-                  <Text style={s.statusText}>Looking up product…</Text>
+                  <ActivityIndicator color={colors.primary} size="small" />
+                  <Text style={s.statusText}>{t('scan.lookingUp')}</Text>
                 </View>
               ) : scanned ? (
                 <View style={s.statusPill}>
-                  <Text style={s.statusText}>✅ Barcode scanned</Text>
+                  <Text style={s.statusText}>✅ {t('scan.barcodeScanned') || 'Scanned'}</Text>
                 </View>
               ) : (
                 <View style={s.statusPill}>
-                  <Text style={s.statusText}>Point at a barcode to scan</Text>
+                  <Text style={s.statusText}>{t('scan.pointBarcode') || 'Point at barcode'}</Text>
                 </View>
               )}
             </>
@@ -313,8 +318,8 @@ export default function ScanModal() {
             <>
               {loading ? (
                 <View style={s.statusPill}>
-                  <ActivityIndicator color={Colors.primary} size="small" />
-                  <Text style={s.statusText}>Analyzing food…</Text>
+                  <ActivityIndicator color={colors.primary} size="small" />
+                  <Text style={s.statusText}>{t('scan.analyzing')}</Text>
                 </View>
               ) : (
                 <TouchableOpacity style={s.shutterOuter} onPress={handleTakePhoto} activeOpacity={0.8}>
@@ -336,8 +341,8 @@ const CORNER_THICKNESS = 3;
 
 const s = StyleSheet.create({
   container:    { flex: 1, backgroundColor: '#000' },
-  center:       { flex: 1, backgroundColor: Colors.background, justifyContent: 'center', alignItems: 'center', padding: Spacing.base },
-  noPermText:   { fontSize: 16, color: Colors.textSecondary, textAlign: 'center', marginBottom: 20 },
+  center:       { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.base },
+  noPermText:   { fontSize: 16, textAlign: 'center', marginBottom: 20 },
   permBtn:      { borderRadius: Radius.md, overflow: 'hidden' },
   permGrad:     { paddingHorizontal: 24, paddingVertical: 14 },
   permBtnText:  { color: '#fff', fontWeight: '700', fontSize: 16 },
@@ -350,14 +355,13 @@ const s = StyleSheet.create({
   // Mode toggle
   modeRow:      { flexDirection: 'row', gap: 8, paddingHorizontal: Spacing.base, marginBottom: 8 },
   modePill:     { flex: 1, borderRadius: Radius.full, paddingVertical: 10, alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)' },
-  modePillActive:{ backgroundColor: 'rgba(124,92,252,0.3)', borderColor: Colors.primary },
   modeText:     { color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: '600' },
   modeTextActive:{ color: '#fff' },
 
   // Viewfinder
   viewfinderWrap:{ flex: 1, justifyContent: 'center', alignItems: 'center' },
   viewfinder:   { width: 260, height: 180 },
-  corner:       { position: 'absolute', width: CORNER_SIZE, height: CORNER_SIZE, borderColor: Colors.primary, borderWidth: CORNER_THICKNESS },
+  corner:       { position: 'absolute', width: CORNER_SIZE, height: CORNER_SIZE, borderWidth: CORNER_THICKNESS },
   tl:           { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 4 },
   tr:           { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: 4 },
   bl:           { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 4 },
@@ -380,33 +384,33 @@ const s = StyleSheet.create({
   shutterIcon:  { fontSize: 28 },
 
   // ── Result screen ──────────────────────────────────────────────────────────
-  resultHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.base, paddingTop: 56, paddingBottom: 12, backgroundColor: Colors.background },
+  resultHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.base, paddingTop: 56, paddingBottom: 12 },
   capturedImage:{ width: '100%', height: 200, borderRadius: Radius.xl, marginBottom: Spacing.base },
 
   confidenceBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: Radius.full, borderWidth: 1.5, paddingHorizontal: 12, paddingVertical: 6, marginBottom: Spacing.base },
   confidenceDot:   { width: 8, height: 8, borderRadius: 4 },
   confidenceText:  { fontSize: 12, fontWeight: '700' },
 
-  sectionTitle: { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.md },
+  sectionTitle: { fontSize: 18, fontWeight: '700', marginBottom: Spacing.md },
 
-  foodCard:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.base, marginBottom: 8, borderWidth: 1, borderColor: Colors.border },
+  foodCard:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderRadius: Radius.lg, padding: Spacing.base, marginBottom: 8, borderWidth: 1 },
   foodCardLeft:  { flex: 1, marginRight: 12 },
-  foodName:      { fontSize: 15, fontWeight: '600', color: Colors.textPrimary, marginBottom: 2 },
-  foodGrams:     { fontSize: 12, color: Colors.textMuted },
+  foodName:      { fontSize: 15, fontWeight: '600', marginBottom: 2 },
+  foodGrams:     { fontSize: 12 },
   foodCardRight: { alignItems: 'flex-end' },
-  foodCal:       { fontSize: 16, fontWeight: '800', color: Colors.accent, marginBottom: 4 },
+  foodCal:       { fontSize: 16, fontWeight: '800', marginBottom: 4 },
   macroRow:      { flexDirection: 'row', gap: 8 },
   macroTag:      { fontSize: 11, fontWeight: '600' },
 
-  totalCard:     { borderRadius: Radius.lg, padding: Spacing.base, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 8, borderWidth: 1, borderColor: '#7C5CFC33' },
-  totalLabel:    { fontSize: 15, fontWeight: '600', color: Colors.textSecondary },
-  totalValue:    { fontSize: 22, fontWeight: '800', color: Colors.accent },
+  totalCard:     { borderRadius: Radius.lg, padding: Spacing.base, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 8, marginBottom: 8, borderWidth: 1 },
+  totalLabel:    { fontSize: 15, fontWeight: '600' },
+  totalValue:    { fontSize: 22, fontWeight: '800' },
 
-  notesText:     { fontSize: 13, color: Colors.textSecondary, marginTop: 8, lineHeight: 20 },
+  notesText:     { fontSize: 13, marginTop: 8, lineHeight: 20 },
 
-  resultFooter:  { flexDirection: 'row', gap: 10, padding: Spacing.base, borderTopWidth: 1, borderTopColor: Colors.border, paddingBottom: 36, backgroundColor: Colors.background },
-  retryBtn:      { flex: 1, paddingVertical: 14, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.border, alignItems: 'center' },
-  retryText:     { color: Colors.textSecondary, fontWeight: '600', fontSize: 15 },
+  resultFooter:  { flexDirection: 'row', gap: 10, padding: Spacing.base, borderTopWidth: 1, paddingBottom: 36 },
+  retryBtn:      { flex: 1, paddingVertical: 14, borderRadius: Radius.md, borderWidth: 1.5, alignItems: 'center' },
+  retryText:     { fontWeight: '600', fontSize: 15 },
   addAllBtn:     { flex: 2, borderRadius: Radius.md, overflow: 'hidden' },
   addAllGrad:    { paddingVertical: 14, alignItems: 'center' },
   addAllText:    { color: '#fff', fontWeight: '700', fontSize: 15 },

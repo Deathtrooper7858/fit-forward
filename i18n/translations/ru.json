@@ -1,0 +1,52 @@
+{
+  "common": {
+    "save": "Сохранить",
+    "cancel": "Отмена",
+    "error": "Ошибка",
+    "success": "Успех",
+    "loading": "Загрузка...",
+    "comingSoon": "Скоро",
+    "notImplemented": "Эта функция находится в разработке."
+  },
+  "tabs": {
+    "dashboard": "Панель",
+    "tracker": "Трекер",
+    "coach": "Коуч",
+    "planner": "Планнер",
+    "profile": "Профиль"
+  },
+  "profile": {
+    "title": "Профиль",
+    "editName": "Обновить имя",
+    "enterName": "Введите ваше имя",
+    "bodyHealth": "Тело и здоровье",
+    "height": "Рост",
+    "weight": "Вес",
+    "age": "Возраст",
+    "sex": "Пол",
+    "activity": "Активность",
+    "measurements": "Замеры",
+    "recalculate": "Пересчитать макросы",
+    "accountApp": "Аккаунт и приложение",
+    "dietary": "Диетические предпочтения",
+    "notifications": "Уведомления",
+    "appearance": "Оформление",
+    "language": "Язык",
+    "dangerZone": "Опасная зона",
+    "signOut": "Выйти",
+    "signOutConfirm": "Вы уверены, что хотите выйти?",
+    "upgrade": "Перейти на Pro 🚀",
+    "proMember": "Pro участник",
+    "admin": "Администратор",
+    "superAdmin": "Супер-админ",
+    "currentGoal": "Текущая цель",
+    "lastMeasurement": "Последний замер"
+  },
+  "coach": {
+    "title": "Fitz Coach",
+    "welcome": "Привет! Я Фиц, твой ИИ-коуч по питанию. Чем я могу помочь тебе сегодня?",
+    "typing": "Фиц думает...",
+    "inputPlaceholder": "Спроси что угодно о питании...",
+    "limitReached": "Дневной лимит исчерпан"
+  }
+}

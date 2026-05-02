@@ -7,6 +7,9 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { FoodItem } from '../services/foodDatabase';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
+export type ThemeMode = 'light' | 'dark';
+export type AppLanguage = 'en' | 'es' | 'fr' | 'pt' | 'it' | 'de' | 'ru';
+
 export interface UserProfile {
   id:              string;
   name:            string;
@@ -24,6 +27,7 @@ export interface UserProfile {
   restrictions?:   string[];
   preferences?:    string[];
   isPro:           boolean;
+  role:            'user' | 'admin' | 'super_admin';
   onboardingDone:  boolean;
 }
 
@@ -303,6 +307,29 @@ export const useProgressStore = create<ProgressState>()(
     }),
     {
       name: 'ff-progress',
+      storage: createJSONStorage(() => AsyncStorage),
+    }
+  )
+);
+
+// ─── Settings store ───────────────────────────────────────────────────────────
+interface SettingsState {
+  theme: ThemeMode;
+  language: AppLanguage;
+  setTheme: (theme: ThemeMode) => void;
+  setLanguage: (lang: AppLanguage) => void;
+}
+
+export const useSettingsStore = create<SettingsState>()(
+  persist(
+    (set) => ({
+      theme: 'dark',
+      language: 'en',
+      setTheme: (theme) => set({ theme }),
+      setLanguage: (language) => set({ language }),
+    }),
+    {
+      name: 'ff-settings',
       storage: createJSONStorage(() => AsyncStorage),
     }
   )

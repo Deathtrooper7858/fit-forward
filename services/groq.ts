@@ -14,6 +14,8 @@
  *  - parseVoiceLog
  */
 
+import OpenAI from 'openai';
+
 // ─── Client ───────────────────────────────────────────────────────────────────
 const apiKey = process.env.EXPO_PUBLIC_GROQ_API_KEY ?? '';
 
@@ -21,35 +23,25 @@ if (!apiKey) {
   console.warn('[Groq] Missing EXPO_PUBLIC_GROQ_API_KEY in .env. Please restart your Metro Bundler.');
 }
 
-const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
+const openai = new OpenAI({
+  apiKey: apiKey,
+  baseURL: 'https://api.groq.com/openai/v1',
+  dangerouslyAllowBrowser: true, // Required for React Native
+});
 
 // ─── Model IDs ────────────────────────────────────────────────────────────────
 const CHAT_MODEL   = 'llama-3.3-70b-versatile';
 const VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct'; // Groq's official vision model
 const AUDIO_MODEL  = 'whisper-large-v3';
 
-// Helper to make fetch calls to Groq API
+// Helper to use OpenAI SDK for chat completions
 async function fetchGroq(payload: any) {
   if (!apiKey) {
     throw new Error('Groq API Key is missing. Make sure EXPO_PUBLIC_GROQ_API_KEY is in your .env file and restart the app.');
   }
 
-  const response = await fetch(GROQ_API_URL, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify(payload),
-  });
-
-  if (!response.ok) {
-    const errText = await response.text();
-    throw new Error(`API Error (${response.status}): ${errText}`);
-  }
-
-  const data = await response.json();
-  return data;
+  const response = await openai.chat.completions.create(payload);
+  return response;
 }
 
 // ─── Coach system prompt ──────────────────────────────────────────────────────
@@ -60,8 +52,20 @@ export function buildCoachSystemPrompt(userProfile: {
   targetCalories: number;
   macros: { protein: number; carbs: number; fat: number };
   restrictions?: string[];
-}) {
+}, language: string = 'en') {
+  const langNames: Record<string, string> = {
+    en: 'English',
+    es: 'Spanish',
+    fr: 'French',
+    pt: 'Portuguese',
+    it: 'Italian',
+    de: 'German',
+    ru: 'Russian'
+  };
+  const targetLang = langNames[language] || 'English';
+
   return `You are Fitz, an expert AI nutrition coach inside the Fit-Forward app.
+IMPORTANT: You MUST respond in ${targetLang}.
 
 User profile:
 - Name: ${userProfile.name}
@@ -123,7 +127,7 @@ export async function sendCoachMessage(
 }
 
 // ─── Food photo analysis ───────────────────────────────────────────────────────
-export async function analyzeFoodPhoto(base64Image: string): Promise<{
+export async function analyzeFoodPhoto(base64Image: string, language: string = 'en'): Promise<{
   foods: { name: string; grams: number; calories: number; protein: number; carbs: number; fat: number }[];
   totalCalories: number;
   confidence: 'high' | 'medium' | 'low';
@@ -143,7 +147,8 @@ Structure:
   "totalCalories": 250,
   "confidence": "high",
   "notes": "brief note about the estimation"
-}`;
+}
+IMPORTANT: The "notes" field MUST be in ${language === 'es' ? 'Spanish' : language === 'fr' ? 'French' : language === 'pt' ? 'Portuguese' : language === 'it' ? 'Italian' : language === 'de' ? 'German' : language === 'ru' ? 'Russian' : 'English'}.`;
 
   try {
     const data = await fetchGroq({
@@ -187,13 +192,20 @@ export async function generateMealPlan(userProfile: {
   goal: string;
   restrictions?: string[];
   preferences?: string[];
-}): Promise<Record<string, { meal: string; name: string; calories: number; protein: number; carbs: number; fat: number }[]>> {
+}, language: string = 'en'): Promise<Record<string, { meal: string; name: string; calories: number; protein: number; carbs: number; fat: number }[]>> {
+  const langNames: Record<string, string> = {
+    en: 'English', es: 'Spanish', fr: 'French', pt: 'Portuguese', it: 'Italian', de: 'German', ru: 'Russian'
+  };
+  const targetLang = langNames[language] || 'English';
+
   const prompt = `Create a 7-day meal plan for someone with these parameters:
 - Daily calories: ${userProfile.targetCalories} kcal
 - Macros: ${userProfile.macros.protein}g protein, ${userProfile.macros.carbs}g carbs, ${userProfile.macros.fat}g fat
 - Goal: ${userProfile.goal}
 ${userProfile.restrictions?.length ? `- Restrictions: ${userProfile.restrictions.join(', ')}` : ''}
 ${userProfile.preferences?.length ? `- Preferences: ${userProfile.preferences.join(', ')}` : ''}
+
+IMPORTANT: All meal names, descriptions, and instructions MUST be in ${targetLang}.
 
 Return ONLY valid JSON (no markdown). Use this exact structure:
 {
@@ -238,12 +250,18 @@ export async function generateWeeklyAnalysis(data: {
   avgFat: number;
   goal: string;
   daysLogged: number;
-}): Promise<string> {
+}, language: string = 'en'): Promise<string> {
+  const langNames: Record<string, string> = {
+    en: 'English', es: 'Spanish', fr: 'French', pt: 'Portuguese', it: 'Italian', de: 'German', ru: 'Russian'
+  };
+  const targetLang = langNames[language] || 'English';
+
   const prompt = `Provide a concise weekly nutrition analysis (max 150 words) for this user:
 - Goal: ${data.goal}
 - Days logged: ${data.daysLogged}/7
 - Average calories: ${data.avgCalories} kcal (target: ${data.targetCalories})
 - Average macros: ${data.avgProtein}g protein, ${data.avgCarbs}g carbs, ${data.avgFat}g fat
+IMPORTANT: You MUST respond in ${targetLang}.
 Give 2-3 specific, actionable tips for next week. Be encouraging.`;
 
   const responseData = await fetchGroq({
@@ -288,8 +306,14 @@ export async function transcribeAudio(uri: string): Promise<string> {
 }
 
 // ─── Generate Recipes ─────────────────────────────────────────────────────────
-export async function generateRecipes(userGoal: string, count: number = 3): Promise<any[]> {
+export async function generateRecipes(userGoal: string, language: string = 'en', count: number = 3): Promise<any[]> {
+  const langNames: Record<string, string> = {
+    en: 'English', es: 'Spanish', fr: 'French', pt: 'Portuguese', it: 'Italian', de: 'German', ru: 'Russian'
+  };
+  const targetLang = langNames[language] || 'English';
+
   const prompt = `Generate ${count} healthy recipe ideas for someone with the goal: ${userGoal}.
+IMPORTANT: All recipe names, descriptions, and instructions MUST be in ${targetLang}.
 Return ONLY valid JSON (no markdown). Structure:
 [
   {
@@ -305,7 +329,8 @@ Return ONLY valid JSON (no markdown). Structure:
     "prepTime": 20,
     "goal": "${userGoal}"
   }
-]`;
+]
+IMPORTANT: All text MUST be in ${targetLang}.`;
 
   const data = await fetchGroq({
     model: CHAT_MODEL,
@@ -328,8 +353,14 @@ Return ONLY valid JSON (no markdown). Structure:
 }
 
 // ─── Parse Voice/Text Log ─────────────────────────────────────────────────────
-export async function parseVoiceLog(text: string): Promise<any[]> {
+export async function parseVoiceLog(text: string, language: string = 'en'): Promise<any[]> {
+  const langNames: Record<string, string> = {
+    en: 'English', es: 'Spanish', fr: 'French', pt: 'Portuguese', it: 'Italian', de: 'German', ru: 'Russian'
+  };
+  const targetLang = langNames[language] || 'English';
+
   const prompt = `Extract food items and estimated portions from this description: "${text}"
+IMPORTANT: Extract the food names in ${targetLang}.
 Return ONLY valid JSON. Structure:
 {
   "items": [

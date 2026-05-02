@@ -5,8 +5,11 @@ import * as SplashScreen from 'expo-splash-screen';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { StyleSheet } from 'react-native';
 import { supabase } from '../services/supabase';
-import { useAuthStore } from '../store';
+import { useAuthStore, useSettingsStore } from '../store';
 import { Colors } from '../constants';
+import '../i18n';
+import i18n from 'i18next';
+import { useTheme } from '../hooks/useTheme';
 
 SplashScreen.preventAutoHideAsync();
 
@@ -45,7 +48,12 @@ function NavigationGuard() {
 
 export default function RootLayout() {
   const { setSession, setLoading, setProfile } = useAuthStore();
+  const { language, theme } = useSettingsStore();
+  const colors = useTheme();
 
+  useEffect(() => {
+    i18n.changeLanguage(language);
+  }, [language]);
   useEffect(() => {
     const fetchProfile = async (userId: string) => {
       try {
@@ -73,6 +81,7 @@ export default function RootLayout() {
             restrictions:   data.restrictions,
             preferences:    data.preferences,
             isPro:          data.is_pro,
+            role:           data.role || 'user',
             onboardingDone: data.onboarding_done,
           });
         } else {
@@ -110,10 +119,14 @@ export default function RootLayout() {
   }, []);
 
   return (
-    <GestureHandlerRootView style={styles.root}>
-      <StatusBar style="light" backgroundColor={Colors.background} />
+    <GestureHandlerRootView style={[styles.root, { backgroundColor: colors.background }]}>
+      <StatusBar style={theme === 'dark' ? 'light' : 'dark'} backgroundColor={colors.background} />
       <NavigationGuard />
-      <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
+      <Stack screenOptions={{ 
+        headerShown: false, 
+        animation: 'fade',
+        contentStyle: { backgroundColor: colors.background }
+      }}>
         <Stack.Screen name="index" />
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
@@ -140,7 +153,7 @@ export default function RootLayout() {
 }
 
 const styles = StyleSheet.create({
-  root: { flex: 1, backgroundColor: Colors.background },
+  root: { flex: 1 },
 });
 
 // Notes:

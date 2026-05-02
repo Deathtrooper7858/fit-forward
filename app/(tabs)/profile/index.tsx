@@ -8,10 +8,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Colors, Spacing, Radius } from '../../../constants';
-import { useAuthStore, useBodyStore } from '../../../store';
+import { useAuthStore, useBodyStore, useSettingsStore } from '../../../store';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '../../../services/supabase';
 import { calculateTDEE, calculateMacros } from '../../../services/foodDatabase';
+import { useTranslation } from 'react-i18next';
+import { useTheme } from '../../../hooks/useTheme';
 
 // ─── Inline edit modal (cross-platform, replaces Alert.prompt) ────────────────
 function EditModal({
@@ -21,6 +23,8 @@ function EditModal({
   keyboardType?: 'numeric' | 'default';
   initialValue?: string; onSave: (val: string) => void; onClose: () => void;
 }) {
+  const { t } = useTranslation();
+  const colors = useTheme();
   const [value, setValue] = useState(initialValue ?? '');
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -28,24 +32,24 @@ function EditModal({
         style={em.overlay}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
-        <View style={em.box}>
-          <Text style={em.title}>{title}</Text>
+        <View style={[em.box, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[em.title, { color: colors.textPrimary }]}>{title}</Text>
           <TextInput
-            style={em.input}
+            style={[em.input, { backgroundColor: colors.surfaceAlt, color: colors.textPrimary, borderColor: colors.border }]}
             value={value}
             onChangeText={setValue}
             placeholder={placeholder}
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={colors.textMuted}
             keyboardType={keyboardType ?? 'default'}
             autoFocus
           />
           <View style={em.row}>
-            <TouchableOpacity style={em.cancelBtn} onPress={onClose}>
-              <Text style={em.cancelText}>Cancel</Text>
+            <TouchableOpacity style={[em.cancelBtn, { borderColor: colors.border }]} onPress={onClose}>
+              <Text style={[em.cancelText, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
             </TouchableOpacity>
             <TouchableOpacity style={em.saveBtn} onPress={() => { onSave(value); onClose(); }}>
               <LinearGradient colors={['#7C5CFC', '#4338CA']} style={em.saveGrad}>
-                <Text style={em.saveText}>Save</Text>
+                <Text style={em.saveText}>{t('common.save')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -57,12 +61,12 @@ function EditModal({
 
 const em = StyleSheet.create({
   overlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: 24 },
-  box:       { backgroundColor: Colors.surface, borderRadius: Radius.xl, padding: 24, borderWidth: 1, borderColor: Colors.border },
-  title:     { fontSize: 17, fontWeight: '700', color: Colors.textPrimary, marginBottom: 16 },
-  input:     { backgroundColor: Colors.surfaceAlt, borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, color: Colors.textPrimary, borderWidth: 1, borderColor: Colors.border, marginBottom: 20 },
+  box:       { borderRadius: Radius.xl, padding: 24, borderWidth: 1 },
+  title:     { fontSize: 17, fontWeight: '700', marginBottom: 16 },
+  input:     { borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, borderWidth: 1, marginBottom: 20 },
   row:       { flexDirection: 'row', gap: 10 },
-  cancelBtn: { flex: 1, borderRadius: Radius.md, borderWidth: 1, borderColor: Colors.border, paddingVertical: 12, alignItems: 'center' },
-  cancelText:{ color: Colors.textSecondary, fontWeight: '600' },
+  cancelBtn: { flex: 1, borderRadius: Radius.md, borderWidth: 1, paddingVertical: 12, alignItems: 'center' },
+  cancelText:{ fontWeight: '600' },
   saveBtn:   { flex: 1, borderRadius: Radius.md, overflow: 'hidden' },
   saveGrad:  { paddingVertical: 12, alignItems: 'center' },
   saveText:  { color: '#fff', fontWeight: '700' },
@@ -72,47 +76,53 @@ const em = StyleSheet.create({
 function StatCard({ label, value, unit, color, onPress }: {
   label: string; value: string | number; unit: string; color: string; onPress?: () => void;
 }) {
+  const { t } = useTranslation();
+  const colors = useTheme();
   return (
-    <TouchableOpacity style={stat.card} onPress={onPress} activeOpacity={onPress ? 0.7 : 1}>
+    <TouchableOpacity style={[stat.card, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={onPress} activeOpacity={onPress ? 0.7 : 1}>
       <Text style={[stat.value, { color }]}>{value}</Text>
-      <Text style={stat.unit}>{unit}</Text>
-      <Text style={stat.label}>{label}</Text>
-      {onPress && <Text style={stat.editHint}>Tap to edit</Text>}
+      <Text style={[stat.unit, { color: colors.textMuted }]}>{unit}</Text>
+      <Text style={[stat.label, { color: colors.textSecondary }]}>{label}</Text>
+      {onPress && <Text style={[stat.editHint, { color: colors.textMuted }]}>{t('common.tapToEdit')}</Text>}
     </TouchableOpacity>
   );
 }
 
 const stat = StyleSheet.create({
-  card:     { flex: 1, backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.base, alignItems: 'center', borderWidth: 1, borderColor: Colors.border },
+  card:     { flex: 1, borderRadius: Radius.lg, padding: Spacing.base, alignItems: 'center', borderWidth: 1 },
   value:    { fontSize: 24, fontWeight: '800', marginBottom: 2 },
-  unit:     { fontSize: 11, color: Colors.textMuted, marginBottom: 4 },
-  label:    { fontSize: 12, color: Colors.textSecondary, fontWeight: '500', textAlign: 'center' },
-  editHint: { fontSize: 8, color: Colors.textMuted, marginTop: 4, textTransform: 'uppercase' },
+  unit:     { fontSize: 11, marginBottom: 4 },
+  label:    { fontSize: 12, fontWeight: '500', textAlign: 'center' },
+  editHint: { fontSize: 8, marginTop: 4, textTransform: 'uppercase' },
 });
 
 function MenuRow({ icon, label, value, onPress, isDestructive }: {
   icon: string; label: string; value?: string; onPress?: () => void; isDestructive?: boolean;
 }) {
+  const colors = useTheme();
   return (
-    <TouchableOpacity style={mr.row} onPress={onPress} activeOpacity={0.7}>
+    <TouchableOpacity style={[mr.row, { borderBottomColor: colors.border }]} onPress={onPress} activeOpacity={0.7}>
       <Text style={mr.icon}>{icon}</Text>
-      <Text style={[mr.label, isDestructive && { color: Colors.error }]}>{label}</Text>
-      {value && <Text style={mr.value}>{value}</Text>}
-      <Text style={mr.arrow}>›</Text>
+      <Text style={[mr.label, { color: isDestructive ? colors.error : colors.textPrimary }]}>{label}</Text>
+      {value && <Text style={[mr.value, { color: colors.textSecondary }]}>{value}</Text>}
+      <Text style={[mr.arrow, { color: colors.textMuted }]}>›</Text>
     </TouchableOpacity>
   );
 }
 
 const mr = StyleSheet.create({
-  row:   { flexDirection: 'row', alignItems: 'center', gap: 12, padding: Spacing.base, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  row:   { flexDirection: 'row', alignItems: 'center', gap: 12, padding: Spacing.base, borderBottomWidth: 1 },
   icon:  { fontSize: 20, width: 28 },
-  label: { flex: 1, fontSize: 15, color: Colors.textPrimary, fontWeight: '500' },
-  value: { fontSize: 14, color: Colors.textSecondary },
-  arrow: { fontSize: 20, color: Colors.textMuted },
+  label: { flex: 1, fontSize: 15, fontWeight: '500' },
+  value: { fontSize: 14 },
+  arrow: { fontSize: 20 },
 });
 
 // ─── Main Screen ──────────────────────────────────────────────────────────────
 export default function ProfileScreen() {
+  const { t } = useTranslation();
+  const colors = useTheme();
+  const { theme, setTheme, language, setLanguage } = useSettingsStore();
   const { profile, setProfile, clearAuth } = useAuthStore();
   const { latest: latestMeasurement }      = useBodyStore();
   const lastMeasure = latestMeasurement();
@@ -197,7 +207,7 @@ export default function ProfileScreen() {
 
       if (!result.canceled && result.assets && result.assets[0].base64) {
         const asset = result.assets[0];
-        const base64 = asset.base64;
+        const base64 = asset.base64!;
         const uri = asset.uri;
         const fileExt = uri.split('.').pop()?.toLowerCase() ?? 'jpg';
         
@@ -250,29 +260,42 @@ export default function ProfileScreen() {
   };
 
   const handleEditGoal = () => {
-    Alert.alert('Change Goal', 'What is your current objective?', [
-      { text: 'Lose Weight',  onPress: () => updateProfileField('goal', 'lose') },
-      { text: 'Maintain',     onPress: () => updateProfileField('goal', 'maintain') },
-      { text: 'Build Muscle', onPress: () => updateProfileField('goal', 'gain') },
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('profile.currentGoal'), 'What is your current objective?', [
+      { text: t('profile.loseWeight'),  onPress: () => updateProfileField('goal', 'lose') },
+      { text: t('profile.maintain'),     onPress: () => updateProfileField('goal', 'maintain') },
+      { text: t('profile.gainMuscle'), onPress: () => updateProfileField('goal', 'gain') },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
   };
 
   const handleEditSex = () => {
-    Alert.alert('Biological Sex', 'Used for calculating basal metabolic rate:', [
-      { text: 'Male',   onPress: () => updateProfileField('sex', 'male') },
-      { text: 'Female', onPress: () => updateProfileField('sex', 'female') },
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('profile.sex'), 'Used for calculating basal metabolic rate:', [
+      { text: t('profile.male'),   onPress: () => updateProfileField('sex', 'male') },
+      { text: t('profile.female'), onPress: () => updateProfileField('sex', 'female') },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
   };
 
   const handleEditActivity = () => {
-    Alert.alert('Activity Level', 'Select your daily activity level:', [
-      { text: 'Sedentary',   onPress: () => updateProfileField('activityLevel', 'sedentary') },
-      { text: 'Lightly Active', onPress: () => updateProfileField('activityLevel', 'light') },
-      { text: 'Moderately Active', onPress: () => updateProfileField('activityLevel', 'moderate') },
-      { text: 'Very Active', onPress: () => updateProfileField('activityLevel', 'active') },
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('profile.activity'), 'Select your daily activity level:', [
+      { text: t('profile.sedentary'),   onPress: () => updateProfileField('activityLevel', 'sedentary') },
+      { text: t('profile.lightlyActive'), onPress: () => updateProfileField('activityLevel', 'light') },
+      { text: t('profile.moderatelyActive'), onPress: () => updateProfileField('activityLevel', 'moderate') },
+      { text: t('profile.veryActive'), onPress: () => updateProfileField('activityLevel', 'active') },
+      { text: t('common.cancel'), style: 'cancel' },
+    ]);
+  };
+
+  const handleEditLanguage = () => {
+    Alert.alert(t('profile.language'), 'Select your language / Selecciona tu idioma:', [
+      { text: 'English',    onPress: () => setLanguage('en') },
+      { text: 'Español',    onPress: () => setLanguage('es') },
+      { text: 'Français',   onPress: () => setLanguage('fr') },
+      { text: 'Português',  onPress: () => setLanguage('pt') },
+      { text: 'Italiano',   onPress: () => setLanguage('it') },
+      { text: 'Deutsch',    onPress: () => setLanguage('de') },
+      { text: 'Русский',    onPress: () => setLanguage('ru') },
+      { text: t('common.cancel'), style: 'cancel' },
     ]);
   };
 
@@ -281,10 +304,10 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = async () => {
-    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
-      { text: 'Cancel', style: 'cancel' },
+    Alert.alert(t('profile.signOut'), t('profile.signOutConfirm'), [
+      { text: t('common.cancel'), style: 'cancel' },
       {
-        text: 'Sign Out', style: 'destructive',
+        text: t('profile.signOut'), style: 'destructive',
         onPress: async () => {
           await supabase.auth.signOut();
           clearAuth();
@@ -299,13 +322,13 @@ export default function ProfileScreen() {
     : '--';
 
   const goalLabel = profile?.goal === 'lose'
-    ? '⬇️ Lose Weight'
+    ? '⬇️ ' + t('profile.loseWeight')
     : profile?.goal === 'gain'
-    ? '⬆️ Gain Muscle'
-    : '⚖️ Maintain';
+    ? '⬆️ ' + t('profile.gainMuscle')
+    : '⚖️ ' + t('profile.maintain');
 
   return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
       <EditModal
         visible={editModal.visible}
         title={editModal.title}
@@ -316,9 +339,8 @@ export default function ProfileScreen() {
         onClose={() => setEditModal(p => ({ ...p, visible: false }))}
       />
 
-      <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Header */}
-        <LinearGradient colors={['#1E2332', '#161A24']} style={s.header}>
+      <ScrollView style={{ flex: 1, backgroundColor: colors.background }} showsVerticalScrollIndicator={false}>
+        <LinearGradient colors={colors.gradientCard} style={s.header}>
           <TouchableOpacity onPress={handlePickImage} activeOpacity={0.8}>
             <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.avatar}>
               {profile?.avatarUrl ? (
@@ -326,16 +348,24 @@ export default function ProfileScreen() {
               ) : (
                 <Text style={s.avatarText}>{profile?.name?.[0]?.toUpperCase() ?? '?'}</Text>
               )}
-              <View style={s.editBadge}>
+              <View style={[s.editBadge, { backgroundColor: colors.surface, borderColor: colors.border }]}>
                 <Text style={{ fontSize: 10 }}>📸</Text>
               </View>
             </LinearGradient>
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => openEdit('name', 'Update Name', 'Enter your name')}>
-            <Text style={s.name}>{profile?.name ?? 'User'} ✎</Text>
+          <TouchableOpacity onPress={() => openEdit('name', t('profile.editName'), t('profile.enterName'))}>
+            <Text style={[s.name, { color: colors.textPrimary }]}>{profile?.name ?? 'User'} ✎</Text>
           </TouchableOpacity>
-          <Text style={s.email}>{profile?.email ?? ''}</Text>
-          {profile?.isPro ? (
+          <Text style={[s.email, { color: colors.textSecondary }]}>{profile?.email ?? ''}</Text>
+          {profile?.role === 'super_admin' ? (
+            <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.proBadge}>
+              <Text style={s.proBadgeText}>⚡ Super Admin</Text>
+            </LinearGradient>
+          ) : profile?.role === 'admin' ? (
+            <LinearGradient colors={['#10B981', '#059669']} style={s.proBadge}>
+              <Text style={s.proBadgeText}>🛡️ Administrator</Text>
+            </LinearGradient>
+          ) : profile?.isPro ? (
             <LinearGradient colors={['#F59E0B', '#D97706']} style={s.proBadge}>
               <Text style={s.proBadgeText}>⭐ Pro Member</Text>
             </LinearGradient>
@@ -350,58 +380,59 @@ export default function ProfileScreen() {
 
         {/* Stats */}
         <View style={s.statsRow}>
-          <StatCard label="Weight"  value={profile?.weight ?? '--'}         unit="kg"   color={Colors.primary}   onPress={() => openEdit('weight', 'Update Weight', 'Enter weight in kg', 'numeric')} />
-          <StatCard label="Calories" value={profile?.targetCalories ?? '--'} unit="kcal" color={Colors.accent} />
-          <StatCard label="BMI"      value={bmi}                             unit="bmi"  color={Colors.secondary} />
+          <StatCard label={t('profile.weight')}  value={profile?.weight ?? '--'}         unit="kg"   color={colors.primary}   onPress={() => openEdit('weight', t('profile.weight'), 'Enter weight in kg', 'numeric')} />
+          <StatCard label={t('profile.calories') || 'Calories'} value={profile?.targetCalories ?? '--'} unit="kcal" color={colors.accent} />
+          <StatCard label={t('profile.bmi') || 'BMI'}      value={bmi}                             unit="bmi"  color={colors.secondary} />
         </View>
 
         {/* Goal banner */}
-        <TouchableOpacity style={s.goalCard} onPress={handleEditGoal} activeOpacity={0.7}>
+        <TouchableOpacity style={[s.goalCard, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={handleEditGoal} activeOpacity={0.7}>
           <View>
-            <Text style={s.goalLabel}>Current Goal</Text>
-            <Text style={s.goalValue}>{goalLabel}</Text>
+            <Text style={[s.goalLabel, { color: colors.textSecondary }]}>{t('profile.currentGoal')}</Text>
+            <Text style={[s.goalValue, { color: colors.textPrimary }]}>{goalLabel}</Text>
           </View>
-          <Text style={s.editHint}>Tap to change ›</Text>
+          <Text style={[s.editHint, { color: colors.textMuted }]}>{t('profile.tapToChange') || 'Tap to change ›'}</Text>
         </TouchableOpacity>
 
         {/* Body measurements quick stats */}
         {lastMeasure && (
-          <View style={s.measureCard}>
-            <Text style={s.sectionTitle}>Last Measurement</Text>
+          <View style={[s.measureCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={[s.sectionTitle, { color: colors.textMuted }]}>{t('profile.lastMeasurement')}</Text>
             <View style={s.measureRow}>
-              {lastMeasure.bodyFat  !== undefined && <MeasureStat label="Body Fat" value={`${lastMeasure.bodyFat}%`} />}
-              {lastMeasure.waist    !== undefined && <MeasureStat label="Waist" value={`${lastMeasure.waist}cm`} />}
-              {lastMeasure.hips     !== undefined && <MeasureStat label="Hips"  value={`${lastMeasure.hips}cm`} />}
+              {lastMeasure.bodyFat  !== undefined && <MeasureStat label={t('profile.bodyFat')} value={`${lastMeasure.bodyFat}%`} />}
+              {lastMeasure.waist    !== undefined && <MeasureStat label={t('profile.waist')} value={`${lastMeasure.waist}cm`} />}
+              {lastMeasure.hips     !== undefined && <MeasureStat label={t('profile.hips')}  value={`${lastMeasure.hips}cm`} />}
             </View>
           </View>
         )}
 
         {/* Settings sections */}
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Body & Health</Text>
-          <MenuRow icon="📏" label="Height"       value={`${profile?.height ?? '--'} cm`} onPress={() => openEdit('height', 'Update Height', 'Enter height in cm', 'numeric')} />
-          <MenuRow icon="⚖️" label="Weight"       value={`${profile?.weight ?? '--'} kg`} onPress={() => openEdit('weight', 'Update Weight', 'Enter weight in kg', 'numeric')} />
-          <MenuRow icon="🎂" label="Age"          value={`${profile?.age ?? '--'} yrs`}  onPress={() => openEdit('age', 'Update Age', 'Enter your age', 'numeric')} />
-          <MenuRow icon="⚧️" label="Sex"          value={profile?.sex ? profile.sex.charAt(0).toUpperCase() + profile.sex.slice(1) : '--'} onPress={handleEditSex} />
-          <MenuRow icon="🏃" label="Activity"     value={profile?.activityLevel ?? '--'} onPress={handleEditActivity} />
-          <MenuRow icon="📊" label="Measurements" onPress={() => router.push('/modals/body-measurements')} />
-          <MenuRow icon="🎯" label="Recalculate Macros" onPress={handleEditGoal} />
+        <View style={[s.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[s.sectionTitle, { color: colors.textMuted }]}>{t('profile.bodyHealth')}</Text>
+          <MenuRow icon="📏" label={t('profile.height')}       value={`${profile?.height ?? '--'} cm`} onPress={() => openEdit('height', t('profile.height'), 'Enter height in cm', 'numeric')} />
+          <MenuRow icon="⚖️" label={t('profile.weight')}       value={`${profile?.weight ?? '--'} kg`} onPress={() => openEdit('weight', t('profile.weight'), 'Enter weight in kg', 'numeric')} />
+          <MenuRow icon="🎂" label={t('profile.age')}          value={`${profile?.age ?? '--'} yrs`}  onPress={() => openEdit('age', t('profile.age'), 'Enter your age', 'numeric')} />
+          <MenuRow icon="⚧️" label={t('profile.sex')}          value={profile?.sex ? (profile.sex === 'male' ? t('profile.male') : t('profile.female')) : '--'} onPress={handleEditSex} />
+          <MenuRow icon="🏃" label={t('profile.activity')}     value={profile?.activityLevel ? t(`profile.${profile.activityLevel}`) : '--'} onPress={handleEditActivity} />
+          <MenuRow icon="📊" label={t('profile.measurements')} onPress={() => router.push('/modals/body-measurements')} />
+          <MenuRow icon="🎯" label={t('profile.recalculate')} onPress={handleEditGoal} />
         </View>
 
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Account & App</Text>
-          <MenuRow icon="👤" label="Edit Name"           onPress={() => openEdit('name', 'Update Name', 'Enter your name')} />
-          <MenuRow icon="🍽️" label="Dietary Preferences" value={profile?.restrictions?.join(', ') || 'None'} onPress={() => openEdit('restrictions', 'Dietary Restrictions', 'e.g. Vegan, Nut-free (comma separated)', 'default')} />
-          <MenuRow icon="🔔" label="Notifications"       onPress={handleNotImplemented} />
-          <MenuRow icon="🌙" label="Appearance"          value="Dark" onPress={handleNotImplemented} />
+        <View style={[s.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[s.sectionTitle, { color: colors.textMuted }]}>{t('profile.accountApp')}</Text>
+          <MenuRow icon="👤" label={t('profile.editName')} onPress={() => openEdit('name', t('profile.editName'), t('profile.enterName'))} />
+          <MenuRow icon="🍽️" label={t('profile.dietary')} value={profile?.restrictions?.join(', ') || 'None'} onPress={() => openEdit('restrictions', t('profile.dietary'), 'e.g. Vegan, Nut-free', 'default')} />
+          <MenuRow icon="🌙" label={t('profile.appearance')} value={theme === 'dark' ? 'Dark' : 'Light'} onPress={() => setTheme(theme === 'dark' ? 'light' : 'dark')} />
+          <MenuRow icon="🌐" label={t('profile.language')} value={language.toUpperCase()} onPress={handleEditLanguage} />
+          <MenuRow icon="🔔" label={t('profile.notifications')} onPress={handleNotImplemented} />
         </View>
 
-        <View style={s.section}>
-          <Text style={s.sectionTitle}>Danger Zone</Text>
-          <MenuRow icon="🚪" label="Sign Out" onPress={handleLogout} isDestructive />
+        <View style={[s.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[s.sectionTitle, { color: colors.textMuted }]}>{t('profile.dangerZone')}</Text>
+          <MenuRow icon="🚪" label={t('profile.signOut')} onPress={handleLogout} isDestructive />
         </View>
 
-        <Text style={s.version}>Fit-Forward v1.0.1</Text>
+        <Text style={[s.version, { color: colors.textMuted }]}>Fit-Forward v1.0.1</Text>
         <View style={{ height: 32 }} />
       </ScrollView>
     </SafeAreaView>
@@ -409,36 +440,37 @@ export default function ProfileScreen() {
 }
 
 function MeasureStat({ label, value }: { label: string; value: string }) {
+  const colors = useTheme();
   return (
     <View style={{ alignItems: 'center', flex: 1 }}>
-      <Text style={{ fontSize: 16, fontWeight: '700', color: Colors.primary }}>{value}</Text>
-      <Text style={{ fontSize: 11, color: Colors.textMuted }}>{label}</Text>
+      <Text style={{ fontSize: 16, fontWeight: '700', color: colors.primary }}>{value}</Text>
+      <Text style={{ fontSize: 11, color: colors.textMuted }}>{label}</Text>
     </View>
   );
 }
 
 const s = StyleSheet.create({
-  safe:        { flex: 1, backgroundColor: Colors.background },
+  safe:        { flex: 1 },
   header:      { alignItems: 'center', padding: Spacing['2xl'], paddingTop: Spacing.lg, marginBottom: Spacing.base },
   avatar:      { width: 84, height: 84, borderRadius: 42, justifyContent: 'center', alignItems: 'center', marginBottom: 14, position: 'relative' },
   avatarImage: { width: 84, height: 84, borderRadius: 42 },
-  editBadge:   { position: 'absolute', bottom: 0, right: 0, backgroundColor: Colors.surface, width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#1E2332' },
+  editBadge:   { position: 'absolute', bottom: 0, right: 0, width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center', borderWidth: 2 },
   avatarText:  { fontSize: 36, fontWeight: '800', color: '#fff' },
-  name:        { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginBottom: 4 },
-  email:       { fontSize: 13, color: Colors.textSecondary, marginBottom: 16 },
+  name:        { fontSize: 22, fontWeight: '800', marginBottom: 4 },
+  email:       { fontSize: 13, marginBottom: 16 },
   proBadge:    { borderRadius: Radius.full, paddingHorizontal: 16, paddingVertical: 6 },
   proBadgeText:{ color: '#fff', fontWeight: '700', fontSize: 13 },
   upgradeBtn:  { borderRadius: Radius.lg, overflow: 'hidden' },
   upgradeGrad: { paddingHorizontal: 20, paddingVertical: 10 },
   upgradeText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   statsRow:    { flexDirection: 'row', gap: 10, marginHorizontal: Spacing.base, marginBottom: Spacing.base },
-  goalCard:    { marginHorizontal: Spacing.base, backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.base, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.base, borderWidth: 1, borderColor: Colors.border },
-  goalLabel:   { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
-  goalValue:   { fontSize: 15, color: Colors.textPrimary, fontWeight: '700' },
-  editHint:    { fontSize: 10, color: Colors.textMuted },
-  measureCard: { marginHorizontal: Spacing.base, backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.base, marginBottom: Spacing.base, borderWidth: 1, borderColor: Colors.border },
+  goalCard:    { marginHorizontal: Spacing.base, borderRadius: Radius.lg, padding: Spacing.base, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.base, borderWidth: 1 },
+  goalLabel:   { fontSize: 13, fontWeight: '500' },
+  goalValue:   { fontSize: 15, fontWeight: '700' },
+  editHint:    { fontSize: 10 },
+  measureCard: { marginHorizontal: Spacing.base, borderRadius: Radius.lg, padding: Spacing.base, marginBottom: Spacing.base, borderWidth: 1 },
   measureRow:  { flexDirection: 'row', marginTop: 10 },
-  section:     { marginHorizontal: Spacing.base, marginBottom: Spacing.base, backgroundColor: Colors.surface, borderRadius: Radius.lg, overflow: 'hidden', borderWidth: 1, borderColor: Colors.border },
-  sectionTitle:{ fontSize: 12, color: Colors.textMuted, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', padding: Spacing.base, paddingBottom: 6 },
-  version:     { textAlign: 'center', fontSize: 12, color: Colors.textMuted, marginTop: 8 },
+  section:     { marginHorizontal: Spacing.base, marginBottom: Spacing.base, borderRadius: Radius.lg, overflow: 'hidden', borderWidth: 1 },
+  sectionTitle:{ fontSize: 12, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', padding: Spacing.base, paddingBottom: 6 },
+  version:     { textAlign: 'center', fontSize: 12, marginTop: 8 },
 });
