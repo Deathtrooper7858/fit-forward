@@ -135,7 +135,7 @@ export default function NutritionistScreen() {
           setMessages([{
             id:        'welcome',
             role:      'model',
-            content:   t('nutritionist.welcome'),
+            content:   t('coach.nutritionist.welcome'),
             timestamp: new Date().toISOString(),
           }], 'nutritionist');
         }
@@ -360,7 +360,7 @@ export default function NutritionistScreen() {
       <View style={[s.header, { borderBottomColor: colors.border }]}>
         <Image source={require('../../../assets/fitgo.jpeg')} style={s.headerAvatar} resizeMode="cover" />
         <View style={{ flex: 1 }}>
-          <Text style={[s.headerName, { color: colors.textPrimary }]}>{t('coach.nutritionist', 'Nutritionist')}</Text>
+          <Text style={[s.headerName, { color: colors.textPrimary }]}>{t('coach.nutritionist.label', 'Nutritionist')}</Text>
           <View style={s.onlineRow}>
             <View style={[s.onlineDot, { backgroundColor: colors.success }]} />
             <Text style={[s.onlineText, { color: colors.success }]}>{t('coach.online')}</Text>
@@ -398,10 +398,10 @@ export default function NutritionistScreen() {
                     <TouchableOpacity
                       key={i}
                       style={[s.chip, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                      onPress={() => handleSend(t(`nutritionist.suggest${i}`))}
+                      onPress={() => handleSend(t(`coach.nutritionist.suggest${i}`))}
                       activeOpacity={0.75}
                     >
-                      <Text style={[s.chipText, { color: colors.textSecondary }]}>{t(`nutritionist.suggest${i}`)}</Text>
+                      <Text style={[s.chipText, { color: colors.textSecondary }]}>{t(`coach.nutritionist.suggest${i}`)}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>

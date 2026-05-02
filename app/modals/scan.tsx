@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image, ScrollView, TextInput } from 'react-native';
 import { router } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -24,6 +24,10 @@ export default function ScanModal() {
     confidence: 'high' | 'medium' | 'low';
     notes: string;
   } | null>(null);
+  const [editedFoods, setEditedFoods] = useState<{
+    name: string; grams: number; calories: number; protein: number; carbs: number; fat: number;
+    originalGrams: number; originalCal: number; originalProt: number; originalCarbs: number; originalFat: number;
+  }[]>([]);
   const [capturedUri, setCapturedUri]    = useState<string | null>(null);
   const cameraRef = useRef<any>(null);
   const colors = useTheme();
@@ -85,6 +89,16 @@ export default function ScanModal() {
 
       const result = await analyzeFoodPhoto(photo.base64, language);
       setPhotoResult(result);
+      
+      // Initialize edited foods with original values preserved for scaling
+      setEditedFoods(result.foods.map(f => ({
+        ...f,
+        originalGrams: f.grams,
+        originalCal: f.calories,
+        originalProt: f.protein,
+        originalCarbs: f.carbs,
+        originalFat: f.fat,
+      })));
     } catch (err: any) {
       console.error('Analysis Error:', err);
       Alert.alert('Analysis Failed', `Could not analyze the food photo.\n\nError: ${err?.message || err}`, [
@@ -95,20 +109,36 @@ export default function ScanModal() {
     }
   };
 
+  const updateGrams = (index: number, newGrams: string) => {
+    const val = parseInt(newGrams) || 0;
+    setEditedFoods(prev => prev.map((f, i) => {
+      if (i !== index) return f;
+      const ratio = val / f.originalGrams;
+      return {
+        ...f,
+        grams: val,
+        calories: Math.round(f.originalCal * ratio),
+        protein:  Math.round(f.originalProt * ratio),
+        carbs:    Math.round(f.originalCarbs * ratio),
+        fat:      Math.round(f.originalFat * ratio),
+      };
+    }));
+  };
+
   // ─── Add all detected foods to tracker ──────────────────────────────────────
   const handleAddAllFoods = () => {
-    if (!photoResult) return;
+    if (!editedFoods.length) return;
 
-    photoResult.foods.forEach((food) => {
+    editedFoods.forEach((food) => {
       addLog({
         id:       `${Date.now()}-${food.name}`,
         foodItem: {
           id:       `ai-${Date.now()}-${food.name}`,
           name:     food.name,
-          calories: Math.round((food.calories / food.grams) * 100),
-          protein:  Math.round((food.protein / food.grams) * 100),
-          carbs:    Math.round((food.carbs / food.grams) * 100),
-          fat:      Math.round((food.fat / food.grams) * 100),
+          calories: Math.round((food.originalCal / food.originalGrams) * 100),
+          protein:  Math.round((food.originalProt / food.originalGrams) * 100),
+          carbs:    Math.round((food.originalCarbs / food.originalGrams) * 100),
+          fat:      Math.round((food.originalFat / food.originalGrams) * 100),
           source:   'custom',
         },
         grams:    food.grams,
@@ -123,7 +153,7 @@ export default function ScanModal() {
 
     Alert.alert(
       t('common.success') + ' ✅',
-      `${photoResult.foods.length} ${t('scan.itemsAdded')} ${t(`tracker.${getAutoMeal()}`)}.`,
+      `${editedFoods.length} ${t('scan.itemsAdded')} ${t(`tracker.${getAutoMeal()}`)}.`,
       [{ text: 'OK', onPress: () => router.back() }]
     );
   };
@@ -195,11 +225,20 @@ export default function ScanModal() {
 
           {/* Detected foods */}
           <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>{t('scan.detectedFoods')}</Text>
-          {photoResult.foods.map((food, i) => (
+          {editedFoods.map((food, i) => (
             <View key={i} style={[s.foodCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
               <View style={s.foodCardLeft}>
                 <Text style={[s.foodName, { color: colors.textPrimary }]}>{food.name}</Text>
-                <Text style={[s.foodGrams, { color: colors.textMuted }]}>{food.grams}g</Text>
+                <View style={s.gramInputRow}>
+                  <TextInput
+                    style={[s.gramInput, { color: colors.primary, borderColor: colors.border, backgroundColor: colors.background }]}
+                    value={String(food.grams)}
+                    onChangeText={(v) => updateGrams(i, v)}
+                    keyboardType="numeric"
+                    maxLength={4}
+                  />
+                  <Text style={[s.gramLabel, { color: colors.textMuted }]}>g</Text>
+                </View>
               </View>
               <View style={s.foodCardRight}>
                 <Text style={[s.foodCal, { color: colors.accent }]}>{food.calories} kcal</Text>
@@ -215,7 +254,9 @@ export default function ScanModal() {
           {/* Total */}
           <LinearGradient colors={colors.theme === 'dark' ? ['#7C5CFC15', '#22D3EE11'] : [colors.primary + '10', colors.secondary + '05']} style={[s.totalCard, { borderColor: colors.primary + '33' }]}>
             <Text style={[s.totalLabel, { color: colors.textSecondary }]}>{t('scan.totalCalories')}</Text>
-            <Text style={[s.totalValue, { color: colors.accent }]}>{photoResult.totalCalories} kcal</Text>
+            <Text style={[s.totalValue, { color: colors.accent }]}>
+              {editedFoods.reduce((acc, f) => acc + f.calories, 0)} kcal
+            </Text>
           </LinearGradient>
 
           {/* Notes */}
@@ -395,8 +436,10 @@ const s = StyleSheet.create({
 
   foodCard:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderRadius: Radius.lg, padding: Spacing.base, marginBottom: 8, borderWidth: 1 },
   foodCardLeft:  { flex: 1, marginRight: 12 },
-  foodName:      { fontSize: 15, fontWeight: '600', marginBottom: 2 },
-  foodGrams:     { fontSize: 12 },
+  foodName:      { fontSize: 15, fontWeight: '600', marginBottom: 4 },
+  gramInputRow:  { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  gramInput:     { width: 60, height: 28, borderRadius: 6, borderWidth: 1, textAlign: 'center', fontSize: 13, fontWeight: '600', padding: 0 },
+  gramLabel:     { fontSize: 12 },
   foodCardRight: { alignItems: 'flex-end' },
   foodCal:       { fontSize: 16, fontWeight: '800', marginBottom: 4 },
   macroRow:      { flexDirection: 'row', gap: 8 },

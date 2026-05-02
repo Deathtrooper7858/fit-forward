@@ -7,8 +7,10 @@ import { Spacing, Radius, Shadow } from '../../constants';
 import { useAuthStore, useRecipesStore, Recipe, useSettingsStore } from '../../store';
 import { generateRecipes } from '../../services/groq';
 import { useTheme } from '../../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 
 export default function RecipesModal() {
+  const { t } = useTranslation();
   const colors = useTheme();
   const { language } = useSettingsStore();
   const { profile } = useAuthStore();
@@ -40,11 +42,11 @@ export default function RecipesModal() {
       <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
         <View style={s.paywallContainer}>
           <Text style={s.paywallEmoji}>🔒</Text>
-          <Text style={[s.paywallTitle, { color: colors.textPrimary }]}>Recipes are a Pro Feature</Text>
-          <Text style={[s.paywallSub, { color: colors.textSecondary }]}>Unlock personalized AI-generated recipes to hit your macros perfectly.</Text>
+          <Text style={[s.paywallTitle, { color: colors.textPrimary }]}>{t('recipes.proTitle')}</Text>
+          <Text style={[s.paywallSub, { color: colors.textSecondary }]}>{t('recipes.proSub')}</Text>
           <TouchableOpacity style={s.proBtn} onPress={() => router.push('/modals/paywall')}>
             <LinearGradient colors={['#F59E0B', '#D97706']} style={s.proGrad}>
-              <Text style={s.proText}>Unlock Pro Now</Text>
+              <Text style={s.proText}>{t('recipes.unlockNow')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -55,9 +57,9 @@ export default function RecipesModal() {
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
       <View style={s.header}>
-        <Text style={[s.title, { color: colors.textPrimary }]}>AI Recipes</Text>
+        <Text style={[s.title, { color: colors.textPrimary }]}>{t('recipes.title')}</Text>
         <TouchableOpacity onPress={loadRecipes} disabled={loading}>
-          <Text style={[s.refresh, { color: colors.primary }, loading && { opacity: 0.5 }]}>Refresh ✨</Text>
+          <Text style={[s.refresh, { color: colors.primary }, loading && { opacity: 0.5 }]}>{t('recipes.refresh')}</Text>
         </TouchableOpacity>
       </View>
 
@@ -65,7 +67,7 @@ export default function RecipesModal() {
         {loading ? (
           <View style={s.center}>
             <ActivityIndicator size="large" color={colors.primary} />
-            <Text style={[s.loadingText, { color: colors.textSecondary }]}>Creating personalized recipes...</Text>
+            <Text style={[s.loadingText, { color: colors.textSecondary }]}>{t('recipes.loading')}</Text>
           </View>
         ) : (
           <View style={s.list}>
@@ -85,6 +87,7 @@ export default function RecipesModal() {
 }
 
 function RecipeCard({ recipe, isFav, onFav }: { recipe: Recipe; isFav: boolean; onFav: () => void }) {
+  const { t } = useTranslation();
   const colors = useTheme();
   return (
     <View style={[rc.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
@@ -98,7 +101,7 @@ function RecipeCard({ recipe, isFav, onFav }: { recipe: Recipe; isFav: boolean; 
         <Text style={[rc.desc, { color: colors.textSecondary }]}>{recipe.description}</Text>
         
         <View style={rc.stats}>
-          <Text style={[rc.statItem, { color: colors.textMuted }]}>🕒 {recipe.prepTime} min</Text>
+          <Text style={[rc.statItem, { color: colors.textMuted }]}>🕒 {recipe.prepTime} {t('recipes.prepTime')}</Text>
           <Text style={[rc.statItem, { color: colors.textMuted }]}>🔥 {recipe.calories} kcal</Text>
         </View>
 

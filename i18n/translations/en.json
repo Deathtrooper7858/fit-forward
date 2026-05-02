@@ -121,7 +121,31 @@
     "thursday": "Thursday",
     "friday": "Friday",
     "saturday": "Saturday",
-    "sunday": "Sunday"
+    "sunday": "Sunday",
+    "noMeals": "No meals planned",
+    "emptySubPro": "Tap \"Generate\" to create an AI meal plan",
+    "emptySubFree": "Upgrade to Pro to generate AI meal plans",
+    "planned": "planned",
+    "planReady": "Your AI meal plan has been generated and saved!",
+    "aiReview": "AI Weekly Review",
+    "analyze": "Analyze",
+    "regenerate": "Regenerate",
+    "reviewPlaceholder": "Get a summary of your week and custom tips.",
+    "autoShoppingList": "Auto Shopping List",
+    "shoppingListSub": "Generate a grocery list from your weekly plan",
+    "noPlan": "No Plan",
+    "noPlanSub": "Generate a meal plan first to create a shopping list.",
+    "shoppingListTitle": "🛒 Shopping List",
+    "analysisFailed": "Analysis Failed",
+    "analysisFailedSub": "Could not generate weekly review.",
+    "unlockPro": "🔓 Unlock Pro",
+    "mon": "Mon",
+    "tue": "Tue",
+    "wed": "Wed",
+    "thu": "Thu",
+    "fri": "Fri",
+    "sat": "Sat",
+    "sun": "Sun"
   },
   "profile": {
     "title": "Profile",
@@ -185,20 +209,38 @@
     "lightMode": "Light",
     "unlockPro": "Unlock FitGO Pro"
   },
+  "recipes": {
+    "title": "AI Recipes",
+    "refresh": "Refresh ✨",
+    "loading": "Creating personalized recipes...",
+    "proTitle": "Recipes are a Pro Feature",
+    "proSub": "Unlock personalized AI-generated recipes to hit your macros perfectly.",
+    "unlockNow": "Unlock Pro Now",
+    "prepTime": "min"
+  },
   "coach": {
     "title": "Fitz Coach",
-    "nutritionist": "Nutritionist",
-    "trainer": "Personal Trainer",
-    "welcome": "Hello! I am Fitz, your AI nutrition coach. How can I help you today?",
     "typing": "Fitz is thinking...",
-    "inputPlaceholder": "Ask anything about nutrition...",
+    "inputPlaceholder": "Type your message here...",
     "limitReached": "Daily limit reached",
     "upgradePro": "Upgrade to Pro for unlimited coaching",
     "online": "Online · Powered by Groq",
-    "suggest1": "What should I eat post-workout? 💪",
-    "suggest2": "Give me a high-protein breakfast idea 🍳",
-    "suggest3": "How can I reduce sugar cravings? 🍬",
-    "suggest4": "Am I eating enough protein? 📊"
+    "nutritionist": {
+      "label": "Nutritionist",
+      "welcome": "Hello! I am your AI Nutritionist. How can I help you with your diet today?",
+      "suggest1": "Give me a light dinner idea 🥗",
+      "suggest2": "What snacks are good for weight loss? 🍎",
+      "suggest3": "How much protein should I eat daily? 🍗",
+      "suggest4": "Analyze my current diet 📊"
+    },
+    "trainer": {
+      "label": "Personal Trainer",
+      "welcome": "Hello! I am your AI Personal Trainer. Ready for today's workout?",
+      "suggest1": "Give me a 20 min home workout 🏠",
+      "suggest2": "How to improve my squat form? 🏋️",
+      "suggest3": "Workout plan for muscle gain 💪",
+      "suggest4": "What stretches to do after running? 🏃"
+    }
   },
   "onboarding": {
     "goalTitle": "What's your main goal?",
@@ -209,11 +251,6 @@
     "staySub": "Maintain current body",
     "gainTitle": "Build Muscle",
     "gainSub": "Gain strength & mass",
-    "statsTitle": "Tell us about yourself",
-    "statsSub": "Used to calculate your daily calorie target",
-    "sexLabel": "Biological Sex",
-    "activityTitle": "Activity Level",
-    "activitySub": "How active are you on a typical week?",
     "dietTitle": "Dietary Preferences",
     "dietSub": "Select all that apply — optional",
     "continue": "Continue →",
@@ -224,11 +261,11 @@
     "activityModerate": "3–5 days/week",
     "activityActive": "6–7 days/week",
     "activityVeryActive": "Twice daily / intense sport",
-    "dietVegetarian": "Vegetarian",
-    "dietVegan": "Vegan",
-    "dietGlutenFree": "Gluten-free",
-    "dietDairyFree": "Dairy-free",
-    "dietNutFree": "Nut-free",
+    "dietVegetarian": "Vegetariano",
+    "dietVegan": "Vegano",
+    "dietGlutenFree": "Sin gluten",
+    "dietDairyFree": "Sin lácteos",
+    "dietNutFree": "Sin frutos secos",
     "dietHalal": "Halal",
     "dietKosher": "Kosher",
     "dietKeto": "Keto"
@@ -236,6 +273,8 @@
   "scan": {
     "title": "Scan Food",
     "barcode": "Barcode",
+    "pointBarcode": "Point at the barcode",
+    "itemsAdded": "items added to",
     "photo": "Food Photo",
     "barcodeTitle": "Scan Barcode",
     "photoTitle": "Photo AI",
@@ -254,6 +293,13 @@
     "totalCalories": "Total Calories",
     "retake": "Retake",
     "addAll": "Add All to {{meal}}"
+  },
+  "foodDetail": {
+    "per": "Per",
+    "amount": "Amount (grams)",
+    "addToMeal": "Add to meal",
+    "addBtn": "Add to {{meal}}",
+    "invalidAmount": "Please enter a valid number of grams."
   },
   "paywall": {
     "unlock": "Unlock FitGO Pro",

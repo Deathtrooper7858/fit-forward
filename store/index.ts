@@ -136,6 +136,7 @@ interface NutritionState {
   favoriteFoods: FoodItem[];
   addLog:       (log: FoodLog) => void;
   removeLog:    (id: string) => void;
+  updateLog:    (id: string, updates: Partial<FoodLog>) => void;
   setLogs:      (logs: FoodLog[]) => void;
   setWater:     (ml: number) => void;
   addWater:     (ml: number) => void;
@@ -144,6 +145,7 @@ interface NutritionState {
   addFavorite:  (food: FoodItem) => void;
   removeFavorite: (id: string) => void;
   totals: () => { calories: number; protein: number; carbs: number; fat: number };
+  fetchLogs: (userId: string, date: string) => Promise<void>;
 }
 
 export const useNutritionStore = create<NutritionState>()(
@@ -157,6 +159,9 @@ export const useNutritionStore = create<NutritionState>()(
 
       addLog:    (log) => set((s) => ({ todayLogs: [...s.todayLogs, log] })),
       removeLog: (id)  => set((s) => ({ todayLogs: s.todayLogs.filter((l) => l.id !== id) })),
+      updateLog: (id, updates) => set((s) => ({
+        todayLogs: s.todayLogs.map((l) => (l.id === id ? { ...l, ...updates } : l)),
+      })),
       setLogs:   (logs) => set({ todayLogs: logs }),
       setWater:  (waterIntake) => set({ waterIntake }),
       addWater:  (ml) => set((s) => ({ waterIntake: s.waterIntake + ml })),
@@ -182,6 +187,38 @@ export const useNutritionStore = create<NutritionState>()(
           }),
           { calories: 0, protein: 0, carbs: 0, fat: 0 }
         );
+      },
+
+      fetchLogs: async (userId, date) => {
+        const { supabase } = await import('../services/supabase');
+        const { data, error } = await supabase
+          .from('food_logs')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('logged_at', date);
+
+        if (data && !error) {
+          const formattedLogs = data.map((d: any) => ({
+            id:        d.id,
+            foodItem:  {
+              id:       d.food_id ?? d.id,
+              name:     d.food_name,
+              calories: d.grams > 0 ? Math.round((d.calories / d.grams) * 100) : d.calories,
+              protein:  d.grams > 0 ? Math.round((d.protein  / d.grams) * 100) : d.protein,
+              carbs:    d.grams > 0 ? Math.round((d.carbs    / d.grams) * 100) : d.carbs,
+              fat:      d.grams > 0 ? Math.round((d.fat      / d.grams) * 100) : d.fat,
+              source:   'custom',
+            },
+            grams:    d.grams,
+            meal:     d.meal,
+            loggedAt: d.created_at || d.logged_at,
+            calories: d.calories,
+            protein:  d.protein,
+            carbs:    d.carbs,
+            fat:      d.fat,
+          }));
+          set({ todayLogs: formattedLogs as any });
+        }
       },
     }),
     {

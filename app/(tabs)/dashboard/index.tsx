@@ -118,7 +118,7 @@ export default function DashboardScreen() {
   const colors = useTheme();
   const { language } = useSettingsStore();
   const { profile }                                         = useAuthStore();
-  const { todayLogs, waterIntake, addWater, setLogs, totals, streakDays, setStreak } = useNutritionStore();
+  const { todayLogs, waterIntake, addWater, setLogs, totals, streakDays, setStreak, fetchLogs } = useNutritionStore();
   const { calories, protein, carbs, fat }                  = useMemo(() => totals(), [todayLogs]);
 
   const target   = profile?.targetCalories ?? 2000;
@@ -132,38 +132,8 @@ export default function DashboardScreen() {
     async function loadTodayData() {
       if (!profile?.id) return;
       const today = new Date().toISOString().split('T')[0];
-
-      const { data, error } = await supabase
-        .from('food_logs')
-        .select('*')
-        .eq('user_id', profile.id)
-        .gte('logged_at', today)
-        .lte('logged_at', today + 'T23:59:59');
-
-      if (data && !error) {
-        const formattedLogs = data.map((d: any) => ({
-          id:        d.id,
-          foodItem:  {
-            id:       d.food_id ?? d.id,
-            name:     d.food_name,
-            calories: d.grams > 0 ? Math.round((d.calories / d.grams) * 100) : d.calories,
-            protein:  d.grams > 0 ? Math.round((d.protein  / d.grams) * 100) : d.protein,
-            carbs:    d.grams > 0 ? Math.round((d.carbs    / d.grams) * 100) : d.carbs,
-            fat:      d.grams > 0 ? Math.round((d.fat      / d.grams) * 100) : d.fat,
-            source:   'custom',
-          },
-          grams:    d.grams,
-          meal:     d.meal,
-          loggedAt: d.logged_at ?? d.created_at,
-          calories: d.calories,
-          protein:  d.protein,
-          carbs:    d.carbs,
-          fat:      d.fat,
-        }));
-        setLogs(formattedLogs as any);
-      }
-
-      // Calculate real streak from Supabase
+      
+      await fetchLogs(profile.id, today);
       calculateStreak(profile.id);
     }
 
@@ -278,7 +248,9 @@ export default function DashboardScreen() {
               <View key={log.id} style={[s.logRow, { borderBottomColor: colors.border }]}>
                 <View>
                   <Text style={[s.logName, { color: colors.textPrimary }]}>{log.foodItem.name}</Text>
-                  <Text style={[s.logMeal, { color: colors.textSecondary }]}>{log.meal} · {log.grams}g</Text>
+                  <Text style={[s.logMeal, { color: colors.textSecondary }]}>
+                    {log.meal} · {log.grams}g · {new Date(log.loggedAt).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit', hour12: true })}
+                  </Text>
                 </View>
                 <Text style={[s.logCal, { color: colors.accent }]}>{log.calories} kcal</Text>
               </View>

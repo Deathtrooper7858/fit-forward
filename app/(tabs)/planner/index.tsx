@@ -114,9 +114,9 @@ export default function PlannerScreen() {
         }
       }
 
-      Alert.alert('✅ ' + t('common.success'), t('planner.planReady') || 'Your AI meal plan has been generated and saved!');
+      Alert.alert('✅ ' + t('common.success'), t('planner.planReady'));
     } catch (err: any) {
-      Alert.alert(t('common.error'), err?.message ?? 'Failed to generate plan. Please try again.');
+      Alert.alert(t('common.error'), err?.message ?? t('planner.analysisFailedSub'));
     } finally {
       setLoading(false);
     }
@@ -129,11 +129,11 @@ export default function PlannerScreen() {
     if (!isPro) { router.push('/modals/paywall'); return; }
     const allItems = Object.values(plans).flat();
     if (allItems.length === 0) {
-      Alert.alert('No Plan', 'Generate a meal plan first to create a shopping list.');
+      Alert.alert(t('planner.noPlan'), t('planner.noPlanSub'));
       return;
     }
     const list = allItems.map(i => `• ${i.name} (${i.calories} kcal)`).join('\n');
-    Alert.alert('🛒 Shopping List', list);
+    Alert.alert(t('planner.shoppingListTitle'), list);
   };
 
   const handleWeeklyAnalysis = async () => {
@@ -152,7 +152,7 @@ export default function PlannerScreen() {
       }, language);
       setAnalysis(res);
     } catch (err) {
-      Alert.alert('Analysis Failed', 'Could not generate weekly review.');
+      Alert.alert(t('planner.analysisFailed'), t('planner.analysisFailedSub'));
     } finally {
       setAnalyzing(false);
     }
@@ -181,9 +181,9 @@ export default function PlannerScreen() {
         {/* Weekly Analysis Section */}
         <View style={[s.analysisWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={s.analysisHeader}>
-            <Text style={[s.analysisTitle, { color: colors.textPrimary }]}>AI Weekly Review</Text>
+            <Text style={[s.analysisTitle, { color: colors.textPrimary }]}>{t('planner.aiReview')}</Text>
             <TouchableOpacity onPress={handleWeeklyAnalysis} disabled={analyzing}>
-              <Text style={[s.analysisBtnText, { color: colors.primary }]}>{analysis ? 'Regenerate' : 'Analyze'}</Text>
+              <Text style={[s.analysisBtnText, { color: colors.primary }]}>{analysis ? t('planner.regenerate') : t('planner.analyze')}</Text>
             </TouchableOpacity>
           </View>
           {analyzing ? (
@@ -193,14 +193,14 @@ export default function PlannerScreen() {
               <Text style={[s.analysisText, { color: colors.textSecondary }]}>{analysis}</Text>
             </View>
           ) : (
-            <Text style={[s.analysisPlaceholder, { color: colors.textMuted }]}>Get a summary of your week and custom tips.</Text>
+            <Text style={[s.analysisPlaceholder, { color: colors.textMuted }]}>{t('planner.reviewPlaceholder')}</Text>
           )}
         </View>
 
         {meals.length > 0 && (
           <View style={[s.summary, { backgroundColor: colors.surfaceAlt }]}>
             <Text style={[s.summaryText, { color: colors.textSecondary }]}>
-              {totalCal} kcal {t('planner.planned') || 'planned'} · {Math.max((profile?.targetCalories ?? 2000) - totalCal, 0)} {t('tracker.remaining')}
+              {totalCal} kcal {t('planner.planned')} · {Math.max((profile?.targetCalories ?? 2000) - totalCal, 0)} {t('tracker.remaining')}
             </Text>
           </View>
         )}
@@ -214,16 +214,16 @@ export default function PlannerScreen() {
           ) : (
             <View style={s.emptyDay}>
               <Text style={s.emptyEmoji}>📅</Text>
-              <Text style={[s.emptyTitle, { color: colors.textPrimary }]}>{t('planner.noMeals') || 'No meals planned'}</Text>
+              <Text style={[s.emptyTitle, { color: colors.textPrimary }]}>{t('planner.noMeals')}</Text>
               <Text style={[s.emptySub, { color: colors.textSecondary }]}>
                 {loading ? t('common.loading') : isPro
-                  ? t('planner.emptySubPro') || 'Tap "Generate" to create an AI meal plan'
-                  : t('planner.emptySubFree') || 'Upgrade to Pro to generate AI meal plans'}
+                  ? t('planner.emptySubPro')
+                  : t('planner.emptySubFree')}
               </Text>
               {!isPro && !loading && (
                 <TouchableOpacity style={s.proBtn} activeOpacity={0.8} onPress={() => router.push('/modals/paywall')}>
                   <LinearGradient colors={['#F59E0B', '#D97706']} style={s.proGrad}>
-                    <Text style={s.proText}>🔓 Unlock Pro</Text>
+                    <Text style={s.proText}>{t('planner.unlockPro')}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
               )}
@@ -236,8 +236,8 @@ export default function PlannerScreen() {
           <LinearGradient colors={colors.theme === 'dark' ? ['#F59E0B11', '#D9770611'] : [colors.pro + '15', colors.pro + '08']} style={[s.teaser, { borderColor: colors.pro + '33' }]}>
             <Text style={s.teaserEmoji}>🛒</Text>
             <View style={{ flex: 1 }}>
-              <Text style={[s.teaserTitle, { color: colors.textPrimary }]}>Auto Shopping List</Text>
-              <Text style={[s.teaserSub, { color: colors.textSecondary }]}>Generate a grocery list from your weekly plan</Text>
+              <Text style={[s.teaserTitle, { color: colors.textPrimary }]}>{t('planner.autoShoppingList')}</Text>
+              <Text style={[s.teaserSub, { color: colors.textSecondary }]}>{t('planner.shoppingListSub')}</Text>
             </View>
             {!isPro && <View style={[s.proBadge, { backgroundColor: colors.pro + '22', borderColor: colors.pro + '66' }]}><Text style={[s.proBadgeText, { color: colors.pro }]}>PRO</Text></View>}
           </LinearGradient>
@@ -250,6 +250,7 @@ export default function PlannerScreen() {
 }
 
 function DayPicker({ active, onSelect }: { active: string; onSelect: (d: string) => void }) {
+  const { t } = useTranslation();
   const colors = useTheme();
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={dp.scroll} contentContainerStyle={dp.row}>
@@ -259,7 +260,9 @@ function DayPicker({ active, onSelect }: { active: string; onSelect: (d: string)
           style={[dp.day, { backgroundColor: colors.surface, borderColor: colors.border }, active === d && { borderColor: colors.primary, backgroundColor: colors.primary + '22' }]}
           onPress={() => onSelect(d)}
         >
-          <Text style={[dp.dayLabel, { color: colors.textSecondary }, active === d && { color: colors.primary }]}>{d}</Text>
+          <Text style={[dp.dayLabel, { color: colors.textSecondary }, active === d && { color: colors.primary }]}>
+            {t(`planner.${d.toLowerCase()}`)}
+          </Text>
         </TouchableOpacity>
       ))}
     </ScrollView>

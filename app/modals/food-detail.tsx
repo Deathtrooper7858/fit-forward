@@ -2,21 +2,32 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Alert } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Spacing, Radius } from '../../constants';
+import { Spacing, Radius } from '../../constants';
 import { FoodItem } from '../../services/foodDatabase';
-import { useNutritionStore } from '../../store';
+import { useAuthStore, useNutritionStore } from '../../store';
 import { useTheme } from '../../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
+import { supabase } from '../../services/supabase';
 
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 type Meal = typeof MEALS[number];
 
 export default function FoodDetailModal() {
+  const { t } = useTranslation();
   const colors = useTheme();
-  const { foodJson }          = useLocalSearchParams<{ foodJson: string }>();
+  const { foodJson, meal: initialMeal, logId, initialGrams, date } = useLocalSearchParams<{ 
+    foodJson: string; 
+    meal?: Meal;
+    logId?: string;
+    initialGrams?: string;
+    date?: string;
+  }>();
+
   const food: FoodItem        = JSON.parse(foodJson ?? '{}');
-  const [grams, setGrams]     = useState('100');
-  const [meal, setMeal]       = useState<Meal>('lunch');
-  const { addLog }            = useNutritionStore();
+  const [grams, setGrams]     = useState(initialGrams || '100');
+  const [meal, setMeal]       = useState<Meal>(initialMeal || 'lunch');
+  const { addLog, updateLog, removeLog } = useNutritionStore();
+  const { profile }           = useAuthStore();
 
   const g      = parseFloat(grams) || 0;
   const factor = g / 100;
@@ -25,32 +36,79 @@ export default function FoodDetailModal() {
   const carb   = Math.round(food.carbs    * factor);
   const fat    = Math.round(food.fat      * factor);
 
-  const handleAdd = () => {
+  const handleSave = async () => {
     if (!g || g <= 0) {
-      Alert.alert('Invalid amount', 'Please enter a valid number of grams.');
+      Alert.alert(t('common.error'), t('foodDetail.invalidAmount'));
       return;
     }
-    addLog({
-      id:       `${Date.now()}-${food.id}`,
-      foodItem: food,
-      grams:    g,
-      meal,
-      loggedAt: new Date().toISOString(),
-      calories: cal,
-      protein:  pro,
-      carbs:    carb,
-      fat,
-    });
+
+    if (logId) {
+      // Update existing log
+      updateLog(logId, {
+        grams: g,
+        meal,
+        calories: cal,
+        protein:  pro,
+        carbs:    carb,
+        fat,
+      });
+
+      if (profile?.id) {
+        await supabase.from('food_logs').update({
+          grams: g,
+          meal,
+          calories: cal,
+          protein:  pro,
+          carbs:    carb,
+          fat,
+        }).eq('id', logId);
+      }
+    } else {
+      // Add new log
+      const localId = `${Date.now()}-${food.id}`;
+      // Optimistic update
+      addLog({
+        id:       localId,
+        foodItem: food,
+        grams:    g,
+        meal,
+        loggedAt: date ? `${date}T${new Date().toISOString().split('T')[1]}` : new Date().toISOString(),
+        calories: cal,
+        protein:  pro,
+        carbs:    carb,
+        fat,
+      });
+
+      if (profile?.id) {
+        const { data, error } = await supabase.from('food_logs').insert({
+          user_id:   profile.id,
+          food_name: food.name,
+          calories:  cal,
+          protein:   pro,
+          carbs:     carb,
+          fat,
+          grams:     g,
+          meal,
+          logged_at: date || new Date().toISOString().split('T')[0],
+        }).select().single();
+
+        if (data && !error) {
+          // Replace the temporary ID with the real one from Supabase
+          const { fetchLogs, selectedDate } = useNutritionStore.getState();
+          // We could write a specific "replaceId" function, but re-fetching is safer 
+          // and ensures everything is in sync.
+          fetchLogs(profile.id, selectedDate);
+        }
+      }
+    }
     router.back();
   };
 
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
-      {/* Handle */}
       <View style={[s.handle, { backgroundColor: colors.border }]} />
 
       <ScrollView>
-        {/* Product header */}
         <View style={s.header}>
           <Text style={[s.name, { color: colors.textPrimary }]}>{food.name}</Text>
           {food.brand && <Text style={[s.brand, { color: colors.textSecondary }]}>{food.brand}</Text>}
@@ -59,15 +117,14 @@ export default function FoodDetailModal() {
           </View>
         </View>
 
-        {/* Macro summary */}
         <View style={[s.macroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[s.macroTitle, { color: colors.textMuted }]}>Per {grams || '?'}g</Text>
+          <Text style={[s.macroTitle, { color: colors.textMuted }]}>{t('foodDetail.per')} {grams || '?'}g</Text>
           <View style={s.macroRow}>
             {[
-              { label: 'Calories', val: cal, color: colors.accent },
-              { label: 'Protein',  val: `${pro}g`,  color: colors.protein },
-              { label: 'Carbs',    val: `${carb}g`, color: colors.carbs },
-              { label: 'Fat',      val: `${fat}g`,  color: colors.fat },
+              { label: t('profile.calories'), val: cal, color: colors.accent },
+              { label: t('profile.protein'),  val: `${pro}g`,  color: colors.protein },
+              { label: t('profile.carbs'),    val: `${carb}g`, color: colors.carbs },
+              { label: t('profile.fat'),      val: `${fat}g`,  color: colors.fat },
             ].map(({ label, val, color }) => (
               <View key={label} style={s.macroItem}>
                 <Text style={[s.macroVal, { color }]}>{val}</Text>
@@ -77,9 +134,8 @@ export default function FoodDetailModal() {
           </View>
         </View>
 
-        {/* Grams input */}
         <View style={s.section}>
-          <Text style={[s.sectionLabel, { color: colors.textSecondary }]}>Amount (grams)</Text>
+          <Text style={[s.sectionLabel, { color: colors.textSecondary }]}>{t('foodDetail.amount')}</Text>
           <TextInput
             style={[s.gramsInput, { backgroundColor: colors.surface, borderColor: colors.primary, color: colors.textPrimary }]}
             value={grams}
@@ -89,9 +145,8 @@ export default function FoodDetailModal() {
           />
         </View>
 
-        {/* Meal selector */}
         <View style={s.section}>
-          <Text style={[s.sectionLabel, { color: colors.textSecondary }]}>Add to meal</Text>
+          <Text style={[s.sectionLabel, { color: colors.textSecondary }]}>{t('foodDetail.addToMeal')}</Text>
           <View style={s.mealRow}>
             {MEALS.map((m) => (
               <TouchableOpacity
@@ -101,22 +156,52 @@ export default function FoodDetailModal() {
                 activeOpacity={0.75}
               >
                 <Text style={[s.mealPillText, { color: colors.textSecondary }, meal === m && { color: colors.primary, fontWeight: '700' }]}>
-                  {m.charAt(0).toUpperCase() + m.slice(1)}
+                  {t(`tracker.${m}`)}
                 </Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
+
+        {/* Delete option (only when editing) */}
+        {logId && (
+          <TouchableOpacity 
+            style={s.deleteRow} 
+            onPress={() => {
+              Alert.alert(
+                t('tracker.removeEntry'),
+                t('tracker.removeConfirm', { name: food.name }),
+                [
+                  { text: t('common.cancel'), style: 'cancel' },
+                  { 
+                    text: t('common.remove'), 
+                    style: 'destructive',
+                    onPress: async () => {
+                      removeLog(logId);
+                      if (profile?.id) {
+                        await supabase.from('food_logs').delete().eq('id', logId);
+                      }
+                      router.back();
+                    }
+                  }
+                ]
+              );
+            }}
+          >
+            <Text style={[s.deleteText, { color: colors.error }]}>🗑️ {t('common.remove')}</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
 
-      {/* Footer CTA */}
       <View style={[s.footer, { borderTopColor: colors.border }]}>
         <TouchableOpacity style={[s.cancelBtn, { borderColor: colors.border }]} onPress={() => router.back()} activeOpacity={0.7}>
-          <Text style={[s.cancelText, { color: colors.textSecondary }]}>Cancel</Text>
+          <Text style={[s.cancelText, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={s.addBtn} onPress={handleAdd} activeOpacity={0.85}>
+        <TouchableOpacity style={s.addBtn} onPress={handleSave} activeOpacity={0.85}>
           <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.addGrad}>
-            <Text style={s.addText}>Add to {meal.charAt(0).toUpperCase() + meal.slice(1)}</Text>
+            <Text style={s.addText}>
+              {logId ? t('common.save') : t('foodDetail.addBtn', { meal: t(`tracker.${meal}`) })}
+            </Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>
@@ -150,4 +235,6 @@ const s = StyleSheet.create({
   addBtn:           { flex: 2, borderRadius: Radius.md, overflow: 'hidden' },
   addGrad:          { padding: 14, alignItems: 'center' },
   addText:          { color: '#fff', fontWeight: '700', fontSize: 15 },
+  deleteRow:        { padding: Spacing.base, alignItems: 'center', marginTop: Spacing.base },
+  deleteText:       { fontSize: 15, fontWeight: '600' },
 });

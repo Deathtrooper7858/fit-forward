@@ -121,7 +121,31 @@
     "thursday": "Jueves",
     "friday": "Viernes",
     "saturday": "Sábado",
-    "sunday": "Domingo"
+    "sunday": "Domingo",
+    "noMeals": "No hay comidas planeadas",
+    "emptySubPro": "Toca \"Generar\" para crear un plan de comidas con IA",
+    "emptySubFree": "Mejora a Pro para generar planes de comidas con IA",
+    "planned": "planeado",
+    "planReady": "¡Tu plan de comidas IA ha sido generado y guardado!",
+    "aiReview": "Revisión Semanal IA",
+    "analyze": "Analizar",
+    "regenerate": "Regenerar",
+    "reviewPlaceholder": "Obtén un resumen de tu semana y consejos personalizados.",
+    "autoShoppingList": "Lista de Compras Automática",
+    "shoppingListSub": "Genera una lista de compras desde tu plan semanal",
+    "noPlan": "Sin Plan",
+    "noPlanSub": "Genera un plan de comidas primero para crear una lista de compras.",
+    "shoppingListTitle": "🛒 Lista de Compras",
+    "analysisFailed": "Análisis Fallido",
+    "analysisFailedSub": "No se pudo generar la revisión semanal.",
+    "unlockPro": "🔓 Desbloquear Pro",
+    "mon": "Lun",
+    "tue": "Mar",
+    "wed": "Mié",
+    "thu": "Jue",
+    "fri": "Vie",
+    "sat": "Sáb",
+    "sun": "Dom"
   },
   "profile": {
     "title": "Perfil",
@@ -185,20 +209,38 @@
     "lightMode": "Claro",
     "unlockPro": "Desbloquea FitGO Pro"
   },
+  "recipes": {
+    "title": "Recetas IA",
+    "refresh": "Actualizar ✨",
+    "loading": "Creando recetas personalizadas...",
+    "proTitle": "Las Recetas son una Función Pro",
+    "proSub": "Desbloquea recetas personalizadas generadas por IA para alcanzar tus macros perfectamente.",
+    "unlockNow": "Desbloquear Pro Ahora",
+    "prepTime": "min"
+  },
   "coach": {
     "title": "Fitz Coach",
-    "nutritionist": "Nutricionista",
-    "trainer": "Entrenador personal",
-    "welcome": "¡Hola! Soy Fitz, tu coach de nutrición con IA. ¿Cómo puedo ayudarte hoy?",
     "typing": "Fitz está pensando...",
-    "inputPlaceholder": "Pregunta lo que sea sobre nutrición...",
+    "inputPlaceholder": "Escribe tu mensaje aquí...",
     "limitReached": "Límite diario alcanzado",
     "upgradePro": "Mejora a Pro para coaching ilimitado",
     "online": "En línea · Con tecnología de Groq",
-    "suggest1": "¿Qué debería comer después de entrenar? 💪",
-    "suggest2": "Dame una idea de desayuno alto en proteína 🍳",
-    "suggest3": "¿Cómo puedo reducir los antojos de azúcar? 🍬",
-    "suggest4": "¿Estoy comiendo suficiente proteína? 📊"
+    "nutritionist": {
+      "label": "Nutricionista",
+      "welcome": "¡Hola! Soy tu Nutricionista IA. ¿En qué puedo ayudarte con tu alimentación hoy?",
+      "suggest1": "Dame una idea de cena ligera 🥗",
+      "suggest2": "¿Qué snacks son buenos para perder peso? 🍎",
+      "suggest3": "¿Cuánta proteína debo comer al día? 🍗",
+      "suggest4": "Analiza mi dieta actual 📊"
+    },
+    "trainer": {
+      "label": "Entrenador personal",
+      "welcome": "¡Hola! Soy tu Entrenador Personal IA. ¿Listo para el entrenamiento de hoy?",
+      "suggest1": "Dame una rutina de 20 min en casa 🏠",
+      "suggest2": "¿Cómo mejorar mi sentadilla? 🏋️",
+      "suggest3": "Plan de entrenamiento para ganar músculo 💪",
+      "suggest4": "¿Qué estiramientos hacer después de correr? 🏃"
+    }
   },
   "onboarding": {
     "goalTitle": "¿Cuál es tu objetivo principal?",
@@ -209,11 +251,6 @@
     "staySub": "Mantén tu cuerpo actual",
     "gainTitle": "Ganar Músculo",
     "gainSub": "Gana fuerza y masa",
-    "statsTitle": "Cuéntanos sobre ti",
-    "statsSub": "Se usa para calcular tu meta de calorías diaria",
-    "sexLabel": "Sexo Biológico",
-    "activityTitle": "Nivel de Actividad",
-    "activitySub": "¿Qué tan activo eres en una semana típica?",
     "dietTitle": "Preferencias Dietéticas",
     "dietSub": "Selecciona todas las que apliquen — opcional",
     "continue": "Continuar →",
@@ -236,6 +273,8 @@
   "scan": {
     "title": "Escanear Alimento",
     "barcode": "Código",
+    "pointBarcode": "Apunta al código de barras",
+    "itemsAdded": "alimentos añadidos a",
     "photo": "Foto de Comida",
     "barcodeTitle": "Escanear Código",
     "photoTitle": "IA Foto",
@@ -254,6 +293,13 @@
     "totalCalories": "Calorías Totales",
     "retake": "Repetir",
     "addAll": "Añadir Todo a {{meal}}"
+  },
+  "foodDetail": {
+    "per": "Por",
+    "amount": "Cantidad (gramos)",
+    "addToMeal": "Añadir a la comida",
+    "addBtn": "Añadir a {{meal}}",
+    "invalidAmount": "Por favor ingresa una cantidad válida de gramos."
   },
   "paywall": {
     "unlock": "Desbloquea FitGO Pro",

@@ -1,7 +1,7 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, Animated,
+  TextInput, ActivityIndicator, Alert, Animated, ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
@@ -114,7 +114,13 @@ export default function TrackerScreen() {
   const colors = useTheme();
   const { language } = useSettingsStore();
   const { profile }   = useAuthStore();
-  const { todayLogs, removeLog, favoriteFoods, addFavorite, removeFavorite, addLog } = useNutritionStore();
+  const { todayLogs, removeLog, favoriteFoods, addFavorite, removeFavorite, addLog, selectedDate, setDate, fetchLogs } = useNutritionStore();
+
+  useEffect(() => {
+    if (profile?.id) {
+      fetchLogs(profile.id, selectedDate);
+    }
+  }, [profile?.id, selectedDate]);
 
 
 
@@ -157,7 +163,7 @@ export default function TrackerScreen() {
               foodItem: { ...item, id: `v-${Date.now()}`, source: 'ai' },
               grams: item.grams,
               meal: activeMeal,
-              loggedAt: new Date().toISOString(),
+              loggedAt: selectedDate ? `${selectedDate}T${new Date().toISOString().split('T')[1]}` : new Date().toISOString(),
               calories: item.calories,
               protein: item.protein,
               carbs: item.carbs,
@@ -174,11 +180,15 @@ export default function TrackerScreen() {
                 fat: item.fat,
                 grams: item.grams,
                 meal: activeMeal,
+                logged_at: selectedDate,
               });
             }
           }
           if (items.length > 0) {
             Alert.alert(t('common.success'), t('tracker.voiceSuccess', { count: items.length }));
+            if (profile?.id) {
+              fetchLogs(profile.id, selectedDate);
+            }
           }
         } catch (err) {
           Alert.alert(t('tracker.voiceFailed'), t('tracker.voiceFailedSub'));
@@ -218,7 +228,19 @@ export default function TrackerScreen() {
   const handleAdd = (item: FoodItem) => {
     router.push({
       pathname: '/modals/food-detail',
-      params: { foodJson: JSON.stringify(item), meal: activeMeal },
+      params: { foodJson: JSON.stringify(item), meal: activeMeal, date: selectedDate },
+    });
+  };
+
+  const handleEditLog = (log: any) => {
+    router.push({
+      pathname: '/modals/food-detail',
+      params: { 
+        foodJson: JSON.stringify(log.foodItem), 
+        meal: log.meal,
+        logId: log.id,
+        initialGrams: String(log.grams)
+      },
     });
   };
 
@@ -258,6 +280,10 @@ export default function TrackerScreen() {
             <Text style={s.scanText}>📷 {t('tracker.photoRecognition')}</Text>
           </LinearGradient>
         </TouchableOpacity>
+      </View>
+
+      <View style={s.datePickerWrap}>
+        <DatePicker selected={selectedDate} onSelect={setDate} />
       </View>
 
       <FlatList
@@ -326,18 +352,24 @@ export default function TrackerScreen() {
                         <TouchableOpacity
                           key={log.id}
                           style={[s.logItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                          onPress={() => handleEditLog(log)}
                           onLongPress={() => handleDeleteLog(log.id, log.foodItem.name)}
                           activeOpacity={0.8}
                         >
                           <View style={{ flex: 1 }}>
-                            <Text style={[s.logName, { color: colors.textPrimary }]}>{log.foodItem.name}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                              <Text style={[s.logName, { color: colors.textPrimary }]}>{log.foodItem.name}</Text>
+                              <Text style={[s.logTime, { color: colors.textMuted }]}>
+                                {new Date(log.loggedAt).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit', hour12: true })}
+                              </Text>
+                            </View>
                             <Text style={[s.logMacros, { color: colors.textMuted }]}>
                               P{log.protein}g · C{log.carbs}g · F{log.fat}g · {log.grams}g
                             </Text>
                           </View>
                           <View style={{ alignItems: 'flex-end' }}>
                             <Text style={[s.logCal, { color: colors.accent }]}>{log.calories} kcal</Text>
-                            <Text style={[s.holdHint, { color: colors.textMuted }]}>{t('tracker.holdToRemove')}</Text>
+                            <Text style={[s.holdHint, { color: colors.textMuted }]}>{t('common.tapToEdit')}</Text>
                           </View>
                         </TouchableOpacity>
                       ))}
@@ -360,9 +392,56 @@ export default function TrackerScreen() {
   );
 }
 
+function DatePicker({ selected, onSelect }: { selected: string; onSelect: (d: string) => void }) {
+  const { t } = useTranslation();
+  const colors = useTheme();
+  const { language } = useSettingsStore();
+
+  const days = useMemo(() => {
+    const arr = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      arr.push({
+        label: d.toLocaleDateString(language, { weekday: 'short' }),
+        dayNum: d.getDate(),
+        full: d.toISOString().split('T')[0],
+      });
+    }
+    return arr;
+  }, [language]);
+
+  return (
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={ds.row}>
+      {days.map((d: any) => (
+        <TouchableOpacity
+          key={d.full}
+          style={[ds.day, { backgroundColor: colors.surface, borderColor: colors.border }, selected === d.full && { borderColor: colors.primary, backgroundColor: colors.primary + '22' }]}
+          onPress={() => onSelect(d.full)}
+        >
+          <Text style={[ds.dayLabel, { color: colors.textSecondary }, selected === d.full && { color: colors.primary }]}>
+            {d.label}
+          </Text>
+          <Text style={[ds.dayNum, { color: colors.textPrimary }, selected === d.full && { color: colors.primary }]}>
+            {d.dayNum}
+          </Text>
+        </TouchableOpacity>
+      ))}
+    </ScrollView>
+  );
+}
+
+const ds = StyleSheet.create({
+  row:      { gap: 10, paddingHorizontal: Spacing.base, paddingBottom: 10 },
+  day:      { width: 50, height: 64, borderRadius: Radius.md, borderWidth: 1.5, justifyContent: 'center', alignItems: 'center', gap: 2 },
+  dayLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase' },
+  dayNum:   { fontSize: 16, fontWeight: '800' },
+});
+
 const s = StyleSheet.create({
   safe:          { flex: 1 },
   header:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.base, paddingTop: Spacing.lg },
+  datePickerWrap:{ marginBottom: Spacing.md },
   title:         { fontSize: 24, fontWeight: '800' },
   scanBtn:       { borderRadius: Radius.md, overflow: 'hidden' },
   scanGrad:      { paddingHorizontal: 16, paddingVertical: 10 },
@@ -379,6 +458,7 @@ const s = StyleSheet.create({
   mealGroupTitle:{ fontSize: 14, fontWeight: '600', marginBottom: 8, textTransform: 'capitalize' },
   logItem:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 12, borderRadius: Radius.md, marginBottom: 6, borderWidth: 1 },
   logName:       { fontSize: 14, fontWeight: '500' },
+  logTime:       { fontSize: 11, fontWeight: '400' },
   logMacros:     { fontSize: 11, marginTop: 2 },
   logCal:        { fontSize: 14, fontWeight: '600' },
   holdHint:      { fontSize: 9, marginTop: 2 },
