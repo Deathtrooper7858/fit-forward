@@ -11,7 +11,8 @@
     "tapToEdit": "Toca para editar"
   },
   "welcome": {
-    "tagline": "Tu compañero de nutrición con IA.\nDiseñado para transformar tu cuerpo.",
+    "motto": "Fit-Go: Tu mejor versión",
+    "tagline": "Tu coach y nutricionista en un solo lugar.",
     "feature1": "Registro Inteligente",
     "feature2": "Coach de Nutrición IA",
     "feature3": "Composición Corporal",
@@ -19,6 +20,14 @@
     "getStarted": "Comenzar — Es Gratis",
     "haveAccount": "Ya tengo una cuenta",
     "legal": "Al continuar, aceptas nuestros Términos de Servicio y Política de Privacidad."
+  },
+  "about": {
+    "title": "Sobre FitGO",
+    "social": "Redes Sociales",
+    "tiktok": "TikTok",
+    "instagram": "Instagram",
+    "email": "Correo de Soporte",
+    "hashtag": "Hashtags"
   },
   "auth": {
     "login": "Bienvenido de nuevo",

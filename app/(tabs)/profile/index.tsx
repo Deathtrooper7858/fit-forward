@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity, Alert,
-  Modal, TextInput, KeyboardAvoidingView, Platform, Image,
+  Modal, TextInput, KeyboardAvoidingView, Platform, Image, Linking,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -474,6 +474,29 @@ export default function ProfileScreen() {
         </View>
 
         <View style={[s.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[s.sectionTitle, { color: colors.textMuted }]}>{t('about.title')}</Text>
+          <MenuRow 
+            icon="📱" 
+            label={t('about.tiktok')} 
+            onPress={() => Linking.openURL('https://www.tiktok.com/@fit_go?is_from_webapp=1&sender_device=pc')} 
+          />
+          <MenuRow 
+            icon="📸" 
+            label={t('about.instagram')} 
+            onPress={() => Linking.openURL('https://www.instagram.com/fit___go/')} 
+          />
+          <MenuRow 
+            icon="📧" 
+            label={t('about.email')} 
+            value="fitgoenterprise@gmail.com"
+            onPress={() => Linking.openURL('mailto:fitgoenterprise@gmail.com')} 
+          />
+          <View style={s.hashtagRow}>
+            <Text style={[s.hashtagText, { color: colors.primary }]}>#FitGo #TuMejorVersion</Text>
+          </View>
+        </View>
+
+        <View style={[s.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[s.sectionTitle, { color: colors.textMuted }]}>{t('profile.dangerZone')}</Text>
           <MenuRow icon="🚪" label={t('profile.signOut')} onPress={handleLogout} isDestructive />
         </View>
@@ -519,4 +542,6 @@ const s = StyleSheet.create({
   section:     { marginHorizontal: Spacing.base, marginBottom: Spacing.base, borderRadius: Radius.lg, overflow: 'hidden', borderWidth: 1 },
   sectionTitle:{ fontSize: 12, fontWeight: '600', letterSpacing: 0.8, textTransform: 'uppercase', padding: Spacing.base, paddingBottom: 6 },
   version:     { textAlign: 'center', fontSize: 12, marginTop: 8 },
+  hashtagRow:  { padding: Spacing.base, alignItems: 'center', borderTopWidth: 1, borderTopColor: 'rgba(0,0,0,0.05)' },
+  hashtagText: { fontSize: 13, fontWeight: '600', fontStyle: 'italic' },
 });

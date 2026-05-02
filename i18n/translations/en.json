@@ -11,7 +11,8 @@
     "tapToEdit": "Tap to edit"
   },
   "welcome": {
-    "tagline": "Your AI-powered nutrition partner.\nBuilt to transform your body.",
+    "motto": "Fit-Go: Your best version",
+    "tagline": "Your coach and nutritionist in one place.",
     "feature1": "Smart Food Tracking",
     "feature2": "AI Nutrition Coach",
     "feature3": "Body Composition",
@@ -19,6 +20,14 @@
     "getStarted": "Get Started — It's Free",
     "haveAccount": "I already have an account",
     "legal": "By continuing you agree to our Terms of Service and Privacy Policy."
+  },
+  "about": {
+    "title": "About FitGO",
+    "social": "Social Media",
+    "tiktok": "TikTok",
+    "instagram": "Instagram",
+    "email": "Support Email",
+    "hashtag": "Hashtags"
   },
   "auth": {
     "login": "Welcome Back",
