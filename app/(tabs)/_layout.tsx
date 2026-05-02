@@ -1,69 +1,74 @@
 import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
-import { Colors } from '../../constants';
+import { useTheme } from '../../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 
 function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
+  const colors = useTheme();
   return (
-    <View style={[styles.tabItem, focused && styles.tabItemActive]}>
+    <View style={styles.tabItem}>
       <Text style={styles.emoji}>{emoji}</Text>
-      <Text style={[styles.tabLabel, focused && styles.tabLabelActive]}>{label}</Text>
+      <Text style={[styles.tabLabel, { color: focused ? colors.tabActive : colors.tabInactive }]} numberOfLines={1}>{label}</Text>
     </View>
   );
 }
 
 export default function TabsLayout() {
+  const { t } = useTranslation();
+  const colors = useTheme();
+  
   return (
     <Tabs
       screenOptions={{
         headerShown: false,
-        tabBarStyle: styles.tabBar,
+        tabBarStyle: [styles.tabBar, { backgroundColor: colors.surface, borderTopColor: colors.border }],
         tabBarShowLabel: false,
-        tabBarActiveTintColor: Colors.tabActive,
-        tabBarInactiveTintColor: Colors.tabInactive,
+        tabBarActiveTintColor: colors.tabActive,
+        tabBarInactiveTintColor: colors.tabInactive,
       }}
     >
       <Tabs.Screen
         name="dashboard/index"
         options={{
-          title: 'Dashboard',
+          title: t('tabs.dashboard'),
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="📊" label="Dashboard" focused={focused} />
+            <TabIcon emoji="📊" label={t('tabs.dashboard')} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="tracker/index"
         options={{
-          title: 'Tracker',
+          title: t('tabs.tracker'),
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🍽️" label="Tracker" focused={focused} />
+            <TabIcon emoji="🍽️" label={t('tabs.tracker')} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="coach/index"
         options={{
-          title: 'Coach',
+          title: t('tabs.coach'),
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🤖" label="Coach" focused={focused} />
+            <TabIcon emoji="🤖" label={t('tabs.coach')} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="planner/index"
         options={{
-          title: 'Planner',
+          title: t('tabs.planner'),
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="📅" label="Planner" focused={focused} />
+            <TabIcon emoji="🗓️" label={t('tabs.planner')} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="profile/index"
         options={{
-          title: 'Profile',
+          title: t('tabs.profile'),
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="👤" label="Profile" focused={focused} />
+            <TabIcon emoji="👤" label={t('tabs.profile')} focused={focused} />
           ),
         }}
       />
@@ -73,16 +78,12 @@ export default function TabsLayout() {
 
 const styles = StyleSheet.create({
   tabBar: {
-    backgroundColor: Colors.surface,
-    borderTopColor: Colors.border,
     borderTopWidth: 1,
     height: 80,
     paddingBottom: 12,
     paddingTop: 8,
   },
   tabItem:       { alignItems: 'center', gap: 4, paddingHorizontal: 4 },
-  tabItemActive: {},
   emoji:         { fontSize: 22 },
-  tabLabel:      { fontSize: 10, color: Colors.tabInactive, fontWeight: '500' },
-  tabLabelActive:{ color: Colors.tabActive },
+  tabLabel:      { fontSize: 10, fontWeight: '500' },
 });

@@ -1,0 +1,52 @@
+{
+  "common": {
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "error": "Fehler",
+    "success": "Erfolg",
+    "loading": "Laden...",
+    "comingSoon": "Demnächst",
+    "notImplemented": "Diese Funktion befindet sich derzeit in der Entwicklung."
+  },
+  "tabs": {
+    "dashboard": "Dashboard",
+    "tracker": "Tracker",
+    "coach": "Coach",
+    "planner": "Planer",
+    "profile": "Profil"
+  },
+  "profile": {
+    "title": "Profil",
+    "editName": "Name aktualisieren",
+    "enterName": "Geben Sie Ihren Namen ein",
+    "bodyHealth": "Körper & Gesundheit",
+    "height": "Größe",
+    "weight": "Gewicht",
+    "age": "Alter",
+    "sex": "Geschlecht",
+    "activity": "Aktivität",
+    "measurements": "Maße",
+    "recalculate": "Makros neu berechnen",
+    "accountApp": "Konto & App",
+    "dietary": "Ernährungspräferenzen",
+    "notifications": "Benachrichtigungen",
+    "appearance": "Erscheinungsbild",
+    "language": "Sprache",
+    "dangerZone": "Gefahrenzone",
+    "signOut": "Abmelden",
+    "signOutConfirm": "Sind Sie sicher, dass Sie sich abmelden möchten?",
+    "upgrade": "Upgrade auf Pro 🚀",
+    "proMember": "Pro-Mitglied",
+    "admin": "Administrator",
+    "superAdmin": "Super-Admin",
+    "currentGoal": "Aktuelles Ziel",
+    "lastMeasurement": "Letzte Messung"
+  },
+  "coach": {
+    "title": "Fitz Coach",
+    "welcome": "Hallo! Ich bin Fitz, dein KI-Ernährungscoach. Wie kann ich dir heute helfen?",
+    "typing": "Fitz denkt nach...",
+    "inputPlaceholder": "Frage alles über Ernährung...",
+    "limitReached": "Tageslimit erreicht"
+  }
+}

@@ -1,0 +1,52 @@
+{
+  "common": {
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "error": "Erreur",
+    "success": "Succès",
+    "loading": "Chargement...",
+    "comingSoon": "Bientôt disponible",
+    "notImplemented": "Cette fonctionnalité est en cours de développement."
+  },
+  "tabs": {
+    "dashboard": "Tableau de bord",
+    "tracker": "Suivi",
+    "coach": "Coach",
+    "planner": "Planificateur",
+    "profile": "Profil"
+  },
+  "profile": {
+    "title": "Profil",
+    "editName": "Mettre à jour le nom",
+    "enterName": "Entrez votre nom",
+    "bodyHealth": "Corps et Santé",
+    "height": "Taille",
+    "weight": "Poids",
+    "age": "Âge",
+    "sex": "Sexe",
+    "activity": "Activité",
+    "measurements": "Mesures",
+    "recalculate": "Recalculer les macros",
+    "accountApp": "Compte et Application",
+    "dietary": "Préférences alimentaires",
+    "notifications": "Notifications",
+    "appearance": "Apparence",
+    "language": "Langue",
+    "dangerZone": "Zone de danger",
+    "signOut": "Se déconnecter",
+    "signOutConfirm": "Êtes-vous sûr de vouloir vous déconnecter?",
+    "upgrade": "Passer à Pro 🚀",
+    "proMember": "Membre Pro",
+    "admin": "Administrateur",
+    "superAdmin": "Super Admin",
+    "currentGoal": "Objectif actuel",
+    "lastMeasurement": "Dernière mesure"
+  },
+  "coach": {
+    "title": "Fitz Coach",
+    "welcome": "Bonjour! Je suis Fitz, votre coach en nutrition IA. Comment puis-je vous aider aujourd'hui?",
+    "typing": "Fitz réfléchit...",
+    "inputPlaceholder": "Posez n'importe quelle question sur la nutrition...",
+    "limitReached": "Limite quotidienne atteinte"
+  }
+}

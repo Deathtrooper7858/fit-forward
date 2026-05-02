@@ -5,11 +5,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, Radius } from '../../constants';
 import { FoodItem } from '../../services/foodDatabase';
 import { useNutritionStore } from '../../store';
+import { useTheme } from '../../hooks/useTheme';
 
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 type Meal = typeof MEALS[number];
 
 export default function FoodDetailModal() {
+  const colors = useTheme();
   const { foodJson }          = useLocalSearchParams<{ foodJson: string }>();
   const food: FoodItem        = JSON.parse(foodJson ?? '{}');
   const [grams, setGrams]     = useState('100');
@@ -43,33 +45,33 @@ export default function FoodDetailModal() {
   };
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: colors.background }]}>
       {/* Handle */}
-      <View style={s.handle} />
+      <View style={[s.handle, { backgroundColor: colors.border }]} />
 
       <ScrollView>
         {/* Product header */}
         <View style={s.header}>
-          <Text style={s.name}>{food.name}</Text>
-          {food.brand && <Text style={s.brand}>{food.brand}</Text>}
-          <View style={s.sourcePill}>
-            <Text style={s.sourceText}>{food.source}</Text>
+          <Text style={[s.name, { color: colors.textPrimary }]}>{food.name}</Text>
+          {food.brand && <Text style={[s.brand, { color: colors.textSecondary }]}>{food.brand}</Text>}
+          <View style={[s.sourcePill, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
+            <Text style={[s.sourceText, { color: colors.textMuted }]}>{food.source}</Text>
           </View>
         </View>
 
         {/* Macro summary */}
-        <View style={s.macroCard}>
-          <Text style={s.macroTitle}>Per {grams || '?'}g</Text>
+        <View style={[s.macroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[s.macroTitle, { color: colors.textMuted }]}>Per {grams || '?'}g</Text>
           <View style={s.macroRow}>
             {[
-              { label: 'Calories', val: cal, color: Colors.accent },
-              { label: 'Protein',  val: `${pro}g`,  color: Colors.protein },
-              { label: 'Carbs',    val: `${carb}g`, color: Colors.carbs },
-              { label: 'Fat',      val: `${fat}g`,  color: Colors.fat },
+              { label: 'Calories', val: cal, color: colors.accent },
+              { label: 'Protein',  val: `${pro}g`,  color: colors.protein },
+              { label: 'Carbs',    val: `${carb}g`, color: colors.carbs },
+              { label: 'Fat',      val: `${fat}g`,  color: colors.fat },
             ].map(({ label, val, color }) => (
               <View key={label} style={s.macroItem}>
                 <Text style={[s.macroVal, { color }]}>{val}</Text>
-                <Text style={s.macroLabel}>{label}</Text>
+                <Text style={[s.macroLabel, { color: colors.textSecondary }]}>{label}</Text>
               </View>
             ))}
           </View>
@@ -77,9 +79,9 @@ export default function FoodDetailModal() {
 
         {/* Grams input */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>Amount (grams)</Text>
+          <Text style={[s.sectionLabel, { color: colors.textSecondary }]}>Amount (grams)</Text>
           <TextInput
-            style={s.gramsInput}
+            style={[s.gramsInput, { backgroundColor: colors.surface, borderColor: colors.primary, color: colors.textPrimary }]}
             value={grams}
             onChangeText={setGrams}
             keyboardType="numeric"
@@ -89,16 +91,16 @@ export default function FoodDetailModal() {
 
         {/* Meal selector */}
         <View style={s.section}>
-          <Text style={s.sectionLabel}>Add to meal</Text>
+          <Text style={[s.sectionLabel, { color: colors.textSecondary }]}>Add to meal</Text>
           <View style={s.mealRow}>
             {MEALS.map((m) => (
               <TouchableOpacity
                 key={m}
-                style={[s.mealPill, meal === m && s.mealPillActive]}
+                style={[s.mealPill, { backgroundColor: colors.surface, borderColor: colors.border }, meal === m && { borderColor: colors.primary, backgroundColor: colors.primary + '22' }]}
                 onPress={() => setMeal(m)}
                 activeOpacity={0.75}
               >
-                <Text style={[s.mealPillText, meal === m && s.mealPillTextActive]}>
+                <Text style={[s.mealPillText, { color: colors.textSecondary }, meal === m && { color: colors.primary, fontWeight: '700' }]}>
                   {m.charAt(0).toUpperCase() + m.slice(1)}
                 </Text>
               </TouchableOpacity>
@@ -108,9 +110,9 @@ export default function FoodDetailModal() {
       </ScrollView>
 
       {/* Footer CTA */}
-      <View style={s.footer}>
-        <TouchableOpacity style={s.cancelBtn} onPress={() => router.back()} activeOpacity={0.7}>
-          <Text style={s.cancelText}>Cancel</Text>
+      <View style={[s.footer, { borderTopColor: colors.border }]}>
+        <TouchableOpacity style={[s.cancelBtn, { borderColor: colors.border }]} onPress={() => router.back()} activeOpacity={0.7}>
+          <Text style={[s.cancelText, { color: colors.textSecondary }]}>Cancel</Text>
         </TouchableOpacity>
         <TouchableOpacity style={s.addBtn} onPress={handleAdd} activeOpacity={0.85}>
           <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.addGrad}>
@@ -123,30 +125,28 @@ export default function FoodDetailModal() {
 }
 
 const s = StyleSheet.create({
-  container:        { flex: 1, backgroundColor: Colors.background },
-  handle:           { width: 40, height: 4, borderRadius: 2, backgroundColor: Colors.border, alignSelf: 'center', marginTop: 12, marginBottom: 20 },
+  container:        { flex: 1 },
+  handle:           { width: 40, height: 4, borderRadius: 2, alignSelf: 'center', marginTop: 12, marginBottom: 20 },
   header:           { paddingHorizontal: Spacing.base, marginBottom: Spacing.lg },
-  name:             { fontSize: 22, fontWeight: '800', color: Colors.textPrimary, marginBottom: 6 },
-  brand:            { fontSize: 14, color: Colors.textSecondary, marginBottom: 8 },
-  sourcePill:       { alignSelf: 'flex-start', backgroundColor: Colors.surfaceAlt, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1, borderColor: Colors.border },
-  sourceText:       { fontSize: 11, color: Colors.textMuted, textTransform: 'capitalize' },
-  macroCard:        { margin: Spacing.base, backgroundColor: Colors.surface, borderRadius: Radius.xl, padding: Spacing.base, borderWidth: 1, borderColor: Colors.border },
-  macroTitle:       { fontSize: 13, color: Colors.textMuted, marginBottom: 14, fontWeight: '500' },
+  name:             { fontSize: 22, fontWeight: '800', marginBottom: 6 },
+  brand:            { fontSize: 14, marginBottom: 8 },
+  sourcePill:       { alignSelf: 'flex-start', borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 3, borderWidth: 1 },
+  sourceText:       { fontSize: 11, textTransform: 'capitalize' },
+  macroCard:        { margin: Spacing.base, borderRadius: Radius.xl, padding: Spacing.base, borderWidth: 1 },
+  macroTitle:       { fontSize: 13, marginBottom: 14, fontWeight: '500' },
   macroRow:         { flexDirection: 'row', justifyContent: 'space-around' },
   macroItem:        { alignItems: 'center', gap: 4 },
   macroVal:         { fontSize: 22, fontWeight: '800' },
-  macroLabel:       { fontSize: 12, color: Colors.textSecondary },
+  macroLabel:       { fontSize: 12 },
   section:          { paddingHorizontal: Spacing.base, marginBottom: Spacing.base },
-  sectionLabel:     { fontSize: 13, color: Colors.textSecondary, fontWeight: '600', marginBottom: 8, letterSpacing: 0.5 },
-  gramsInput:       { backgroundColor: Colors.surface, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.primary, padding: Spacing.base, fontSize: 20, color: Colors.textPrimary, fontWeight: '700', textAlign: 'center' },
+  sectionLabel:     { fontSize: 13, fontWeight: '600', marginBottom: 8, letterSpacing: 0.5 },
+  gramsInput:       { borderRadius: Radius.md, borderWidth: 1.5, padding: Spacing.base, fontSize: 20, fontWeight: '700', textAlign: 'center' },
   mealRow:          { flexDirection: 'row', gap: 8, flexWrap: 'wrap' },
-  mealPill:         { borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.border, paddingHorizontal: 16, paddingVertical: 8, backgroundColor: Colors.surface },
-  mealPillActive:   { borderColor: Colors.primary, backgroundColor: '#7C5CFC22' },
-  mealPillText:     { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
-  mealPillTextActive:{ color: Colors.primary, fontWeight: '700' },
-  footer:           { flexDirection: 'row', gap: 10, padding: Spacing.base, borderTopWidth: 1, borderTopColor: Colors.border, paddingBottom: 36 },
-  cancelBtn:        { flex: 1, padding: 14, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.border, alignItems: 'center' },
-  cancelText:       { color: Colors.textSecondary, fontWeight: '600', fontSize: 15 },
+  mealPill:         { borderRadius: Radius.full, borderWidth: 1.5, paddingHorizontal: 16, paddingVertical: 8 },
+  mealPillText:     { fontSize: 13, fontWeight: '500' },
+  footer:           { flexDirection: 'row', gap: 10, padding: Spacing.base, borderTopWidth: 1, paddingBottom: 36 },
+  cancelBtn:        { flex: 1, padding: 14, borderRadius: Radius.md, borderWidth: 1.5, alignItems: 'center' },
+  cancelText:       { fontWeight: '600', fontSize: 15 },
   addBtn:           { flex: 2, borderRadius: Radius.md, overflow: 'hidden' },
   addGrad:          { padding: 14, alignItems: 'center' },
   addText:          { color: '#fff', fontWeight: '700', fontSize: 15 },

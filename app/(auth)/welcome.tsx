@@ -1,19 +1,24 @@
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, ImageBackground } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Spacing, Radius } from '../../constants';
-
-const FEATURES = [
-  { icon: '🍎', label: 'Smart Food Tracking' },
-  { icon: '🤖', label: 'AI Nutrition Coach' },
-  { icon: '📊', label: 'Body Composition' },
-  { icon: '📅', label: 'Meal Planner' },
-];
+import { Spacing, Radius } from '../../constants';
+import { useTheme } from '../../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 
 export default function WelcomeScreen() {
+  const { t } = useTranslation();
+  const colors = useTheme();
+
+  const FEATURES = [
+    { icon: '🍎', label: t('welcome.feature1') },
+    { icon: '🤖', label: t('welcome.feature2') },
+    { icon: '📊', label: t('welcome.feature3') },
+    { icon: '📅', label: t('welcome.feature4') },
+  ];
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { backgroundColor: colors.background }]}>
       {/* Decorative background glow */}
       <View style={styles.glow1} />
       <View style={styles.glow2} />
@@ -24,18 +29,18 @@ export default function WelcomeScreen() {
           <LinearGradient colors={['#7C5CFC', '#4338CA']} style={styles.logoMark}>
             <Text style={styles.logoText}>FF</Text>
           </LinearGradient>
-          <Text style={styles.brand}>Fit-Forward</Text>
-          <Text style={styles.tagline}>
-            Your AI-powered nutrition partner.{'\n'}Built to transform your body.
+          <Text style={[styles.brand, { color: colors.textPrimary }]}>Fit-Forward</Text>
+          <Text style={[styles.tagline, { color: colors.textSecondary }]}>
+            {t('welcome.tagline')}
           </Text>
         </View>
 
         {/* Feature pills */}
         <View style={styles.features}>
           {FEATURES.map((f) => (
-            <View key={f.label} style={styles.pill}>
+            <View key={f.label} style={[styles.pill, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
               <Text style={styles.pillIcon}>{f.icon}</Text>
-              <Text style={styles.pillLabel}>{f.label}</Text>
+              <Text style={[styles.pillLabel, { color: colors.textPrimary }]}>{f.label}</Text>
             </View>
           ))}
         </View>
@@ -48,21 +53,21 @@ export default function WelcomeScreen() {
             activeOpacity={0.85}
           >
             <LinearGradient colors={['#7C5CFC', '#4338CA']} style={styles.primaryGradient}>
-              <Text style={styles.primaryText}>Get Started — It's Free</Text>
+              <Text style={styles.primaryText}>{t('welcome.getStarted')}</Text>
             </LinearGradient>
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={styles.secondaryBtn}
+            style={[styles.secondaryBtn, { borderColor: colors.border }]}
             onPress={() => router.push('/(auth)/login')}
             activeOpacity={0.8}
           >
-            <Text style={styles.secondaryText}>I already have an account</Text>
+            <Text style={[styles.secondaryText, { color: colors.textPrimary }]}>{t('welcome.haveAccount')}</Text>
           </TouchableOpacity>
         </View>
 
-        <Text style={styles.legal}>
-          By continuing you agree to our Terms of Service and Privacy Policy.
+        <Text style={[styles.legal, { color: colors.textMuted }]}>
+          {t('welcome.legal')}
         </Text>
       </ScrollView>
     </View>
@@ -70,7 +75,7 @@ export default function WelcomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  container:      { flex: 1, backgroundColor: Colors.background },
+  container:      { flex: 1 },
   glow1: {
     position: 'absolute', top: -80, left: -80,
     width: 300, height: 300, borderRadius: 150,
@@ -85,17 +90,17 @@ const styles = StyleSheet.create({
   hero:           { alignItems: 'center', marginBottom: 48 },
   logoMark:       { width: 88, height: 88, borderRadius: 28, justifyContent: 'center', alignItems: 'center', marginBottom: 20 },
   logoText:       { fontSize: 36, fontWeight: '900', color: '#fff', letterSpacing: -1 },
-  brand:          { fontSize: 38, fontWeight: '800', color: Colors.textPrimary, letterSpacing: -1, marginBottom: 16 },
-  tagline:        { fontSize: 17, color: Colors.textSecondary, textAlign: 'center', lineHeight: 26 },
+  brand:          { fontSize: 38, fontWeight: '800', letterSpacing: -1, marginBottom: 16 },
+  tagline:        { fontSize: 17, textAlign: 'center', lineHeight: 26 },
   features:       { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center', marginBottom: 48 },
-  pill:           { flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: Colors.surfaceAlt, borderRadius: Radius.full, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1, borderColor: Colors.border },
+  pill:           { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: Radius.full, paddingHorizontal: 14, paddingVertical: 8, borderWidth: 1 },
   pillIcon:       { fontSize: 16 },
-  pillLabel:      { fontSize: 13, color: Colors.textPrimary, fontWeight: '500' },
+  pillLabel:      { fontSize: 13, fontWeight: '500' },
   ctas:           { gap: Spacing.md },
   primaryBtn:     { borderRadius: Radius.lg, overflow: 'hidden' },
   primaryGradient:{ padding: 18, alignItems: 'center' },
   primaryText:    { fontSize: 17, fontWeight: '700', color: '#fff', letterSpacing: 0.2 },
-  secondaryBtn:   { padding: 16, alignItems: 'center', borderRadius: Radius.lg, borderWidth: 1.5, borderColor: Colors.border },
-  secondaryText:  { fontSize: 15, fontWeight: '600', color: Colors.textPrimary },
-  legal:          { marginTop: 24, textAlign: 'center', fontSize: 11, color: Colors.textMuted, lineHeight: 18 },
+  secondaryBtn:   { padding: 16, alignItems: 'center', borderRadius: Radius.lg, borderWidth: 1.5 },
+  secondaryText:  { fontSize: 15, fontWeight: '600' },
+  legal:          { marginTop: 24, textAlign: 'center', fontSize: 11, lineHeight: 18 },
 });

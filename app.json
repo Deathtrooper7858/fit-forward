@@ -33,15 +33,12 @@
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",
-        "READ_EXTERNAL_STORAGE",
-        "WRITE_EXTERNAL_STORAGE",
-        "RECEIVE_BOOT_COMPLETED",
         "VIBRATE"
       ]
     },
     "web": {
       "bundler": "metro",
-      "output": "single",
+      "output": "standalone",
       "favicon": "./assets/favicon.png"
     },
     "plugins": [

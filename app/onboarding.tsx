@@ -6,8 +6,10 @@ import {
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { Colors, Spacing, Radius } from '../constants';
-import { useAuthStore } from '../store';
+import { Spacing, Radius } from '../constants';
+import { useAuthStore, useSettingsStore } from '../store';
+import { useTheme } from '../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 import { calculateTDEE, calculateMacros } from '../services/foodDatabase';
 import { supabase } from '../services/supabase';
 
@@ -28,31 +30,34 @@ interface OnboardingData {
 }
 
 // ─── Step 1: Goal ─────────────────────────────────────────────────────────────
-const GOALS = [
-  { id: 'lose',     icon: '🔥', title: 'Lose Weight',   sub: 'Burn fat, look leaner' },
-  { id: 'maintain', icon: '⚖️', title: 'Stay Healthy',  sub: 'Maintain current body' },
-  { id: 'gain',     icon: '💪', title: 'Build Muscle',  sub: 'Gain strength & mass' },
-] as const;
-
 function GoalStep({ data, onChange }: { data: Partial<OnboardingData>; onChange: (d: Partial<OnboardingData>) => void }) {
+  const { t } = useTranslation();
+  const colors = useTheme();
+
+  const GOALS = [
+    { id: 'lose',     icon: '🔥', title: t('onboarding.loseTitle'),   sub: t('onboarding.loseSub') },
+    { id: 'maintain', icon: '⚖️', title: t('onboarding.stayTitle'),  sub: t('onboarding.staySub') },
+    { id: 'gain',     icon: '💪', title: t('onboarding.gainTitle'),   sub: t('onboarding.gainSub') },
+  ] as const;
+
   return (
     <View style={step.container}>
-      <Text style={step.title}>What's your main goal?</Text>
-      <Text style={step.sub}>We'll personalize everything around this</Text>
+      <Text style={[step.title, { color: colors.textPrimary }]}>{t('onboarding.goalTitle')}</Text>
+      <Text style={[step.sub, { color: colors.textSecondary }]}>{t('onboarding.goalSub')}</Text>
       <View style={step.optionList}>
         {GOALS.map((g) => (
           <TouchableOpacity
             key={g.id}
-            style={[step.optionCard, data.goal === g.id && step.optionCardActive]}
+            style={[step.optionCard, { backgroundColor: colors.surface, borderColor: colors.border }, data.goal === g.id && { borderColor: colors.primary, backgroundColor: '#7C5CFC15' }]}
             onPress={() => onChange({ goal: g.id })}
             activeOpacity={0.8}
           >
             <Text style={step.optionIcon}>{g.icon}</Text>
             <View>
-              <Text style={step.optionTitle}>{g.title}</Text>
-              <Text style={step.optionSub}>{g.sub}</Text>
+              <Text style={[step.optionTitle, { color: colors.textPrimary }]}>{g.title}</Text>
+              <Text style={[step.optionSub, { color: colors.textSecondary }]}>{g.sub}</Text>
             </View>
-            {data.goal === g.id && <View style={step.optionCheck}><Text style={step.checkText}>✓</Text></View>}
+            {data.goal === g.id && <View style={[step.optionCheck, { backgroundColor: colors.primary }]}><Text style={step.checkText}>✓</Text></View>}
           </TouchableOpacity>
         ))}
       </View>
@@ -62,25 +67,27 @@ function GoalStep({ data, onChange }: { data: Partial<OnboardingData>; onChange:
 
 // ─── Step 2: Stats ────────────────────────────────────────────────────────────
 function StatsStep({ data, onChange }: { data: Partial<OnboardingData>; onChange: (d: Partial<OnboardingData>) => void }) {
+  const { t } = useTranslation();
+  const colors = useTheme();
   return (
     <View style={step.container}>
-      <Text style={step.title}>Tell us about yourself</Text>
-      <Text style={step.sub}>Used to calculate your daily calorie target</Text>
+      <Text style={[step.title, { color: colors.textPrimary }]}>{t('onboarding.statsTitle')}</Text>
+      <Text style={[step.sub, { color: colors.textSecondary }]}>{t('onboarding.statsSub')}</Text>
 
       <View style={step.statsGrid}>
         {/* Sex */}
         <View style={step.field}>
-          <Text style={step.fieldLabel}>Biological Sex</Text>
+          <Text style={[step.fieldLabel, { color: colors.textSecondary }]}>{t('onboarding.sexLabel')}</Text>
           <View style={step.sexRow}>
             {(['male', 'female'] as const).map((s) => (
               <TouchableOpacity
                 key={s}
-                style={[step.sexBtn, data.sex === s && step.sexBtnActive]}
+                style={[step.sexBtn, { backgroundColor: colors.surface, borderColor: colors.border }, data.sex === s && { borderColor: colors.primary, backgroundColor: '#7C5CFC15' }]}
                 onPress={() => onChange({ sex: s })}
               >
                 <Text style={step.sexIcon}>{s === 'male' ? '♂️' : '♀️'}</Text>
-                <Text style={[step.sexLabel, data.sex === s && step.sexLabelActive]}>
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                <Text style={[step.sexLabel, { color: colors.textSecondary }, data.sex === s && { color: colors.primary }]}>
+                  {t(`profile.${s}`)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -89,34 +96,34 @@ function StatsStep({ data, onChange }: { data: Partial<OnboardingData>; onChange
 
         {/* Numeric fields */}
         {[
-          { label: 'Age', key: 'age', unit: 'years', min: 15, max: 80 },
-          { label: 'Weight', key: 'weight', unit: 'kg', min: 30, max: 250 },
-          { label: 'Height', key: 'height', unit: 'cm', min: 100, max: 250 },
+          { label: t('profile.age'), key: 'age', unit: 'years', min: 15, max: 80 },
+          { label: t('profile.weight'), key: 'weight', unit: 'kg', min: 30, max: 250 },
+          { label: t('profile.height'), key: 'height', unit: 'cm', min: 100, max: 250 },
         ].map(({ label, key, unit, min, max }) => (
           <View key={key} style={step.field}>
-            <Text style={step.fieldLabel}>{label}</Text>
+            <Text style={[step.fieldLabel, { color: colors.textSecondary }]}>{label}</Text>
             <View style={step.numRow}>
               <TouchableOpacity
-                style={step.numBtn}
+                style={[step.numBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={() => {
                   const cur = (data as any)[key] ?? min;
                   if (cur > min) onChange({ [key]: cur - 1 });
                 }}
               >
-                <Text style={step.numBtnText}>−</Text>
+                <Text style={[step.numBtnText, { color: colors.primary }]}>−</Text>
               </TouchableOpacity>
-              <View style={step.numDisplay}>
-                <Text style={step.numValue}>{(data as any)[key] ?? '-'}</Text>
-                <Text style={step.numUnit}>{unit}</Text>
+              <View style={[step.numDisplay, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Text style={[step.numValue, { color: colors.textPrimary }]}>{(data as any)[key] ?? '-'}</Text>
+                <Text style={[step.numUnit, { color: colors.textMuted }]}>{unit}</Text>
               </View>
               <TouchableOpacity
-                style={step.numBtn}
+                style={[step.numBtn, { backgroundColor: colors.surface, borderColor: colors.border }]}
                 onPress={() => {
                   const cur = (data as any)[key] ?? min;
                   if (cur < max) onChange({ [key]: cur + 1 });
                 }}
               >
-                <Text style={step.numBtnText}>+</Text>
+                <Text style={[step.numBtnText, { color: colors.primary }]}>+</Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -127,33 +134,36 @@ function StatsStep({ data, onChange }: { data: Partial<OnboardingData>; onChange
 }
 
 // ─── Step 3: Activity ─────────────────────────────────────────────────────────
-const ACTIVITY_LEVELS = [
-  { id: 'sedentary',   label: 'Sedentary',    sub: 'Little or no exercise',     icon: '🛋️' },
-  { id: 'light',       label: 'Lightly Active', sub: '1–3 days/week',            icon: '🚶' },
-  { id: 'moderate',    label: 'Moderately Active', sub: '3–5 days/week',         icon: '🏃' },
-  { id: 'active',      label: 'Very Active',  sub: '6–7 days/week',              icon: '🏋️' },
-  { id: 'very_active', label: 'Athlete',      sub: 'Twice daily / intense sport',icon: '⚡' },
-] as const;
-
 function ActivityStep({ data, onChange }: { data: Partial<OnboardingData>; onChange: (d: Partial<OnboardingData>) => void }) {
+  const { t } = useTranslation();
+  const colors = useTheme();
+
+  const ACTIVITY_LEVELS = [
+    { id: 'sedentary',   label: t('profile.sedentary'),    sub: 'Little or no exercise',     icon: '🛋️' },
+    { id: 'light',       label: t('profile.light'),        sub: '1–3 days/week',            icon: '🚶' },
+    { id: 'moderate',    label: t('profile.moderate'),     sub: '3–5 days/week',         icon: '🏃' },
+    { id: 'active',      label: t('profile.active'),       sub: '6–7 days/week',              icon: '🏋️' },
+    { id: 'very_active', label: t('profile.very_active'),  sub: 'Twice daily / intense sport',icon: '⚡' },
+  ] as const;
+
   return (
     <View style={step.container}>
-      <Text style={step.title}>Activity Level</Text>
-      <Text style={step.sub}>How active are you on a typical week?</Text>
+      <Text style={[step.title, { color: colors.textPrimary }]}>{t('onboarding.activityTitle')}</Text>
+      <Text style={[step.sub, { color: colors.textSecondary }]}>{t('onboarding.activitySub')}</Text>
       <View style={step.optionList}>
         {ACTIVITY_LEVELS.map((a) => (
           <TouchableOpacity
             key={a.id}
-            style={[step.optionCard, data.activityLevel === a.id && step.optionCardActive]}
+            style={[step.optionCard, { backgroundColor: colors.surface, borderColor: colors.border }, data.activityLevel === a.id && { borderColor: colors.primary, backgroundColor: '#7C5CFC15' }]}
             onPress={() => onChange({ activityLevel: a.id })}
             activeOpacity={0.8}
           >
             <Text style={step.optionIcon}>{a.icon}</Text>
             <View>
-              <Text style={step.optionTitle}>{a.label}</Text>
-              <Text style={step.optionSub}>{a.sub}</Text>
+              <Text style={[step.optionTitle, { color: colors.textPrimary }]}>{a.label}</Text>
+              <Text style={[step.optionSub, { color: colors.textSecondary }]}>{a.sub}</Text>
             </View>
-            {data.activityLevel === a.id && <View style={step.optionCheck}><Text style={step.checkText}>✓</Text></View>}
+            {data.activityLevel === a.id && <View style={[step.optionCheck, { backgroundColor: colors.primary }]}><Text style={step.checkText}>✓</Text></View>}
           </TouchableOpacity>
         ))}
       </View>
@@ -165,6 +175,8 @@ function ActivityStep({ data, onChange }: { data: Partial<OnboardingData>; onCha
 const DIET_OPTIONS = ['Vegetarian', 'Vegan', 'Gluten-free', 'Dairy-free', 'Nut-free', 'Halal', 'Kosher', 'Keto'];
 
 function DietStep({ data, onChange }: { data: Partial<OnboardingData>; onChange: (d: Partial<OnboardingData>) => void }) {
+  const { t } = useTranslation();
+  const colors = useTheme();
   const toggle = (opt: string) => {
     const cur = data.restrictions ?? [];
     onChange({ restrictions: cur.includes(opt) ? cur.filter((r) => r !== opt) : [...cur, opt] });
@@ -172,19 +184,19 @@ function DietStep({ data, onChange }: { data: Partial<OnboardingData>; onChange:
 
   return (
     <View style={step.container}>
-      <Text style={step.title}>Dietary Preferences</Text>
-      <Text style={step.sub}>Select all that apply — optional</Text>
+      <Text style={[step.title, { color: colors.textPrimary }]}>{t('onboarding.dietTitle')}</Text>
+      <Text style={[step.sub, { color: colors.textSecondary }]}>{t('onboarding.dietSub')}</Text>
       <View style={step.dietGrid}>
         {DIET_OPTIONS.map((opt) => {
           const active = data.restrictions?.includes(opt);
           return (
             <TouchableOpacity
               key={opt}
-              style={[step.dietPill, active && step.dietPillActive]}
+              style={[step.dietPill, { backgroundColor: colors.surface, borderColor: colors.border }, active && { borderColor: colors.primary, backgroundColor: '#7C5CFC22' }]}
               onPress={() => toggle(opt)}
               activeOpacity={0.75}
             >
-              <Text style={[step.dietPillText, active && step.dietPillTextActive]}>{opt}</Text>
+              <Text style={[step.dietPillText, { color: colors.textSecondary }, active && { color: colors.primary, fontWeight: '700' }]}>{opt}</Text>
             </TouchableOpacity>
           );
         })}
@@ -196,40 +208,43 @@ function DietStep({ data, onChange }: { data: Partial<OnboardingData>; onChange:
 // ─── Shared step styles ────────────────────────────────────────────────────────
 const step = StyleSheet.create({
   container:        { flex: 1 },
-  title:            { fontSize: 26, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8 },
-  sub:              { fontSize: 15, color: Colors.textSecondary, marginBottom: 28 },
+  title:            { fontSize: 26, fontWeight: '800', marginBottom: 8 },
+  sub:              { fontSize: 15, marginBottom: 28 },
   optionList:       { gap: 10 },
-  optionCard:       { flexDirection: 'row', alignItems: 'center', gap: 14, padding: Spacing.base, borderRadius: Radius.lg, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.surface },
-  optionCardActive: { borderColor: Colors.primary, backgroundColor: '#7C5CFC15' },
+  optionCard:       { flexDirection: 'row', alignItems: 'center', gap: 14, padding: Spacing.base, borderRadius: Radius.lg, borderWidth: 1.5 },
+  optionCardActive: { backgroundColor: '#7C5CFC15' },
   optionIcon:       { fontSize: 28, width: 38 },
-  optionTitle:      { fontSize: 16, fontWeight: '700', color: Colors.textPrimary, marginBottom: 2 },
-  optionSub:        { fontSize: 12, color: Colors.textSecondary },
-  optionCheck:      { marginLeft: 'auto', width: 24, height: 24, borderRadius: 12, backgroundColor: Colors.primary, justifyContent: 'center', alignItems: 'center' },
+  optionTitle:      { fontSize: 16, fontWeight: '700', marginBottom: 2 },
+  optionSub:        { fontSize: 12 },
+  optionCheck:      { marginLeft: 'auto', width: 24, height: 24, borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
   checkText:        { color: '#fff', fontWeight: '800', fontSize: 13 },
   statsGrid:        { gap: 20 },
   field:            {},
-  fieldLabel:       { fontSize: 13, color: Colors.textSecondary, fontWeight: '600', letterSpacing: 0.5, marginBottom: 8 },
+  fieldLabel:       { fontSize: 13, fontWeight: '600', letterSpacing: 0.5, marginBottom: 8 },
   sexRow:           { flexDirection: 'row', gap: 10 },
-  sexBtn:           { flex: 1, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.border, backgroundColor: Colors.surface, padding: 12, alignItems: 'center', gap: 4 },
-  sexBtnActive:     { borderColor: Colors.primary, backgroundColor: '#7C5CFC15' },
+  sexBtn:           { flex: 1, borderRadius: Radius.md, borderWidth: 1.5, padding: 12, alignItems: 'center', gap: 4 },
+  sexBtnActive:     { backgroundColor: '#7C5CFC15' },
   sexIcon:          { fontSize: 24 },
-  sexLabel:         { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
-  sexLabelActive:   { color: Colors.primary },
+  sexLabel:         { fontSize: 14, fontWeight: '600' },
+  sexLabelActive:   { },
   numRow:           { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  numBtn:           { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.surface, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: Colors.border },
-  numBtnText:       { color: Colors.primary, fontSize: 22, fontWeight: '600', lineHeight: 28 },
-  numDisplay:       { flex: 1, borderRadius: Radius.md, backgroundColor: Colors.surface, borderWidth: 1.5, borderColor: Colors.border, padding: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 },
-  numValue:         { fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
-  numUnit:          { fontSize: 13, color: Colors.textMuted, marginTop: 4 },
+  numBtn:           { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center', borderWidth: 1.5 },
+  numBtnText:       { fontSize: 22, fontWeight: '600', lineHeight: 28 },
+  numDisplay:       { flex: 1, borderRadius: Radius.md, borderWidth: 1.5, padding: 12, alignItems: 'center', flexDirection: 'row', justifyContent: 'center', gap: 6 },
+  numValue:         { fontSize: 22, fontWeight: '800' },
+  numUnit:          { fontSize: 13, marginTop: 4 },
   dietGrid:         { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  dietPill:         { borderRadius: Radius.full, borderWidth: 1.5, borderColor: Colors.border, paddingHorizontal: 16, paddingVertical: 10, backgroundColor: Colors.surface },
-  dietPillActive:   { borderColor: Colors.primary, backgroundColor: '#7C5CFC22' },
-  dietPillText:     { fontSize: 14, color: Colors.textSecondary, fontWeight: '500' },
-  dietPillTextActive:{ color: Colors.primary, fontWeight: '700' },
+  dietPill:         { borderRadius: Radius.full, borderWidth: 1.5, paddingHorizontal: 16, paddingVertical: 10 },
+  dietPillActive:   { backgroundColor: '#7C5CFC22' },
+  dietPillText:     { fontSize: 14, fontWeight: '500' },
+  dietPillTextActive:{ fontWeight: '700' },
 });
 
 // ─── Main Onboarding Screen ────────────────────────────────────────────────────
 export default function OnboardingScreen() {
+  const { t } = useTranslation();
+  const colors = useTheme();
+  const { theme } = useSettingsStore();
   const [currentStep, setCurrentStep] = useState(0);
   const [data, setData]               = useState<Partial<OnboardingData>>({ restrictions: [], age: 25, weight: 70, height: 170 });
   const [saving, setSaving]           = useState(false);
@@ -288,6 +303,7 @@ export default function OnboardingScreen() {
         macros:         { protein, carbs, fat },
         restrictions:   d.restrictions,
         isPro:          false,
+        role:           'user' as const,
         onboardingDone: true,
       };
 
@@ -330,16 +346,28 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
       {/* Progress bar */}
       <View style={s.progressWrap}>
         {STEPS.map((_, i) => (
           <View
             key={i}
-            style={[s.progressSegment, i <= currentStep && s.progressSegmentActive]}
+            style={[s.progressSegment, { backgroundColor: colors.border }, i <= currentStep && { backgroundColor: colors.primary }]}
           />
         ))}
       </View>
+      
+      {/* Exit Button */}
+      <TouchableOpacity 
+        style={s.exitBtn} 
+        onPress={async () => {
+          await supabase.auth.signOut();
+          setProfile(null);
+          router.replace('/(auth)/welcome');
+        }}
+      >
+        <Text style={[s.exitText, { color: colors.textMuted }]}>{t('profile.signOut')}</Text>
+      </TouchableOpacity>
 
       {/* Step content */}
       <ScrollView style={s.scroll} contentContainerStyle={s.content}>
@@ -347,10 +375,10 @@ export default function OnboardingScreen() {
       </ScrollView>
 
       {/* Navigation */}
-      <View style={s.footer}>
+      <View style={[s.footer, { borderTopColor: colors.border }]}>
         {currentStep > 0 && (
-          <TouchableOpacity style={s.backBtn} onPress={() => setCurrentStep((s) => s - 1)}>
-            <Text style={s.backText}>← Back</Text>
+          <TouchableOpacity style={[s.backBtn, { borderColor: colors.border }]} onPress={() => setCurrentStep((s) => s - 1)}>
+            <Text style={[s.backText, { color: colors.textSecondary }]}>{t('onboarding.back')}</Text>
           </TouchableOpacity>
         )}
         <TouchableOpacity
@@ -364,7 +392,7 @@ export default function OnboardingScreen() {
               <ActivityIndicator color="#fff" />
             ) : (
               <Text style={s.nextText}>
-                {currentStep === STEPS.length - 1 ? "Let's go! 🚀" : 'Continue →'}
+                {currentStep === STEPS.length - 1 ? t('onboarding.letsGo') : t('onboarding.continue')}
               </Text>
             )}
           </LinearGradient>
@@ -375,17 +403,18 @@ export default function OnboardingScreen() {
 }
 
 const s = StyleSheet.create({
-  safe:                 { flex: 1, backgroundColor: Colors.background },
-  progressWrap:         { flexDirection: 'row', gap: 6, paddingHorizontal: Spacing.base, paddingTop: 16, paddingBottom: 8 },
-  progressSegment:      { flex: 1, height: 4, borderRadius: 2, backgroundColor: Colors.border },
-  progressSegmentActive:{ backgroundColor: Colors.primary },
+  safe:                 { flex: 1 },
+  progressWrap:         { flexDirection: 'row', gap: 6, paddingHorizontal: Spacing.base, marginTop: 12 },
+  progressSegment:      { flex: 1, height: 4, borderRadius: 2 },
   scroll:               { flex: 1 },
   content:              { padding: Spacing.base, paddingTop: Spacing.xl },
-  footer:               { flexDirection: 'row', gap: 10, padding: Spacing.base, borderTopWidth: 1, borderTopColor: Colors.border, paddingBottom: 36 },
-  backBtn:              { paddingHorizontal: Spacing.base, paddingVertical: 14, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.border },
-  backText:             { color: Colors.textSecondary, fontWeight: '600', fontSize: 15 },
+  footer:               { flexDirection: 'row', gap: 10, padding: Spacing.base, borderTopWidth: 1, paddingBottom: 36 },
+  backBtn:              { paddingHorizontal: Spacing.base, paddingVertical: 14, borderRadius: Radius.md, borderWidth: 1.5 },
+  backText:             { fontWeight: '600', fontSize: 15 },
   nextBtn:              { flex: 1, borderRadius: Radius.md, overflow: 'hidden' },
   nextBtnDisabled:      { opacity: 0.5 },
   nextGrad:             { padding: 16, alignItems: 'center' },
   nextText:             { color: '#fff', fontWeight: '700', fontSize: 16 },
+  exitBtn:              { position: 'absolute', top: 16, right: 16, padding: 8, zIndex: 10 },
+  exitText:             { fontSize: 13, fontWeight: '500' },
 });

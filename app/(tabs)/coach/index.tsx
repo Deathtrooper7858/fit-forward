@@ -9,23 +9,20 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useAudioRecorder, useAudioRecorderState, RecordingPresets, setAudioModeAsync, requestRecordingPermissionsAsync } from 'expo-audio';
-import { Colors, Spacing, Radius } from '../../../constants';
-import { useAuthStore, useCoachStore, CoachMessage } from '../../../store';
+import { useAuthStore, useCoachStore, CoachMessage, useSettingsStore } from '../../../store';
 import { sendCoachMessage, buildCoachSystemPrompt, transcribeAudio } from '../../../services/groq';
 import { supabase } from '../../../services/supabase';
+import { Spacing, Radius } from '../../../constants';
+import { useTheme } from '../../../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 
 const FREE_MSG_LIMIT = 10;
 
-// ─── Suggestion chips ─────────────────────────────────────────────────────────
-const SUGGESTIONS = [
-  'What should I eat post-workout? 💪',
-  'Give me a high-protein breakfast idea 🍳',
-  'How can I reduce sugar cravings? 🍬',
-  'Am I eating enough protein? 📊',
-];
+// Suggestion chips are now generated inside the component using t()
 
 // ─── Message bubble ───────────────────────────────────────────────────────────
 function MessageBubble({ msg }: { msg: CoachMessage }) {
+  const colors = useTheme();
   const isUser = msg.role === 'user';
 
   // Format bold markdown **text** simply
@@ -39,7 +36,7 @@ function MessageBubble({ msg }: { msg: CoachMessage }) {
           <Text style={bubble.avatarText}>F</Text>
         </LinearGradient>
       )}
-      <View style={[bubble.box, isUser ? bubble.boxUser : bubble.boxBot]}>
+      <View style={[bubble.box, isUser ? { backgroundColor: colors.primary, borderBottomRightRadius: 4 } : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4 }]}>
         {msg.imageUrl && (
           <Image
             source={{ uri: msg.imageUrl }}
@@ -47,10 +44,10 @@ function MessageBubble({ msg }: { msg: CoachMessage }) {
             resizeMode="cover"
           />
         )}
-        <Text style={[bubble.text, isUser && bubble.textUser]}>
+        <Text style={[bubble.text, isUser && bubble.textUser, !isUser && { color: colors.textPrimary }]}>
           {formatContent(msg.content)}
         </Text>
-        <Text style={[bubble.time, isUser && { color: 'rgba(255,255,255,0.6)' }]}>
+        <Text style={[bubble.time, isUser ? { color: 'rgba(255,255,255,0.6)' } : { color: colors.textMuted }]}>
           {new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </Text>
       </View>
@@ -64,22 +61,21 @@ const bubble = StyleSheet.create({
   avatar:     { width: 34, height: 34, borderRadius: 17, justifyContent: 'center', alignItems: 'center', flexShrink: 0 },
   avatarText: { color: '#fff', fontWeight: '700', fontSize: 14 },
   box:        { maxWidth: '78%', borderRadius: Radius.lg, padding: 12 },
-  boxBot:     { backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border, borderBottomLeftRadius: 4 },
-  boxUser:    { backgroundColor: Colors.primary, borderBottomRightRadius: 4 },
-  text:       { fontSize: 15, color: Colors.textPrimary, lineHeight: 22 },
+  text:       { fontSize: 15, lineHeight: 22 },
   textUser:   { color: '#fff' },
-  time:       { fontSize: 10, color: Colors.textMuted, marginTop: 4, textAlign: 'right' },
+  time:       { fontSize: 10, marginTop: 4, textAlign: 'right' },
 });
 
 // ─── Typing indicator ─────────────────────────────────────────────────────────
 function TypingIndicator() {
+  const colors = useTheme();
   return (
     <View style={[bubble.row, { paddingHorizontal: Spacing.base, marginTop: 4 }]}>
       <LinearGradient colors={['#7C5CFC', '#4338CA']} style={bubble.avatar}>
         <Text style={bubble.avatarText}>F</Text>
       </LinearGradient>
-      <View style={[bubble.box, bubble.boxBot, { paddingHorizontal: 16, paddingVertical: 14 }]}>
-        <ActivityIndicator color={Colors.primary} size="small" />
+      <View style={[bubble.box, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4, paddingHorizontal: 16, paddingVertical: 14 }]}>
+        <ActivityIndicator color={colors.primary} size="small" />
       </View>
     </View>
   );
@@ -95,6 +91,9 @@ export default function CoachScreen() {
   const isRecording   = recorderState.isRecording;
   const flatRef                         = useRef<FlatList<CoachMessage>>(null);
 
+  const { t } = useTranslation();
+  const colors = useTheme();
+  const { language } = useSettingsStore();
   const {
     messages, isTyping, msgCount,
     addMessage, setMessages, setTyping, incrementCount, checkAndResetDaily,
@@ -137,19 +136,22 @@ export default function CoachScreen() {
           timestamp: m.created_at,
         }));
         setMessages(formatted);
-      } else if (messages.length === 0) {
-        const firstName = profile?.name?.split(' ')[0] ?? '';
-        addMessage({
-          id:        'welcome',
-          role:      'model',
-          content:   `Hi${firstName ? ` ${firstName}` : ''}! I'm Fitz, your AI nutrition coach 🤖\n\nI'm here to help you reach your goals. Ask me anything about nutrition, meals, or your progress!`,
-          timestamp: new Date().toISOString(),
-        });
+      } else {
+        // If no history or if the only message is the welcome message (and language changed), re-init
+        const shouldInit = messages.length === 0 || (messages.length === 1 && messages[0].id === 'welcome');
+        if (shouldInit) {
+          setMessages([{
+            id:        'welcome',
+            role:      'model',
+            content:   t('coach.welcome'),
+            timestamp: new Date().toISOString(),
+          }]);
+        }
       }
     }
 
     loadHistory();
-  }, [profile?.id]);
+  }, [profile?.id, language]);
 
   // Scroll to bottom on new message or typing change
   useEffect(() => {
@@ -322,7 +324,7 @@ export default function CoachScreen() {
         targetCalories: profile.targetCalories ?? 2000,
         macros:         profile.macros         ?? { protein: 150, carbs: 200, fat: 67 },
         restrictions:   profile.restrictions,
-      });
+      }, language);
 
       const reply = await sendCoachMessage(history, text, systemPrompt, currentImg ?? undefined);
 
@@ -359,22 +361,22 @@ export default function CoachScreen() {
   const showSuggestions = messages.length <= 1 && !isTyping;
 
   return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
-      <View style={s.header}>
+      <View style={[s.header, { borderBottomColor: colors.border }]}>
         <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.headerAvatar}>
           <Text style={s.headerAvatarText}>F</Text>
         </LinearGradient>
         <View style={{ flex: 1 }}>
-          <Text style={s.headerName}>Fitz · AI Coach</Text>
+          <Text style={[s.headerName, { color: colors.textPrimary }]}>{t('coach.title')}</Text>
           <View style={s.onlineRow}>
-            <View style={s.onlineDot} />
-            <Text style={s.onlineText}>Online · Powered by Groq</Text>
+            <View style={[s.onlineDot, { backgroundColor: colors.success }]} />
+            <Text style={[s.onlineText, { color: colors.success }]}>{t('coach.online')}</Text>
           </View>
         </View>
         {!isPro && (
-          <View style={s.countBadge}>
-            <Text style={s.countText}>
+          <View style={[s.countBadge, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
+            <Text style={[s.countText, { color: colors.textSecondary }]}>
               {Math.max(FREE_MSG_LIMIT - msgCount, 0)}/{FREE_MSG_LIMIT}
             </Text>
           </View>
@@ -398,14 +400,14 @@ export default function CoachScreen() {
               {isTyping && <TypingIndicator />}
               {showSuggestions && !isTyping && (
                 <View style={s.suggestionsWrap}>
-                  {SUGGESTIONS.map((suggestion) => (
+                  {[1,2,3,4].map((i) => (
                     <TouchableOpacity
-                      key={suggestion}
-                      style={s.chip}
-                      onPress={() => handleSend(suggestion)}
+                      key={i}
+                      style={[s.chip, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                      onPress={() => handleSend(t(`coach.suggest${i}`))}
                       activeOpacity={0.75}
                     >
-                      <Text style={s.chipText}>{suggestion}</Text>
+                      <Text style={[s.chipText, { color: colors.textSecondary }]}>{t(`coach.suggest${i}`)}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -416,9 +418,9 @@ export default function CoachScreen() {
 
         {/* ── Input area ── */}
         {atLimit ? (
-          <View style={s.limitBanner}>
-            <Text style={s.limitText}>
-              🔒 Daily limit reached. Upgrade to Pro for unlimited coaching.
+          <View style={[s.limitBanner, { borderTopColor: colors.border }]}>
+            <Text style={[s.limitText, { color: colors.textSecondary }]}>
+              🔒 {t('coach.upgradePro')}
             </Text>
             <TouchableOpacity
               style={s.upgradeBtn}
@@ -426,12 +428,12 @@ export default function CoachScreen() {
               activeOpacity={0.8}
             >
               <LinearGradient colors={['#F59E0B', '#D97706']} style={s.upgradeGrad}>
-                <Text style={s.upgradeText}>Upgrade to Pro</Text>
+                <Text style={s.upgradeText}>{t('profile.upgrade')}</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
         ) : (
-          <View style={s.inputAreaContainer}>
+          <View style={[s.inputAreaContainer, { borderTopColor: colors.border }]}>
             {selectedImage && (
               <View style={s.imagePreviewContainer}>
                 <Image
@@ -468,11 +470,11 @@ export default function CoachScreen() {
               </TouchableOpacity>
 
               <TextInput
-                style={s.input}
+                style={[s.input, { backgroundColor: colors.surface, color: colors.textPrimary, borderColor: colors.border }]}
                 value={input}
                 onChangeText={setInput}
-                placeholder="Ask Fitz anything…"
-                placeholderTextColor={Colors.textMuted}
+                placeholder={t('coach.inputPlaceholder')}
+                placeholderTextColor={colors.textMuted}
                 multiline
                 maxLength={500}
                 returnKeyType="send"
@@ -501,21 +503,21 @@ export default function CoachScreen() {
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
 const s = StyleSheet.create({
-  safe:                 { flex: 1, backgroundColor: Colors.background },
-  header:               { flexDirection: 'row', alignItems: 'center', gap: 12, padding: Spacing.base, borderBottomWidth: 1, borderBottomColor: Colors.border },
+  safe:                 { flex: 1 },
+  header:               { flexDirection: 'row', alignItems: 'center', gap: 12, padding: Spacing.base, borderBottomWidth: 1 },
   headerAvatar:         { width: 42, height: 42, borderRadius: 21, justifyContent: 'center', alignItems: 'center' },
   headerAvatarText:     { color: '#fff', fontWeight: '800', fontSize: 16 },
-  headerName:           { fontSize: 16, fontWeight: '700', color: Colors.textPrimary },
+  headerName:           { fontSize: 16, fontWeight: '700' },
   onlineRow:            { flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 2 },
-  onlineDot:            { width: 7, height: 7, borderRadius: 4, backgroundColor: Colors.success },
-  onlineText:           { fontSize: 11, color: Colors.success },
-  countBadge:           { backgroundColor: Colors.surfaceAlt, borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1, borderColor: Colors.border },
-  countText:            { fontSize: 12, color: Colors.textSecondary, fontWeight: '600' },
+  onlineDot:            { width: 7, height: 7, borderRadius: 4 },
+  onlineText:           { fontSize: 11 },
+  countBadge:           { borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1 },
+  countText:            { fontSize: 12, fontWeight: '600' },
   messages:             { paddingVertical: Spacing.base, paddingBottom: 16 },
   suggestionsWrap:      { padding: Spacing.base, gap: 8 },
-  chip:                 { backgroundColor: Colors.surface, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1, borderColor: Colors.border },
-  chipText:             { color: Colors.textSecondary, fontSize: 14 },
-  inputAreaContainer:   { borderTopWidth: 1, borderTopColor: Colors.border },
+  chip:                 { borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1 },
+  chipText:             { fontSize: 14 },
+  inputAreaContainer:   { borderTopWidth: 1 },
   imagePreviewContainer:{ padding: Spacing.base, paddingBottom: 0, flexDirection: 'row', alignItems: 'flex-start' },
   imagePreview:         { width: 64, height: 64, borderRadius: Radius.md },
   removeImageBtn:       { marginLeft: 8, backgroundColor: 'rgba(0,0,0,0.55)', borderRadius: 12, width: 24, height: 24, justifyContent: 'center', alignItems: 'center' },
@@ -525,13 +527,13 @@ const s = StyleSheet.create({
   micBtn:               { padding: 8, justifyContent: 'center', alignItems: 'center' },
   micBtnActive:         { backgroundColor: '#EF444422', borderRadius: Radius.full },
   cameraEmoji:          { fontSize: 24 },
-  input:                { flex: 1, backgroundColor: Colors.surface, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, color: Colors.textPrimary, borderWidth: 1.5, borderColor: Colors.border, maxHeight: 120 },
+  input:                { flex: 1, borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 10, fontSize: 15, borderWidth: 1.5, maxHeight: 120 },
   sendBtn:              { borderRadius: Radius.md, overflow: 'hidden' },
   sendBtnDisabled:      { opacity: 0.35 },
   sendGrad:             { width: 44, height: 44, justifyContent: 'center', alignItems: 'center' },
   sendText:             { color: '#fff', fontSize: 22, fontWeight: '700' },
-  limitBanner:          { padding: Spacing.base, borderTopWidth: 1, borderTopColor: Colors.border, gap: 10 },
-  limitText:            { fontSize: 13, color: Colors.textSecondary, textAlign: 'center' },
+  limitBanner:          { padding: Spacing.base, borderTopWidth: 1, gap: 10 },
+  limitText:            { fontSize: 13, textAlign: 'center' },
   upgradeBtn:           { borderRadius: Radius.md, overflow: 'hidden' },
   upgradeGrad:          { padding: 14, alignItems: 'center' },
   upgradeText:          { color: '#fff', fontWeight: '700', fontSize: 15 },

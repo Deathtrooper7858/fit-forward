@@ -7,8 +7,10 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, Radius } from '../../constants';
 import { supabase } from '../../services';
+import { useTheme } from '../../hooks/useTheme';
 
 export default function RegisterScreen() {
+  const colors = useTheme();
   const [name, setName]         = useState('');
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -42,38 +44,38 @@ export default function RegisterScreen() {
   };
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: colors.background }]}>
       <View style={s.glow} />
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <TouchableOpacity style={s.back} onPress={() => router.back()}>
-          <Text style={s.backText}>← Back</Text>
+          <Text style={[s.backText, { color: colors.primary }]}>← Back</Text>
         </TouchableOpacity>
 
-        <Text style={s.title}>Create account</Text>
-        <Text style={s.subtitle}>Start your transformation today</Text>
+        <Text style={[s.title, { color: colors.textPrimary }]}>Create account</Text>
+        <Text style={[s.subtitle, { color: colors.textSecondary }]}>Start your transformation today</Text>
 
         <View style={s.form}>
           <View style={s.field}>
-            <Text style={s.fieldLabel}>Full Name</Text>
+            <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>Full Name</Text>
             <TextInput
-              style={s.input}
+              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
               value={name}
               onChangeText={setName}
               placeholder="John Doe"
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               autoCapitalize="words"
               autoComplete="name"
             />
           </View>
 
           <View style={s.field}>
-            <Text style={s.fieldLabel}>Email</Text>
+            <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>Email</Text>
             <TextInput
-              style={s.input}
+              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
               value={email}
               onChangeText={setEmail}
               placeholder="you@example.com"
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               keyboardType="email-address"
               autoCapitalize="none"
               autoComplete="email"
@@ -81,13 +83,13 @@ export default function RegisterScreen() {
           </View>
 
           <View style={s.field}>
-            <Text style={s.fieldLabel}>Password</Text>
+            <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>Password</Text>
             <TextInput
-              style={s.input}
+              style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
               value={password}
               onChangeText={setPassword}
               placeholder="8+ characters"
-              placeholderTextColor={Colors.textMuted}
+              placeholderTextColor={colors.textMuted}
               secureTextEntry
               autoComplete="new-password"
             />
@@ -106,19 +108,19 @@ export default function RegisterScreen() {
         </TouchableOpacity>
 
         <View style={s.divider}>
-          <View style={s.divLine} />
-          <Text style={s.divText}>or</Text>
-          <View style={s.divLine} />
+          <View style={[s.divLine, { backgroundColor: colors.border }]} />
+          <Text style={[s.divText, { color: colors.textMuted }]}>or</Text>
+          <View style={[s.divLine, { backgroundColor: colors.border }]} />
         </View>
 
-        <TouchableOpacity style={s.socialBtn} activeOpacity={0.8}>
-          <Text style={s.socialText}>🔗  Continue with Google</Text>
+        <TouchableOpacity style={[s.socialBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} activeOpacity={0.8}>
+          <Text style={[s.socialText, { color: colors.textPrimary }]}>🔗  Continue with Google</Text>
         </TouchableOpacity>
 
         <View style={s.footer}>
-          <Text style={s.footerText}>Already have an account? </Text>
+          <Text style={[s.footerText, { color: colors.textSecondary }]}>Already have an account? </Text>
           <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
-            <Text style={s.footerLink}>Sign In</Text>
+            <Text style={[s.footerLink, { color: colors.primary }]}>Sign In</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>
@@ -127,27 +129,27 @@ export default function RegisterScreen() {
 }
 
 const s = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: Colors.background },
+  container:    { flex: 1 },
   glow:         { position: 'absolute', top: -60, right: -60, width: 250, height: 250, borderRadius: 125, backgroundColor: '#7C5CFC', opacity: 0.10 },
   content:      { flexGrow: 1, padding: Spacing.base, paddingTop: 60 },
   back:         { marginBottom: 32 },
-  backText:     { color: Colors.primary, fontSize: 15, fontWeight: '600' },
-  title:        { fontSize: 30, fontWeight: '800', color: Colors.textPrimary, marginBottom: 6 },
-  subtitle:     { fontSize: 15, color: Colors.textSecondary, marginBottom: 36 },
+  backText:     { fontSize: 15, fontWeight: '600' },
+  title:        { fontSize: 30, fontWeight: '800', marginBottom: 6 },
+  subtitle:     { fontSize: 15, marginBottom: 36 },
   form:         { gap: 16 },
   field:        { gap: 6 },
-  fieldLabel:   { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, letterSpacing: 0.5 },
-  input:        { backgroundColor: Colors.surface, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.border, padding: Spacing.base, fontSize: 15, color: Colors.textPrimary, minHeight: 50 },
+  fieldLabel:   { fontSize: 13, fontWeight: '600', letterSpacing: 0.5 },
+  input:        { borderRadius: Radius.md, borderWidth: 1.5, padding: Spacing.base, fontSize: 15, minHeight: 50 },
   btn:          { borderRadius: Radius.md, overflow: 'hidden', marginTop: 28 },
   btnDisabled:  { opacity: 0.6 },
   btnGradient:  { padding: 18, alignItems: 'center' },
   btnText:      { fontSize: 16, fontWeight: '700', color: '#fff' },
   divider:      { flexDirection: 'row', alignItems: 'center', gap: 12, marginVertical: 24 },
-  divLine:      { flex: 1, height: 1, backgroundColor: Colors.border },
-  divText:      { color: Colors.textMuted, fontSize: 13 },
-  socialBtn:    { borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.border, padding: 16, alignItems: 'center', backgroundColor: Colors.surface },
-  socialText:   { color: Colors.textPrimary, fontWeight: '600', fontSize: 15 },
+  divLine:      { flex: 1, height: 1 },
+  divText:      { fontSize: 13 },
+  socialBtn:    { borderRadius: Radius.md, borderWidth: 1.5, padding: 16, alignItems: 'center' },
+  socialText:   { fontWeight: '600', fontSize: 15 },
   footer:       { flexDirection: 'row', justifyContent: 'center', marginTop: 32, paddingBottom: 20 },
-  footerText:   { color: Colors.textSecondary, fontSize: 14 },
-  footerLink:   { color: Colors.primary, fontWeight: '700', fontSize: 14 },
+  footerText:   { fontSize: 14 },
+  footerLink:   { fontWeight: '700', fontSize: 14 },
 });

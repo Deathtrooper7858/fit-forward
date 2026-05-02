@@ -5,7 +5,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, Radius } from '../../constants';
 import { supabase } from '../../services';
 
+import { useTheme } from '../../hooks/useTheme';
+
 export default function ForgotPasswordScreen() {
+  const colors = useTheme();
   const [email, setEmail]     = useState('');
   const [loading, setLoading] = useState(false);
   const [sent, setSent]       = useState(false);
@@ -28,16 +31,16 @@ export default function ForgotPasswordScreen() {
 
   if (sent) {
     return (
-      <View style={s.container}>
+      <View style={[s.container, { backgroundColor: colors.background }]}>
         <View style={s.content}>
           <Text style={s.emoji}>📧</Text>
-          <Text style={s.title}>Check your email</Text>
-          <Text style={s.sub}>
+          <Text style={[s.title, { color: colors.textPrimary }]}>Check your email</Text>
+          <Text style={[s.sub, { color: colors.textSecondary }]}>
             We sent a password reset link to{'\n'}
-            <Text style={{ color: Colors.primary, fontWeight: '600' }}>{email}</Text>
+            <Text style={{ color: colors.primary, fontWeight: '600' }}>{email}</Text>
           </Text>
           <TouchableOpacity style={s.backBtn} onPress={() => router.back()}>
-            <Text style={s.backBtnText}>← Back to Login</Text>
+            <Text style={[s.backBtnText, { color: colors.primary }]}>← Back to Login</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -45,23 +48,23 @@ export default function ForgotPasswordScreen() {
   }
 
   return (
-    <View style={s.container}>
+    <View style={[s.container, { backgroundColor: colors.background }]}>
       <View style={s.content}>
         <TouchableOpacity onPress={() => router.back()} style={s.back}>
-          <Text style={s.backText}>← Back</Text>
+          <Text style={[s.backText, { color: colors.primary }]}>← Back</Text>
         </TouchableOpacity>
 
-        <Text style={s.title}>Reset Password</Text>
-        <Text style={s.sub}>Enter the email address associated with your account</Text>
+        <Text style={[s.title, { color: colors.textPrimary }]}>Reset Password</Text>
+        <Text style={[s.sub, { color: colors.textSecondary }]}>Enter the email address associated with your account</Text>
 
         <View style={s.field}>
-          <Text style={s.fieldLabel}>Email</Text>
+          <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>Email</Text>
           <TextInput
-            style={s.input}
+            style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
             value={email}
             onChangeText={setEmail}
             placeholder="you@example.com"
-            placeholderTextColor={Colors.textMuted}
+            placeholderTextColor={colors.textMuted}
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
@@ -84,20 +87,20 @@ export default function ForgotPasswordScreen() {
 }
 
 const s = StyleSheet.create({
-  container:  { flex: 1, backgroundColor: Colors.background },
+  container:  { flex: 1 },
   content:    { flex: 1, padding: Spacing.base, paddingTop: 60, justifyContent: 'flex-start' },
   back:       { marginBottom: 32 },
-  backText:   { color: Colors.primary, fontSize: 15, fontWeight: '600' },
+  backText:   { fontSize: 15, fontWeight: '600' },
   emoji:      { fontSize: 48, textAlign: 'center', marginBottom: 20, marginTop: 60 },
-  title:      { fontSize: 28, fontWeight: '800', color: Colors.textPrimary, marginBottom: 8 },
-  sub:        { fontSize: 15, color: Colors.textSecondary, marginBottom: 32, lineHeight: 22 },
+  title:      { fontSize: 28, fontWeight: '800', marginBottom: 8 },
+  sub:        { fontSize: 15, marginBottom: 32, lineHeight: 22 },
   field:      { gap: 6, marginBottom: 24 },
-  fieldLabel: { fontSize: 13, fontWeight: '600', color: Colors.textSecondary, letterSpacing: 0.5 },
-  input:      { backgroundColor: Colors.surface, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.border, padding: Spacing.base, fontSize: 15, color: Colors.textPrimary },
+  fieldLabel: { fontSize: 13, fontWeight: '600', letterSpacing: 0.5 },
+  input:      { borderRadius: Radius.md, borderWidth: 1.5, padding: Spacing.base, fontSize: 15 },
   btn:        { borderRadius: Radius.md, overflow: 'hidden' },
   btnDisabled:{ opacity: 0.6 },
   btnGrad:    { padding: 18, alignItems: 'center' },
   btnText:    { fontSize: 16, fontWeight: '700', color: '#fff' },
   backBtn:    { marginTop: 24, alignItems: 'center' },
-  backBtnText:{ color: Colors.primary, fontWeight: '600', fontSize: 15 },
+  backBtnText:{ fontWeight: '600', fontSize: 15 },
 });

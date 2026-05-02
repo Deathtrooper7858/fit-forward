@@ -3,10 +3,12 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, ActivityIndicator
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Colors, Spacing, Radius } from '../../../constants';
-import { useAuthStore, useNutritionStore } from '../../../store';
+import { Spacing, Radius } from '../../../constants';
+import { useAuthStore, useNutritionStore, useSettingsStore } from '../../../store';
 import { generateMealPlan, generateWeeklyAnalysis } from '../../../services/groq';
 import { supabase } from '../../../services/supabase';
+import { useTranslation } from 'react-i18next';
+import { useTheme } from '../../../hooks/useTheme';
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -20,6 +22,9 @@ interface PlanItem {
 }
 
 export default function PlannerScreen() {
+  const { t } = useTranslation();
+  const colors = useTheme();
+  const { language } = useSettingsStore();
   const [activeDay, setActiveDay] = useState('Mon');
   const [loading, setLoading]     = useState(false);
   const [plans, setPlans]         = useState<Record<string, PlanItem[]>>({});
@@ -29,7 +34,7 @@ export default function PlannerScreen() {
   const { streakDays, totals }    = useNutritionStore();
   const isPro                     = profile?.isPro ?? false;
 
-  // Load saved plan from Supabase
+  // ... (keeping Supabase logic)
   useEffect(() => {
     async function loadStoredPlan() {
       if (!profile?.id) return;
@@ -70,14 +75,13 @@ export default function PlannerScreen() {
 
     setLoading(true);
     try {
-      // generateMealPlan now returns structured JSON
       const parsedPlan = await generateMealPlan({
         targetCalories: profile.targetCalories,
         macros:         profile.macros,
         goal:           profile.goal,
         restrictions:   profile.restrictions,
         preferences:    profile.preferences,
-      });
+      }, language);
 
       setPlans(parsedPlan);
 
@@ -110,9 +114,9 @@ export default function PlannerScreen() {
         }
       }
 
-      Alert.alert('✅ Plan Ready', 'Your AI meal plan has been generated and saved!');
+      Alert.alert('✅ ' + t('common.success'), t('planner.planReady') || 'Your AI meal plan has been generated and saved!');
     } catch (err: any) {
-      Alert.alert('Error', err?.message ?? 'Failed to generate plan. Please try again.');
+      Alert.alert(t('common.error'), err?.message ?? 'Failed to generate plan. Please try again.');
     } finally {
       setLoading(false);
     }
@@ -121,7 +125,6 @@ export default function PlannerScreen() {
   const meals    = plans[activeDay] ?? [];
   const totalCal = meals.reduce((a, m) => a + m.calories, 0);
 
-  // Generate shopping list from all days
   const handleShoppingList = () => {
     if (!isPro) { router.push('/modals/paywall'); return; }
     const allItems = Object.values(plans).flat();
@@ -139,14 +142,14 @@ export default function PlannerScreen() {
     try {
       const stats = totals();
       const res = await generateWeeklyAnalysis({
-        avgCalories:    stats.calories, // In a real app, calculate actual weekly avg
+        avgCalories:    stats.calories,
         targetCalories: profile?.targetCalories ?? 2000,
         avgProtein:     stats.protein,
         avgCarbs:       stats.carbs,
         avgFat:         stats.fat,
         goal:           profile?.goal ?? 'maintain',
         daysLogged:     streakDays,
-      });
+      }, language);
       setAnalysis(res);
     } catch (err) {
       Alert.alert('Analysis Failed', 'Could not generate weekly review.');
@@ -156,19 +159,19 @@ export default function PlannerScreen() {
   };
 
   return (
-    <SafeAreaView style={s.safe}>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={s.header}>
           <View>
-            <Text style={s.title}>Meal Planner</Text>
-            <Text style={s.subtitle}>Personalized AI Plans</Text>
+            <Text style={[s.title, { color: colors.textPrimary }]}>{t('planner.title')}</Text>
+            <Text style={[s.subtitle, { color: colors.textSecondary }]}>{t('planner.weekPlan')}</Text>
           </View>
           <TouchableOpacity style={s.genBtn} activeOpacity={0.8} onPress={handleGenerate} disabled={loading}>
             <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.genGrad}>
               {loading
                 ? <ActivityIndicator size="small" color="#fff" />
-                : <Text style={s.genText}>✨ Generate</Text>}
+                : <Text style={s.genText}>✨ {t('planner.generate')}</Text>}
             </LinearGradient>
           </TouchableOpacity>
         </View>
@@ -176,28 +179,28 @@ export default function PlannerScreen() {
         <DayPicker active={activeDay} onSelect={setActiveDay} />
 
         {/* Weekly Analysis Section */}
-        <View style={s.analysisWrap}>
+        <View style={[s.analysisWrap, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <View style={s.analysisHeader}>
-            <Text style={s.analysisTitle}>AI Weekly Review</Text>
+            <Text style={[s.analysisTitle, { color: colors.textPrimary }]}>AI Weekly Review</Text>
             <TouchableOpacity onPress={handleWeeklyAnalysis} disabled={analyzing}>
-              <Text style={s.analysisBtnText}>{analysis ? 'Regenerate' : 'Analyze'}</Text>
+              <Text style={[s.analysisBtnText, { color: colors.primary }]}>{analysis ? 'Regenerate' : 'Analyze'}</Text>
             </TouchableOpacity>
           </View>
           {analyzing ? (
-            <ActivityIndicator size="small" color={Colors.primary} style={{ marginVertical: 10 }} />
+            <ActivityIndicator size="small" color={colors.primary} style={{ marginVertical: 10 }} />
           ) : analysis ? (
-            <View style={s.analysisContent}>
-              <Text style={s.analysisText}>{analysis}</Text>
+            <View style={[s.analysisContent, { backgroundColor: colors.surfaceAlt }]}>
+              <Text style={[s.analysisText, { color: colors.textSecondary }]}>{analysis}</Text>
             </View>
           ) : (
-            <Text style={s.analysisPlaceholder}>Get a summary of your week and custom tips.</Text>
+            <Text style={[s.analysisPlaceholder, { color: colors.textMuted }]}>Get a summary of your week and custom tips.</Text>
           )}
         </View>
 
         {meals.length > 0 && (
-          <View style={s.summary}>
-            <Text style={s.summaryText}>
-              {totalCal} kcal planned · {Math.max((profile?.targetCalories ?? 2000) - totalCal, 0)} remaining
+          <View style={[s.summary, { backgroundColor: colors.surfaceAlt }]}>
+            <Text style={[s.summaryText, { color: colors.textSecondary }]}>
+              {totalCal} kcal {t('planner.planned') || 'planned'} · {Math.max((profile?.targetCalories ?? 2000) - totalCal, 0)} {t('tracker.remaining')}
             </Text>
           </View>
         )}
@@ -211,11 +214,11 @@ export default function PlannerScreen() {
           ) : (
             <View style={s.emptyDay}>
               <Text style={s.emptyEmoji}>📅</Text>
-              <Text style={s.emptyTitle}>No meals planned</Text>
-              <Text style={s.emptySub}>
-                {loading ? 'Generating your plan...' : isPro
-                  ? 'Tap "Generate" to create an AI meal plan'
-                  : 'Upgrade to Pro to generate AI meal plans'}
+              <Text style={[s.emptyTitle, { color: colors.textPrimary }]}>{t('planner.noMeals') || 'No meals planned'}</Text>
+              <Text style={[s.emptySub, { color: colors.textSecondary }]}>
+                {loading ? t('common.loading') : isPro
+                  ? t('planner.emptySubPro') || 'Tap "Generate" to create an AI meal plan'
+                  : t('planner.emptySubFree') || 'Upgrade to Pro to generate AI meal plans'}
               </Text>
               {!isPro && !loading && (
                 <TouchableOpacity style={s.proBtn} activeOpacity={0.8} onPress={() => router.push('/modals/paywall')}>
@@ -230,13 +233,13 @@ export default function PlannerScreen() {
 
         {/* Shopping list teaser */}
         <TouchableOpacity onPress={handleShoppingList} activeOpacity={0.8}>
-          <LinearGradient colors={['#F59E0B11', '#D9770611']} style={s.teaser}>
+          <LinearGradient colors={colors.theme === 'dark' ? ['#F59E0B11', '#D9770611'] : [colors.pro + '15', colors.pro + '08']} style={[s.teaser, { borderColor: colors.pro + '33' }]}>
             <Text style={s.teaserEmoji}>🛒</Text>
             <View style={{ flex: 1 }}>
-              <Text style={s.teaserTitle}>Auto Shopping List</Text>
-              <Text style={s.teaserSub}>Generate a grocery list from your weekly plan</Text>
+              <Text style={[s.teaserTitle, { color: colors.textPrimary }]}>Auto Shopping List</Text>
+              <Text style={[s.teaserSub, { color: colors.textSecondary }]}>Generate a grocery list from your weekly plan</Text>
             </View>
-            {!isPro && <View style={s.proBadge}><Text style={s.proBadgeText}>PRO</Text></View>}
+            {!isPro && <View style={[s.proBadge, { backgroundColor: colors.pro + '22', borderColor: colors.pro + '66' }]}><Text style={[s.proBadgeText, { color: colors.pro }]}>PRO</Text></View>}
           </LinearGradient>
         </TouchableOpacity>
 
@@ -247,15 +250,16 @@ export default function PlannerScreen() {
 }
 
 function DayPicker({ active, onSelect }: { active: string; onSelect: (d: string) => void }) {
+  const colors = useTheme();
   return (
     <ScrollView horizontal showsHorizontalScrollIndicator={false} style={dp.scroll} contentContainerStyle={dp.row}>
       {DAYS.map((d) => (
         <TouchableOpacity
           key={d}
-          style={[dp.day, active === d && dp.dayActive]}
+          style={[dp.day, { backgroundColor: colors.surface, borderColor: colors.border }, active === d && { borderColor: colors.primary, backgroundColor: colors.primary + '22' }]}
           onPress={() => onSelect(d)}
         >
-          <Text style={[dp.dayLabel, active === d && dp.dayLabelActive]}>{d}</Text>
+          <Text style={[dp.dayLabel, { color: colors.textSecondary }, active === d && { color: colors.primary }]}>{d}</Text>
         </TouchableOpacity>
       ))}
     </ScrollView>
@@ -266,21 +270,22 @@ function MealCard({ name, meal, cal, protein, carbs, fat }: {
   name: string; meal: string; cal: number;
   protein?: number; carbs?: number; fat?: number;
 }) {
+  const colors = useTheme();
   return (
-    <View style={mc.card}>
-      <View style={[mc.mealDot, { backgroundColor: Colors.primary }]} />
+    <View style={[mc.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <View style={[mc.mealDot, { backgroundColor: colors.primary }]} />
       <View style={mc.info}>
-        <Text style={mc.mealLabel}>{meal}</Text>
-        <Text style={mc.name}>{name}</Text>
+        <Text style={[mc.mealLabel, { color: colors.textMuted }]}>{meal}</Text>
+        <Text style={[mc.name, { color: colors.textPrimary }]}>{name}</Text>
         {(protein !== undefined) && (
           <View style={mc.macroRow}>
-            <Text style={[mc.macro, { color: Colors.protein }]}>P {protein}g</Text>
-            <Text style={[mc.macro, { color: Colors.carbs }]}>C {carbs}g</Text>
-            <Text style={[mc.macro, { color: Colors.fat }]}>F {fat}g</Text>
+            <Text style={[mc.macro, { color: colors.protein }]}>P {protein}g</Text>
+            <Text style={[mc.macro, { color: colors.carbs }]}>C {carbs}g</Text>
+            <Text style={[mc.macro, { color: colors.fat }]}>F {fat}g</Text>
           </View>
         )}
       </View>
-      <Text style={mc.cal}>{cal} kcal</Text>
+      <Text style={[mc.cal, { color: colors.accent }]}>{cal} kcal</Text>
     </View>
   );
 }
@@ -288,52 +293,50 @@ function MealCard({ name, meal, cal, protein, carbs, fat }: {
 const dp = StyleSheet.create({
   scroll:         { marginBottom: Spacing.base },
   row:            { gap: 8, paddingHorizontal: Spacing.base, paddingBottom: 4 },
-  day:            { width: 54, height: 64, borderRadius: Radius.md, borderWidth: 1.5, borderColor: Colors.border, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.surface },
-  dayActive:      { borderColor: Colors.primary, backgroundColor: '#7C5CFC22' },
-  dayLabel:       { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
-  dayLabelActive: { color: Colors.primary },
+  day:            { width: 54, height: 64, borderRadius: Radius.md, borderWidth: 1.5, justifyContent: 'center', alignItems: 'center' },
+  dayLabel:       { fontSize: 14, fontWeight: '600' },
 });
 
 const mc = StyleSheet.create({
-  card:      { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.base, marginBottom: 10, borderWidth: 1, borderColor: Colors.border },
+  card:      { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: Radius.lg, padding: Spacing.base, marginBottom: 10, borderWidth: 1 },
   mealDot:   { width: 10, height: 10, borderRadius: 5, flexShrink: 0 },
   info:      { flex: 1 },
-  mealLabel: { fontSize: 11, color: Colors.textMuted, fontWeight: '500', textTransform: 'uppercase', marginBottom: 2 },
-  name:      { fontSize: 14, color: Colors.textPrimary, fontWeight: '500' },
+  mealLabel: { fontSize: 11, fontWeight: '500', textTransform: 'uppercase', marginBottom: 2 },
+  name:      { fontSize: 14, fontWeight: '500' },
   macroRow:  { flexDirection: 'row', gap: 8, marginTop: 4 },
   macro:     { fontSize: 11, fontWeight: '600' },
-  cal:       { fontSize: 14, color: Colors.accent, fontWeight: '700' },
+  cal:       { fontSize: 14, fontWeight: '700' },
 });
 
 const s = StyleSheet.create({
-  safe:        { flex: 1, backgroundColor: Colors.background },
+  safe:        { flex: 1 },
   header:      { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.base, paddingTop: Spacing.lg, marginBottom: Spacing.md },
-  title:       { fontSize: 24, fontWeight: '800', color: Colors.textPrimary },
-  subtitle:    { fontSize: 13, color: Colors.textSecondary, marginTop: 2 },
+  title:       { fontSize: 24, fontWeight: '800' },
+  subtitle:    { fontSize: 13, marginTop: 2 },
   genBtn:      { borderRadius: Radius.md, overflow: 'hidden' },
   genGrad:     { paddingHorizontal: 14, paddingVertical: 10 },
   genText:     { color: '#fff', fontWeight: '700', fontSize: 13 },
-  summary:     { marginHorizontal: Spacing.base, marginBottom: Spacing.base, backgroundColor: Colors.surfaceAlt, borderRadius: Radius.md, padding: 10, alignItems: 'center' },
-  summaryText: { fontSize: 13, color: Colors.textSecondary, fontWeight: '500' },
+  summary:     { marginHorizontal: Spacing.base, marginBottom: Spacing.base, borderRadius: Radius.md, padding: 10, alignItems: 'center' },
+  summaryText: { fontSize: 13, fontWeight: '500' },
   mealList:    { paddingHorizontal: Spacing.base },
   emptyDay:    { alignItems: 'center', paddingVertical: 60 },
   emptyEmoji:  { fontSize: 48, marginBottom: 12 },
-  emptyTitle:  { fontSize: 18, fontWeight: '700', color: Colors.textPrimary, marginBottom: 6 },
-  emptySub:    { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', marginBottom: 20, paddingHorizontal: 20 },
+  emptyTitle:  { fontSize: 18, fontWeight: '700', marginBottom: 6 },
+  emptySub:    { fontSize: 14, textAlign: 'center', marginBottom: 20, paddingHorizontal: 20 },
   proBtn:      { borderRadius: Radius.md, overflow: 'hidden' },
   proGrad:     { paddingHorizontal: 24, paddingVertical: 12 },
   proText:     { color: '#fff', fontWeight: '700', fontSize: 15 },
-  teaser:      { margin: Spacing.base, borderRadius: Radius.lg, padding: Spacing.base, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#F59E0B33' },
+  teaser:      { margin: Spacing.base, borderRadius: Radius.lg, padding: Spacing.base, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1 },
   teaserEmoji: { fontSize: 28 },
-  teaserTitle: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
-  teaserSub:   { fontSize: 12, color: Colors.textSecondary, marginTop: 2 },
-  proBadge:    { backgroundColor: '#F59E0B22', borderRadius: Radius.sm, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1, borderColor: '#F59E0B66' },
-  proBadgeText:{ color: Colors.pro, fontWeight: '800', fontSize: 11 },
-  analysisWrap: { margin: Spacing.base, backgroundColor: Colors.surface, borderRadius: Radius.lg, padding: Spacing.base, borderWidth: 1, borderColor: Colors.border },
+  teaserTitle: { fontSize: 14, fontWeight: '700' },
+  teaserSub:   { fontSize: 12, marginTop: 2 },
+  proBadge:    { borderRadius: Radius.sm, paddingHorizontal: 8, paddingVertical: 3, borderWidth: 1 },
+  proBadgeText:{ fontWeight: '800', fontSize: 11 },
+  analysisWrap: { margin: Spacing.base, borderRadius: Radius.lg, padding: Spacing.base, borderWidth: 1 },
   analysisHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 },
-  analysisTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  analysisBtnText: { fontSize: 13, color: Colors.primary, fontWeight: '600' },
-  analysisContent: { backgroundColor: Colors.surfaceAlt, borderRadius: Radius.md, padding: 12, marginTop: 4 },
-  analysisText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20 },
-  analysisPlaceholder: { fontSize: 13, color: Colors.textMuted, fontStyle: 'italic' },
+  analysisTitle: { fontSize: 15, fontWeight: '700' },
+  analysisBtnText: { fontSize: 13, fontWeight: '600' },
+  analysisContent: { borderRadius: Radius.md, padding: 12, marginTop: 4 },
+  analysisText: { fontSize: 14, lineHeight: 20 },
+  analysisPlaceholder: { fontSize: 13, fontStyle: 'italic' },
 });
