@@ -43,6 +43,15 @@ export interface FoodLog {
   fat:        number;
 }
 
+export interface ActivityLog {
+  id:         string;
+  name:       string;
+  icon:       string;
+  calories:   number;
+  duration:   number;   // minutes
+  loggedAt:   string;   // ISO date string
+}
+
 export interface DailyProgress {
   date:          string;  // YYYY-MM-DD
   totalCalories: number;
@@ -134,6 +143,12 @@ interface NutritionState {
   selectedDate: string;
   streakDays:   number;
   favoriteFoods: FoodItem[];
+  steps:         number;
+  activityCals:  number;
+  neatLevel:     string;
+  neatLevel:     string;
+  exerciseLevel: string;
+  activityLogs: ActivityLog[];
   addLog:       (log: FoodLog) => void;
   removeLog:    (id: string) => void;
   updateLog:    (id: string, updates: Partial<FoodLog>) => void;
@@ -142,6 +157,15 @@ interface NutritionState {
   addWater:     (ml: number) => void;
   setDate:      (date: string) => void;
   setStreak:    (days: number) => void;
+  setSteps:     (steps: number) => void;
+  addSteps:     (steps: number) => void;
+  setActivity:  (cals: number) => void;
+  addActivityLog: (activity: ActivityLog) => void;
+  removeActivityLog: (id: string) => void;
+  updateActivityLog: (id: string, updates: Partial<ActivityLog>) => void;
+  setActivityLogs: (activities: ActivityLog[]) => void;
+  setNeat:      (level: string) => void;
+  setExerciseLevel: (level: string) => void;
   addFavorite:  (food: FoodItem) => void;
   removeFavorite: (id: string) => void;
   totals: () => { calories: number; protein: number; carbs: number; fat: number };
@@ -155,6 +179,12 @@ export const useNutritionStore = create<NutritionState>()(
       waterIntake:  0,
       selectedDate: new Date().toISOString().split('T')[0],
       streakDays:   0,
+      steps:        0,
+      activityCals: 0,
+      neatLevel:     'A veces de pie',
+      neatLevel:     'A veces de pie',
+      exerciseLevel: '5-6 días por Semana',
+      activityLogs: [],
       favoriteFoods: [],
 
       addLog:    (log) => set((s) => ({ todayLogs: [...s.todayLogs, log] })),
@@ -167,6 +197,17 @@ export const useNutritionStore = create<NutritionState>()(
       addWater:  (ml) => set((s) => ({ waterIntake: s.waterIntake + ml })),
       setDate:   (date) => set({ selectedDate: date }),
       setStreak: (streakDays) => set({ streakDays }),
+      setSteps:  (steps) => set({ steps }),
+      addSteps:  (steps) => set((s) => ({ steps: Math.max(0, s.steps + steps) })),
+      setActivity: (activityCals) => set({ activityCals }),
+      addActivityLog: (activity) => set((s) => ({ activityLogs: [...s.activityLogs, activity] })),
+      removeActivityLog: (id) => set((s) => ({ activityLogs: s.activityLogs.filter(a => a.id !== id) })),
+      updateActivityLog: (id, updates) => set((s) => ({
+        activityLogs: s.activityLogs.map(a => a.id === id ? { ...a, ...updates } : a)
+      })),
+      setActivityLogs: (activityLogs) => set({ activityLogs }),
+      setNeat:     (neatLevel) => set({ neatLevel }),
+      setExerciseLevel: (exerciseLevel) => set({ exerciseLevel }),
       addFavorite: (food) => set((s) => ({
         favoriteFoods: s.favoriteFoods.find(f => f.id === food.id)
           ? s.favoriteFoods
@@ -227,6 +268,11 @@ export const useNutritionStore = create<NutritionState>()(
       partialize: (s) => ({
         waterIntake:   s.waterIntake,
         streakDays:    s.streakDays,
+        steps:         s.steps,
+        activityCals:  s.activityCals,
+        neatLevel:     s.neatLevel,
+        exerciseLevel: s.exerciseLevel,
+        activityLogs:  s.activityLogs,
         favoriteFoods: s.favoriteFoods,
         // todayLogs: intentionally NOT persisted — reloaded from Supabase on mount
       }),

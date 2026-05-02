@@ -9,11 +9,11 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { useAudioRecorder, useAudioRecorderState, RecordingPresets, setAudioModeAsync, requestRecordingPermissionsAsync } from 'expo-audio';
-import { useAuthStore, useCoachStore, CoachMessage, useSettingsStore } from '../../../store';
-import { sendCoachMessage, buildCoachSystemPrompt, transcribeAudio } from '../../../services/groq';
-import { supabase } from '../../../services/supabase';
-import { Spacing, Radius } from '../../../constants';
-import { useTheme } from '../../../hooks/useTheme';
+import { useAuthStore, useCoachStore, CoachMessage, useSettingsStore } from '../../store';
+import { sendCoachMessage, buildCoachSystemPrompt, transcribeAudio } from '../../services/groq';
+import { supabase } from '../../services/supabase';
+import { Spacing, Radius } from '../../constants';
+import { useTheme } from '../../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 
 const FREE_MSG_LIMIT = 10;
@@ -32,7 +32,7 @@ function MessageBubble({ msg }: { msg: CoachMessage }) {
   return (
     <View style={[bubble.row, isUser && bubble.rowUser]}>
       {!isUser && (
-        <Image source={require('../../../assets/fitgo.jpeg')} style={bubble.avatar} resizeMode="cover" />
+        <Image source={require('../../assets/fitgo.jpeg')} style={bubble.avatar} resizeMode="cover" />
       )}
       <View style={[bubble.box, isUser ? { backgroundColor: colors.primary, borderBottomRightRadius: 4 } : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4 }]}>
         {msg.imageUrl && (
@@ -69,7 +69,7 @@ function TypingIndicator() {
   const colors = useTheme();
   return (
     <View style={[bubble.row, { paddingHorizontal: Spacing.base, marginTop: 4 }]}>
-      <Image source={require('../../../assets/fitgo.jpeg')} style={bubble.avatar} resizeMode="cover" />
+      <Image source={require('../../assets/fitgo.jpeg')} style={bubble.avatar} resizeMode="cover" />
       <View style={[bubble.box, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4, paddingHorizontal: 16, paddingVertical: 14 }]}>
         <ActivityIndicator color={colors.primary} size="small" />
       </View>
@@ -77,10 +77,10 @@ function TypingIndicator() {
   );
 }
 
-// ─── Trainer Screen ─────────────────────────────────────────────────────────────
-export default function TrainerScreen() {
+// ─── Nutritionist Screen ─────────────────────────────────────────────────────────────
+export default function NutritionistScreen() {
   const [input, setInput]               = useState('');
-  const coachType = 'trainer';
+  const coachType = 'nutritionist';
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSending, setIsSending]       = useState(false); // local send guard
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -92,7 +92,7 @@ export default function TrainerScreen() {
   const colors = useTheme();
   const { language } = useSettingsStore();
   const {
-    trainerMessages: messages, isTyping, msgCount,
+    nutritionistMessages: messages, isTyping, msgCount,
     addMessage, setMessages, setTyping, incrementCount, checkAndResetDaily,
   } = useCoachStore();
   const { profile } = useAuthStore();
@@ -116,7 +116,7 @@ export default function TrainerScreen() {
         .from('coach_conversations')
         .select('id, role, content, created_at')
         .eq('user_id', profile!.id)
-        .eq('coach_type', 'trainer')
+        .eq('coach_type', 'nutritionist')
         .order('created_at', { ascending: true })
         .limit(50);
 
@@ -127,7 +127,7 @@ export default function TrainerScreen() {
           content:   m.content ?? '',
           timestamp: m.created_at,
         }));
-        setMessages(formatted, 'trainer');
+        setMessages(formatted, 'nutritionist');
       } else {
         // If no history or if the only message is the welcome message (and language changed), re-init
         const shouldInit = messages.length === 0 || (messages.length === 1 && messages[0].id === 'welcome');
@@ -135,9 +135,9 @@ export default function TrainerScreen() {
           setMessages([{
             id:        'welcome',
             role:      'model',
-            content:   t('coach.trainer.welcome'),
+            content:   t('coach.nutritionist.welcome'),
             timestamp: new Date().toISOString(),
-          }], 'trainer');
+          }], 'nutritionist');
         }
       }
     }
@@ -253,7 +253,7 @@ export default function TrainerScreen() {
         role:      'model',
         content:   'Profile not loaded yet. Please wait a moment and try again.',
         timestamp: new Date().toISOString(),
-      }, 'trainer');
+      }, 'nutritionist');
       return;
     }
 
@@ -267,7 +267,7 @@ export default function TrainerScreen() {
       imageUrl:  currentImg ? `data:image/jpeg;base64,${currentImg}` : undefined,
       timestamp: new Date().toISOString(),
     };
-    addMessage(userMsg, 'trainer');
+    addMessage(userMsg, 'nutritionist');
     incrementCount();
     setInput('');
     setSelectedImage(null);
@@ -279,7 +279,7 @@ export default function TrainerScreen() {
       user_id: profile.id,
       role:    'user',
       content: text || '[Image]',
-      coach_type: 'trainer',
+      coach_type: 'nutritionist',
     });
 
     try {
@@ -327,14 +327,14 @@ export default function TrainerScreen() {
         content:   reply,
         timestamp: new Date().toISOString(),
       };
-      addMessage(botMsg, 'trainer');
+      addMessage(botMsg, 'nutritionist');
 
       // Persist bot response (best-effort, fire-and-forget)
       void supabase.from('coach_conversations').insert({
         user_id: profile.id,
         role:    'model',
         content: reply,
-        coach_type: 'trainer',
+        coach_type: 'nutritionist',
       });
 
     } catch (err: any) {
@@ -344,7 +344,7 @@ export default function TrainerScreen() {
         role:      'model',
         content:   `Sorry, I couldn't connect right now. ${err?.message ?? 'Please try again.'}`,
         timestamp: new Date().toISOString(),
-      }, 'trainer');
+      }, 'nutritionist');
     } finally {
       setTyping(false);
       setIsSending(false);
@@ -355,12 +355,12 @@ export default function TrainerScreen() {
   const showSuggestions = messages.length <= 1 && !isTyping;
 
   return (
-    <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
+    <SafeAreaView edges={['bottom']} style={[s.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[s.header, { borderBottomColor: colors.border }]}>
-        <Image source={require('../../../assets/fitgo.jpeg')} style={s.headerAvatar} resizeMode="cover" />
+        <Image source={require('../../assets/fitgo.jpeg')} style={s.headerAvatar} resizeMode="cover" />
         <View style={{ flex: 1 }}>
-          <Text style={[s.headerName, { color: colors.textPrimary }]}>{t('coach.trainer.label', 'Trainer')}</Text>
+          <Text style={[s.headerName, { color: colors.textPrimary }]}>{t('coach.nutritionist.label', 'Nutritionist')}</Text>
           <View style={s.onlineRow}>
             <View style={[s.onlineDot, { backgroundColor: colors.success }]} />
             <Text style={[s.onlineText, { color: colors.success }]}>{t('coach.online')}</Text>
@@ -398,10 +398,10 @@ export default function TrainerScreen() {
                     <TouchableOpacity
                       key={i}
                       style={[s.chip, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                      onPress={() => handleSend(t(`coach.trainer.suggest${i}`))}
+                      onPress={() => handleSend(t(`coach.nutritionist.suggest${i}`))}
                       activeOpacity={0.75}
                     >
-                      <Text style={[s.chipText, { color: colors.textSecondary }]}>{t(`coach.trainer.suggest${i}`)}</Text>
+                      <Text style={[s.chipText, { color: colors.textSecondary }]}>{t(`coach.nutritionist.suggest${i}`)}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>

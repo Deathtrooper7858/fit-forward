@@ -5,9 +5,9 @@
 
 const Palette = {
   // Common brand colors
-  primary:      '#7C5CFC',  // violet-purple
-  primaryLight: '#9D84FD',
-  primaryDark:  '#5A3DD6',
+  primary:      '#EAB308',  // yellow / gold
+  primaryLight: '#FDE047',
+  primaryDark:  '#CA8A04',
   secondary:    '#22D3EE',  // cyan
   accent:       '#F59E0B',  // amber — calories / energy
   
@@ -16,7 +16,7 @@ const Palette = {
   error:        '#EF4444',
   info:         '#3B82F6',
 
-  protein:      '#7C5CFC',  // purple
+  protein:      '#EAB308',  // yellow
   carbs:        '#22D3EE',  // cyan
   fat:          '#F59E0B',  // amber
   calories:     '#EF4444',  // red-ish
@@ -25,18 +25,18 @@ const Palette = {
 export const Colors = {
   dark: {
     ...Palette,
-    background:   '#0D0F14',
-    surface:      '#161A24',
-    surfaceAlt:   '#1E2332',
-    border:       '#2A3045',
+    background:   '#000000',
+    surface:      '#1C1C1E',
+    surfaceAlt:   '#2C2C2E',
+    border:       '#3A3A3C',
     textPrimary:  '#F1F5F9',
     textSecondary:'#94A3B8',
-    textMuted:    '#475569',
-    textInverse:  '#0D0F14',
-    tabActive:    '#7C5CFC',
-    tabInactive:  '#475569',
-    gradientPrimary: ['#7C5CFC', '#4338CA'] as const,
-    gradientCard:    ['#1E2332', '#161A24'] as const,
+    textMuted:    '#64748B',
+    textInverse:  '#000000',
+    tabActive:    '#EAB308',
+    tabInactive:  '#64748B',
+    gradientPrimary: ['#EAB308', '#CA8A04'] as const,
+    gradientCard:    ['#1C1C1E', '#000000'] as const,
     gradientBurn:    ['#EF4444', '#F59E0B'] as const,
     pro:          '#F59E0B',
     proGradient:  ['#F59E0B', '#D97706'] as const,
@@ -50,10 +50,10 @@ export const Colors = {
     textPrimary:  '#0F172A',
     textSecondary:'#475569',
     textMuted:    '#94A3B8',
-    textInverse:  '#F1F5F9',
-    tabActive:    '#7C5CFC',
+    textInverse:  '#FFFFFF',
+    tabActive:    '#EAB308',
     tabInactive:  '#94A3B8',
-    gradientPrimary: ['#7C5CFC', '#4338CA'] as const,
+    gradientPrimary: ['#EAB308', '#CA8A04'] as const,
     gradientCard:    ['#FFFFFF', '#F1F5F9'] as const,
     gradientBurn:    ['#EF4444', '#F59E0B'] as const,
     pro:          '#F59E0B',

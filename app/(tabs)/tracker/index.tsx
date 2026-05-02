@@ -1,469 +1,504 @@
-import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react';
+import React, { useMemo, useEffect, useState } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TouchableOpacity,
-  TextInput, ActivityIndicator, Alert, Animated, ScrollView,
+  View, Text, StyleSheet, ScrollView,
+  TouchableOpacity, Image, Alert, Dimensions, ActivityIndicator
 } from 'react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
-import { useAudioRecorder, useAudioRecorderState, RecordingPresets, setAudioModeAsync, requestRecordingPermissionsAsync } from 'expo-audio';
-import { Spacing, Radius, Shadow } from '../../../constants';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import Svg, { Circle, G, Path } from 'react-native-svg';
+import { Spacing, Radius } from '../../../constants';
 import { useAuthStore, useNutritionStore, useSettingsStore } from '../../../store';
-import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../hooks/useTheme';
-import { searchFood, FoodItem } from '../../../services/foodDatabase';
-import { transcribeAudio, parseVoiceLog } from '../../../services/groq';
+import { useTranslation } from 'react-i18next';
 import { supabase } from '../../../services/supabase';
+
+const RING_SIZE     = 220;
+const STROKE_WIDTH  = 12;
+const RADIUS        = (RING_SIZE - STROKE_WIDTH) / 2;
+const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
+
+// We will use an arc instead of a full circle for the calorie ring
+const ARC_ANGLE = 180; // semi-circle
+const ARC_CIRCUMFERENCE = (ARC_ANGLE / 360) * CIRCUMFERENCE;
 
 const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 type Meal = typeof MEALS[number];
 
-const MEAL_ICONS: Record<Meal, string> = {
-  breakfast: '🌅',
-  lunch:     '☀️',
-  dinner:    '🌙',
-  snack:     '🍎',
+const NEAT_CALORIES: Record<string, number> = {
+  'Mayormente Sentado': 200,
+  'A veces de pie': 439,
+  'Mayormente de pie': 600,
+  'En movimiento todo el día': 850,
+  'Trabajo físico intenso': 1200,
 };
 
-function MealSelector({ active, onSelect }: { active: Meal; onSelect: (m: Meal) => void }) {
-  const { t } = useTranslation();
+const EXERCISE_CALORIES: Record<string, number> = {
+  'No Hago Ejercicio': 0,
+  '1-2 Días por Semana': 150,
+  '3-4 días por Semana': 300,
+  '5-6 días por Semana': 450,
+  'Diario': 700,
+};
+
+function MacroBar({ label, current, target, color }: { label: string; current: number; target: number; color: string; }) {
   const colors = useTheme();
+  const pct = Math.min(current / Math.max(target, 1), 1);
   return (
-    <View style={ms.row}>
-      {MEALS.map((m) => (
-        <TouchableOpacity
-          key={m} style={[ms.pill, { borderColor: colors.border }, active === m && { borderColor: colors.primary, backgroundColor: '#7C5CFC22' }]}
-          onPress={() => onSelect(m)} activeOpacity={0.75}
-        >
-          <Text style={ms.icon}>{MEAL_ICONS[m]}</Text>
-          <Text style={[ms.label, { color: colors.textMuted }, active === m && { color: colors.primary }]}>
-            {t(`tracker.${m}`) || m.charAt(0).toUpperCase() + m.slice(1)}
-          </Text>
-        </TouchableOpacity>
-      ))}
+    <View style={macro.wrap}>
+      <Text style={[macro.label, { color: colors.textSecondary }]}>{label}</Text>
+      <Text style={[macro.values, { color: colors.textPrimary }]}><Text style={{ color }}>{current}</Text> / {target} g</Text>
+      <View style={[macro.track, { backgroundColor: colors.border }]}>
+        <View style={[macro.fill, { width: `${pct * 100}%`, backgroundColor: color }]} />
+      </View>
     </View>
   );
 }
 
-const ms = StyleSheet.create({
-  row:        { flexDirection: 'row', gap: 8, marginBottom: Spacing.base },
-  pill:       { flex: 1, borderRadius: Radius.lg, borderWidth: 1.5, paddingVertical: 8, alignItems: 'center', gap: 2 },
-  pillActive: { },
-  icon:       { fontSize: 18 },
-  label:      { fontSize: 10, fontWeight: '500' },
-  labelActive:{ },
-});
-
-function FoodCard({ item, onAdd, isFavorite, onToggleFav }: {
-  item: FoodItem; onAdd: (item: FoodItem) => void;
-  isFavorite: boolean; onToggleFav: (item: FoodItem) => void;
-}) {
-  const colors = useTheme();
-  return (
-    <TouchableOpacity style={[fc.card, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={() => onAdd(item)} activeOpacity={0.8}>
-      <View style={fc.left}>
-        <Text style={[fc.name, { color: colors.textPrimary }]} numberOfLines={1}>{item.name}</Text>
-        {item.brand && <Text style={[fc.brand, { color: colors.textMuted }]} numberOfLines={1}>{item.brand}</Text>}
-        <View style={fc.macroRow}>
-          <Text style={[fc.macro, { color: colors.protein }]}>P {item.protein}g</Text>
-          <Text style={[fc.macro, { color: colors.carbs }]}>C {item.carbs}g</Text>
-          <Text style={[fc.macro, { color: colors.fat }]}>F {item.fat}g</Text>
-        </View>
-      </View>
-      <View style={fc.right}>
-        <TouchableOpacity onPress={() => onToggleFav(item)} style={fc.favBtn}>
-          <Text style={fc.favText}>{isFavorite ? '⭐' : '☆'}</Text>
-        </TouchableOpacity>
-        <Text style={[fc.cal, { color: colors.accent }]}>{item.calories}</Text>
-        <Text style={[fc.calUnit, { color: colors.textMuted }]}>kcal/100g</Text>
-        <View style={[fc.addBtn, { backgroundColor: colors.primary }]}>
-          <Text style={fc.addText}>+</Text>
-        </View>
-      </View>
-    </TouchableOpacity>
-  );
-}
-
-const fc = StyleSheet.create({
-  card:     { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderRadius: Radius.lg, padding: Spacing.base, marginBottom: 10, borderWidth: 1, ...Shadow.sm },
-  left:     { flex: 1, marginRight: 12 },
-  name:     { fontSize: 15, fontWeight: '600', marginBottom: 2 },
-  brand:    { fontSize: 12, marginBottom: 6 },
-  macroRow: { flexDirection: 'row', gap: 10 },
-  macro:    { fontSize: 12, fontWeight: '600' },
-  right:    { alignItems: 'center', gap: 4 },
-  favBtn:   { padding: 4 },
-  favText:  { fontSize: 18 },
-  cal:      { fontSize: 18, fontWeight: '800' },
-  calUnit:  { fontSize: 10 },
-  addBtn:   { width: 30, height: 30, borderRadius: 15, justifyContent: 'center', alignItems: 'center' },
-  addText:  { color: '#fff', fontSize: 20, fontWeight: '300', lineHeight: 28 },
+const macro = StyleSheet.create({
+  wrap:   { flex: 1, alignItems: 'center', gap: 4 },
+  label:  { fontSize: 13, fontWeight: '500' },
+  values: { fontSize: 12, fontWeight: '600' },
+  track:  { height: 4, borderRadius: 2, width: '100%', overflow: 'hidden', marginTop: 4 },
+  fill:   { height: 4, borderRadius: 2 },
 });
 
 export default function TrackerScreen() {
-  const [query, setQuery]         = useState('');
-  const [results, setResults]     = useState<FoodItem[]>([]);
-  const [loading, setLoading]     = useState(false);
-  const [activeMeal, setActiveMeal] = useState<Meal>('lunch');
-  const [showFavorites, setShowFavorites] = useState(false);
-  const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
-  const recorderState = useAudioRecorderState(audioRecorder, 500);
-  const isRecording   = recorderState.isRecording;
-
   const { t } = useTranslation();
   const colors = useTheme();
   const { language } = useSettingsStore();
-  const { profile }   = useAuthStore();
-  const { todayLogs, removeLog, favoriteFoods, addFavorite, removeFavorite, addLog, selectedDate, setDate, fetchLogs } = useNutritionStore();
+  const { profile } = useAuthStore();
+  const { 
+    todayLogs, fetchLogs, selectedDate, setDate, streakDays, 
+    addWater, waterIntake, steps, setSteps, addActivityLog,
+    removeActivityLog, updateActivityLog,
+    addSteps, neatLevel, exerciseLevel, activityLogs 
+  } = useNutritionStore();
+  const [carouselIndex, setCarouselIndex] = useState(0);
+  const [isFetching, setIsFetching] = useState(false);
 
   useEffect(() => {
-    if (profile?.id) {
-      fetchLogs(profile.id, selectedDate);
-    }
+    const load = async () => {
+      if (profile?.id) {
+        setIsFetching(true);
+        await fetchLogs(profile.id, selectedDate);
+        setIsFetching(false);
+      }
+    };
+    load();
   }, [profile?.id, selectedDate]);
 
-
-
-  const startRecording = async () => {
-    try {
-      const permission = await requestRecordingPermissionsAsync();
-      if (permission.status !== 'granted') {
-        Alert.alert(t('tracker.micPermission'), t('tracker.micPermissionSub'));
-        return;
-      }
-      
-      await setAudioModeAsync({
-        allowsRecording: true,
-        playsInSilentMode: true,
-      });
-
-      await audioRecorder.prepareToRecordAsync();
-      audioRecorder.record();
-    } catch (err: any) {
-      console.error('Failed to start recording', err);
-    }
+  // Derived state
+  const target = profile?.targetCalories || 2000;
+  const macros = {
+    protein: profile?.macros?.protein || 150,
+    carbs: profile?.macros?.carbs || 200,
+    fat: profile?.macros?.fat || 65,
   };
 
-  const stopRecording = async () => {
-    if (!isRecording) return;
-    
-    try {
-      await audioRecorder.stop();
-      const uri = audioRecorder.uri;
-
-      if (uri) {
-        setLoading(true);
-        try {
-          const text = await transcribeAudio(uri);
-          const items = await parseVoiceLog(text, language);
-          
-          for (const item of items) {
-            const log = {
-              id: `v-${Date.now()}-${Math.random()}`,
-              foodItem: { ...item, id: `v-${Date.now()}`, source: 'ai' },
-              grams: item.grams,
-              meal: activeMeal,
-              loggedAt: selectedDate ? `${selectedDate}T${new Date().toISOString().split('T')[1]}` : new Date().toISOString(),
-              calories: item.calories,
-              protein: item.protein,
-              carbs: item.carbs,
-              fat: item.fat,
-            };
-            addLog(log as any);
-            if (profile?.id) {
-              await supabase.from('food_logs').insert({
-                user_id: profile.id,
-                food_name: item.name,
-                calories: item.calories,
-                protein: item.protein,
-                carbs: item.carbs,
-                fat: item.fat,
-                grams: item.grams,
-                meal: activeMeal,
-                logged_at: selectedDate,
-              });
-            }
-          }
-          if (items.length > 0) {
-            Alert.alert(t('common.success'), t('tracker.voiceSuccess', { count: items.length }));
-            if (profile?.id) {
-              fetchLogs(profile.id, selectedDate);
-            }
-          }
-        } catch (err) {
-          Alert.alert(t('tracker.voiceFailed'), t('tracker.voiceFailedSub'));
-        } finally {
-          setLoading(false);
-        }
-      }
-    } catch (err) {
-      console.error('Failed to stop recording', err);
-    }
-  };
-
-  const isFavorite = (id: string) => favoriteFoods.some(f => f.id === id);
-
-  const handleToggleFav = (item: FoodItem) => {
-    if (isFavorite(item.id)) {
-      removeFavorite(item.id);
-    } else {
-      addFavorite(item);
-    }
-  };
-
-  const doSearch = useCallback(async () => {
-    if (!query.trim()) return;
-    setLoading(true);
-    setShowFavorites(false);
-    try {
-      const foods = await searchFood(query.trim());
-      setResults(foods);
-    } catch {
-      Alert.alert(t('tracker.searchFailed'), t('tracker.searchFailedSub'));
-    } finally {
-      setLoading(false);
-    }
-  }, [query]);
-
-  const handleAdd = (item: FoodItem) => {
-    router.push({
-      pathname: '/modals/food-detail',
-      params: { foodJson: JSON.stringify(item), meal: activeMeal, date: selectedDate },
-    });
-  };
-
-  const handleEditLog = (log: any) => {
-    router.push({
-      pathname: '/modals/food-detail',
-      params: { 
-        foodJson: JSON.stringify(log.foodItem), 
-        meal: log.meal,
-        logId: log.id,
-        initialGrams: String(log.grams)
-      },
-    });
-  };
-
-  const handleDeleteLog = (logId: string, foodName: string) => {
-    Alert.alert(
-      t('tracker.removeEntry'),
-      t('tracker.removeConfirm', { name: foodName }),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        {
-          text: t('common.remove'), style: 'destructive',
-          onPress: async () => {
-            removeLog(logId);
-            if (profile?.id) {
-              await supabase.from('food_logs').delete().eq('id', logId);
-            }
-          },
-        },
-      ]
-    );
-  };
+  const calories = Math.round(todayLogs.reduce((sum, log) => sum + (log.calories || 0), 0));
+  const protein  = Math.round(todayLogs.reduce((sum, log) => sum + (log.protein || 0), 0));
+  const carbs    = Math.round(todayLogs.reduce((sum, log) => sum + (log.carbs || 0), 0));
+  const fat      = Math.round(todayLogs.reduce((sum, log) => sum + (log.fat || 0), 0));
 
   const grouped = MEALS.reduce((acc, m) => {
     acc[m] = todayLogs.filter((l) => l.meal === m);
     return acc;
   }, {} as Record<Meal, typeof todayLogs>);
 
-  const displayedResults = showFavorites ? favoriteFoods : results;
-
-  return (
-    <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
-      {/* Header */}
-      <View style={s.header}>
-        <Text style={[s.title, { color: colors.textPrimary }]}>{t('tracker.title')}</Text>
-        <TouchableOpacity style={s.scanBtn} onPress={() => router.push('/modals/scan')} activeOpacity={0.8}>
-          <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.scanGrad}>
-            <Text style={s.scanText}>📷 {t('tracker.photoRecognition')}</Text>
-          </LinearGradient>
-        </TouchableOpacity>
-      </View>
-
-      <View style={s.datePickerWrap}>
-        <DatePicker selected={selectedDate} onSelect={setDate} />
-      </View>
-
-      <FlatList
-        data={displayedResults}
-        keyExtractor={(i) => i.id}
-        renderItem={({ item }) => (
-          <FoodCard
-            item={item}
-            onAdd={handleAdd}
-            isFavorite={isFavorite(item.id)}
-            onToggleFav={handleToggleFav}
-          />
-        )}
-        contentContainerStyle={s.list}
-        ListHeaderComponent={
-          <>
-            {/* Meal selector */}
-            <MealSelector active={activeMeal} onSelect={setActiveMeal} />
-
-            {/* Search + favorites toggle */}
-            <View style={s.searchRow}>
-              <TextInput
-                style={[s.input, { backgroundColor: colors.surface, color: colors.textPrimary, borderColor: colors.border }]}
-                value={query}
-                onChangeText={setQuery}
-                placeholder={t('tracker.searchFood')}
-                placeholderTextColor={colors.textMuted}
-                onSubmitEditing={doSearch}
-                returnKeyType="search"
-              />
-              <TouchableOpacity style={[s.searchBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} onPress={doSearch}>
-                <Text style={s.searchBtnText}>🔍</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[s.searchBtn, { backgroundColor: colors.surface, borderColor: colors.border }, isRecording && { backgroundColor: colors.accent + '22', borderColor: colors.accent }]}
-                onPressIn={startRecording}
-                onPressOut={stopRecording}
-              >
-                <Text style={s.searchBtnText}>{isRecording ? '🛑' : '🎙️'}</Text>
-              </TouchableOpacity>
-              {favoriteFoods.length > 0 && (
-                <TouchableOpacity
-                  style={[s.searchBtn, { backgroundColor: colors.surface, borderColor: colors.border }, showFavorites && { backgroundColor: colors.primary + '22', borderColor: colors.primary }]}
-                  onPress={() => { setShowFavorites(!showFavorites); setResults([]); }}
-                >
-                  <Text style={s.searchBtnText}>⭐</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-
-            {showFavorites && favoriteFoods.length > 0 && (
-              <Text style={[s.sectionLabel, { color: colors.textPrimary }]}>⭐ {t('tracker.favorites')}</Text>
-            )}
-
-            {loading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />}
-
-            {/* Today's logs */}
-            {displayedResults.length === 0 && !loading && (
-              <View style={s.logsSection}>
-                <Text style={[s.logsTitle, { color: colors.textPrimary }]}>{t('tracker.dailySummary')}</Text>
-                {MEALS.map((m) =>
-                  grouped[m].length > 0 ? (
-                    <View key={m} style={s.mealGroup}>
-                      <Text style={[s.mealGroupTitle, { color: colors.textMuted }]}>{MEAL_ICONS[m]} {t(`tracker.${m}`) || m}</Text>
-                      {grouped[m].map((log) => (
-                        <TouchableOpacity
-                          key={log.id}
-                          style={[s.logItem, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                          onPress={() => handleEditLog(log)}
-                          onLongPress={() => handleDeleteLog(log.id, log.foodItem.name)}
-                          activeOpacity={0.8}
-                        >
-                          <View style={{ flex: 1 }}>
-                            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-                              <Text style={[s.logName, { color: colors.textPrimary }]}>{log.foodItem.name}</Text>
-                              <Text style={[s.logTime, { color: colors.textMuted }]}>
-                                {new Date(log.loggedAt).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit', hour12: true })}
-                              </Text>
-                            </View>
-                            <Text style={[s.logMacros, { color: colors.textMuted }]}>
-                              P{log.protein}g · C{log.carbs}g · F{log.fat}g · {log.grams}g
-                            </Text>
-                          </View>
-                          <View style={{ alignItems: 'flex-end' }}>
-                            <Text style={[s.logCal, { color: colors.accent }]}>{log.calories} kcal</Text>
-                            <Text style={[s.holdHint, { color: colors.textMuted }]}>{t('common.tapToEdit')}</Text>
-                          </View>
-                        </TouchableOpacity>
-                      ))}
-                    </View>
-                  ) : null
-                )}
-                {todayLogs.length === 0 && (
-                  <View style={s.emptyState}>
-                    <Text style={s.emptyEmoji}>🍽️</Text>
-                    <Text style={[s.emptyTitle, { color: colors.textPrimary }]}>{t('common.noData') || 'Nothing logged yet'}</Text>
-                    <Text style={[s.emptySub, { color: colors.textMuted }]}>{t('tracker.emptySub') || 'Search for food above, scan a barcode, or use AI photo recognition'}</Text>
-                  </View>
-                )}
-              </View>
-            )}
-          </>
-        }
-      />
-    </SafeAreaView>
-  );
-}
-
-function DatePicker({ selected, onSelect }: { selected: string; onSelect: (d: string) => void }) {
-  const { t } = useTranslation();
-  const colors = useTheme();
-  const { language } = useSettingsStore();
+  const handleAddMeal = (meal: Meal) => {
+    router.push({ pathname: '/modals/scan', params: { initialMeal: meal } } as any);
+  };
 
   const days = useMemo(() => {
     const arr = [];
-    for (let i = 6; i >= 0; i--) {
-      const d = new Date();
+    const base = new Date(selectedDate + 'T12:00:00');
+    for (let i = 3; i >= -3; i--) {
+      const d = new Date(base);
       d.setDate(d.getDate() - i);
       arr.push({
-        label: d.toLocaleDateString(language, { weekday: 'short' }),
+        label: d.toLocaleDateString(language, { weekday: 'narrow' }).toUpperCase(),
         dayNum: d.getDate(),
         full: d.toISOString().split('T')[0],
       });
     }
     return arr;
-  }, [language]);
+  }, [language, selectedDate]);
+
+  const pct = Math.min(calories / Math.max(target, 1), 1);
+  const strokeDashoffset = ARC_CIRCUMFERENCE - pct * ARC_CIRCUMFERENCE;
+
+  const baseline = (NEAT_CALORIES[neatLevel] || 0) + (EXERCISE_CALORIES[exerciseLevel] || 0);
+  
+  const dayActivities = useMemo(() => {
+    return activityLogs.filter(a => a.loggedAt.startsWith(selectedDate));
+  }, [activityLogs, selectedDate]);
+
+  const totalBurned = baseline + dayActivities.reduce((acc, a) => acc + a.calories, 0);
+
+  const handleActivityPress = (act: any) => {
+    Alert.alert(
+      act.name,
+      '¿Qué deseas hacer con esta actividad?',
+      [
+        { text: 'Editar', onPress: () => router.push({ pathname: '/modals/add-activity', params: { id: act.id } } as any) },
+        { text: 'Eliminar', onPress: () => removeActivityLog(act.id), style: 'destructive' },
+        { text: 'Cancelar', style: 'cancel' }
+      ]
+    );
+  };
 
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={ds.row}>
-      {days.map((d: any) => (
-        <TouchableOpacity
-          key={d.full}
-          style={[ds.day, { backgroundColor: colors.surface, borderColor: colors.border }, selected === d.full && { borderColor: colors.primary, backgroundColor: colors.primary + '22' }]}
-          onPress={() => onSelect(d.full)}
-        >
-          <Text style={[ds.dayLabel, { color: colors.textSecondary }, selected === d.full && { color: colors.primary }]}>
-            {d.label}
-          </Text>
-          <Text style={[ds.dayNum, { color: colors.textPrimary }, selected === d.full && { color: colors.primary }]}>
-            {d.dayNum}
-          </Text>
+    <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]} edges={['top']}>
+      {/* Header */}
+      <View style={s.header}>
+        <TouchableOpacity style={s.avatarWrap} onPress={() => router.push('/(tabs)/profile' as any)}>
+          {profile?.avatarUrl ? (
+            <Image source={{ uri: profile.avatarUrl }} style={s.avatarImage} />
+          ) : (
+            <View style={[s.avatarPlaceholder, { backgroundColor: colors.primary }]}>
+              <Text style={s.avatarText}>{profile?.name?.[0]?.toUpperCase()}</Text>
+            </View>
+          )}
         </TouchableOpacity>
-      ))}
-    </ScrollView>
+        <View style={s.headerCenter}>
+          <Text style={s.streakText}>🔥 {streakDays}</Text>
+          <TouchableOpacity onPress={() => router.push('/modals/calendar' as any)}>
+            <Text style={s.dateText}>
+              🗓️ {selectedDate === new Date().toISOString().split('T')[0] ? 'Hoy' : new Date(selectedDate + 'T12:00:00').toLocaleDateString(language, { month: 'short', day: 'numeric' })} ▾
+            </Text>
+          </TouchableOpacity>
+        </View>
+        <TouchableOpacity onPress={() => router.push('/modals/tracker-menu' as any)}>
+          <Text style={{ color: colors.textPrimary, fontSize: 20 }}>•••</Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scrollContent}>
+        {/* Date Picker */}
+        <View style={s.datePicker}>
+          {days.map((d) => (
+            <TouchableOpacity 
+              key={d.full} 
+              style={s.dateItem} 
+              onPress={() => setDate(d.full)}
+            >
+              <Text style={[s.dateLabel, { color: colors.textSecondary }]}>{d.label}</Text>
+              <View style={[s.dateNumWrap, selectedDate === d.full && { backgroundColor: colors.textPrimary }]}>
+                <Text style={[s.dateNum, { color: selectedDate === d.full ? colors.background : colors.textPrimary }]}>{d.dayNum}</Text>
+              </View>
+              {selectedDate === d.full && <View style={[s.dateDot, { backgroundColor: colors.textSecondary }]} />}
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        {/* Empty Plan Banner */}
+        {todayLogs.length === 0 && (
+          <View style={[s.emptyBanner, { backgroundColor: '#423812' }]}>
+            <View style={{ flex: 1 }}>
+              <Text style={s.emptyBannerTitle}>Tu Plan de Comida{'\n'}Está Vacío</Text>
+              <TouchableOpacity 
+                style={[s.planificarBtn, { backgroundColor: colors.primary }]}
+                onPress={() => profile?.isPro ? Alert.alert('Planificador', 'Próximamente') : router.push('/modals/paywall' as any)}
+              >
+                <Text style={s.planificarText}>Planificar {profile?.isPro ? '' : '🔒'}</Text>
+              </TouchableOpacity>
+            </View>
+            <Text style={{ fontSize: 60, opacity: 0.8 }}>🥣</Text>
+          </View>
+        )}
+
+        {/* Widgets Carousel */}
+        <ScrollView 
+          horizontal 
+          pagingEnabled 
+          showsHorizontalScrollIndicator={false}
+          style={s.carousel}
+          contentContainerStyle={s.carouselContent}
+          onMomentumScrollEnd={(e) => {
+            const index = Math.round(e.nativeEvent.contentOffset.x / (Dimensions.get('window').width - 32));
+            setCarouselIndex(index);
+          }}
+        >
+          {/* Main Calorie Card */}
+          <View style={[s.card, { backgroundColor: colors.surface, width: Dimensions.get('window').width - 32 }]}>
+            <View style={s.arcWrap}>
+              <Svg width={RING_SIZE} height={RING_SIZE / 2 + 20}>
+                <Path
+                  d={`M ${STROKE_WIDTH} ${RING_SIZE / 2} A ${RADIUS} ${RADIUS} 0 0 1 ${RING_SIZE - STROKE_WIDTH} ${RING_SIZE / 2}`}
+                  fill="none"
+                  stroke={colors.border}
+                  strokeWidth={STROKE_WIDTH}
+                  strokeLinecap="round"
+                />
+                <Path
+                  d={`M ${STROKE_WIDTH} ${RING_SIZE / 2} A ${RADIUS} ${RADIUS} 0 0 1 ${RING_SIZE - STROKE_WIDTH} ${RING_SIZE / 2}`}
+                  fill="none"
+                  stroke={colors.primary}
+                  strokeWidth={STROKE_WIDTH}
+                  strokeLinecap="round"
+                  strokeDasharray={ARC_CIRCUMFERENCE}
+                  strokeDashoffset={strokeDashoffset}
+                />
+              </Svg>
+              <View style={s.arcTextWrap}>
+                <Text style={[s.arcVal, { color: colors.textPrimary }]}>{calories} / {target}</Text>
+                <Text style={[s.arcLabel, { color: colors.textSecondary }]}>kcal</Text>
+              </View>
+            </View>
+
+            <View style={s.macrosWrap}>
+              <MacroBar label="Proteínas" current={protein} target={macros.protein} color={colors.protein} />
+              <MacroBar label="Carbs" current={carbs} target={macros.carbs} color={colors.carbs} />
+              <MacroBar label="Grasas" current={fat} target={macros.fat} color={colors.fat} />
+            </View>
+
+            <TouchableOpacity style={[s.endDayBtn, { backgroundColor: colors.border }]}>
+              <Text style={[s.endDayText, { color: colors.textMuted }]}>Terminar Día</Text>
+            </TouchableOpacity>
+          </View>
+
+          {/* Other Nutrients Card */}
+          <View style={[s.card, { backgroundColor: colors.surface, width: Dimensions.get('window').width - 32 }]}>
+            <View style={s.cardHeader}>
+              <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Otros Nutrientes</Text>
+              <Text style={{ color: colors.textSecondary }}>✎</Text>
+            </View>
+            {['Azúcares', 'Fibra', 'Gras. Saturadas', 'Grasas Trans', 'Sodio'].map((nut) => (
+              <View key={nut} style={s.nutrientRow}>
+                <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>🔹 {nut}</Text>
+                {profile?.isPro ? (
+                   <Text style={{ color: colors.textMuted }}>0 g</Text>
+                ) : (
+                   <Text style={{ color: colors.textMuted }}>🔒</Text>
+                )}
+              </View>
+            ))}
+          </View>
+        </ScrollView>
+
+        {/* Carousel Indicators */}
+        <View style={s.dotsRow}>
+          {[0, 1].map(i => (
+            <View 
+              key={i} 
+              style={[
+                s.dotIndicator, 
+                { backgroundColor: carouselIndex === i ? colors.primary : colors.border }
+              ]} 
+            />
+          ))}
+        </View>
+
+        {/* Meals */}
+        {MEALS.map((m) => {
+          const mealLogs = grouped[m];
+          const mealCals = Math.round(mealLogs.reduce((s, l) => s + (l.calories || 0), 0));
+          return (
+            <View key={m} style={[s.mealCard, { backgroundColor: colors.surface }]}>
+              <View style={s.cardHeader}>
+                <Text style={[s.cardTitle, { color: colors.textPrimary }]}>{t(`tracker.${m}`, m)}</Text>
+                <Text style={{ color: colors.textSecondary }}>•••</Text>
+              </View>
+              <Text style={[s.mealSub, { color: colors.textSecondary }]}>🔥 {mealCals} kcal</Text>
+              
+              {mealLogs.map(log => (
+                <View key={log.id} style={s.logItem}>
+                  <Text style={[s.logName, { color: colors.textPrimary }]}>{log.foodItem.name}</Text>
+                  <Text style={[s.logCal, { color: colors.textSecondary }]}>{log.calories} kcal</Text>
+                </View>
+              ))}
+
+              <TouchableOpacity style={[s.addBtn, { backgroundColor: colors.surfaceAlt }]} onPress={() => handleAddMeal(m)}>
+                <Text style={[s.addBtnText, { color: colors.textPrimary }]}>+</Text>
+              </TouchableOpacity>
+            </View>
+          );
+        })}
+
+        {/* Water */}
+        {isFetching && <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />}
+        
+        <View style={[s.card, { backgroundColor: colors.surface }]}>
+          <View style={s.cardHeader}>
+            <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Agua</Text>
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10 }}>
+            <Text style={[s.waterVal, { color: colors.textPrimary }]}>💧 {(waterIntake / 1000).toFixed(1)} <Text style={{fontSize: 16, color: colors.textSecondary}}>/ 3.5 L</Text></Text>
+            <Text style={[s.waterSub, { color: colors.textSecondary }]}>{Math.floor(waterIntake / 250)} de 14 vasos</Text>
+          </View>
+          <View style={s.waterControls}>
+            <TouchableOpacity style={[s.waterBtn, { backgroundColor: colors.surfaceAlt }]} onPress={() => addWater(-250)}>
+              <Text style={[s.waterBtnText, { color: colors.textPrimary }]}>-</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.waterBtn, { backgroundColor: colors.surfaceAlt }]} onPress={() => addWater(250)}>
+              <Text style={[s.waterBtnText, { color: colors.textPrimary }]}>+</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Activity Section */}
+        <View style={[s.card, { backgroundColor: colors.surface }]}>
+          <View style={s.cardHeader}>
+            <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Actividad</Text>
+          </View>
+          <View style={s.activitySummary}>
+            <Text style={{ fontSize: 20 }}>🔥</Text>
+            <Text style={[s.activityTotal, { color: colors.textPrimary }]}>{totalBurned} kcal</Text>
+          </View>
+          
+          <TouchableOpacity style={s.nutrientRow} onPress={() => router.push('/modals/select-activity-level' as any)}>
+            <View style={s.nutrientRowLeft}>
+              <Text style={{ fontSize: 24 }}>🔥</Text>
+              <View>
+                <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>Actividad</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{exerciseLevel}</Text>
+              </View>
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>{EXERCISE_CALORIES[exerciseLevel] || 0} kcal</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Promedio Semanal</Text>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity style={s.nutrientRow} onPress={() => router.push('/modals/select-neat' as any)}>
+            <View style={s.nutrientRowLeft}>
+              <Text style={{ fontSize: 24 }}>🏃</Text>
+              <View>
+                <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>Estilo de vida</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{neatLevel}</Text>
+              </View>
+            </View>
+            <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>{NEAT_CALORIES[neatLevel] || 0} kcal</Text>
+          </TouchableOpacity>
+
+          {dayActivities.map(act => (
+            <TouchableOpacity key={act.id} style={s.nutrientRow} onPress={() => handleActivityPress(act)}>
+              <View style={s.nutrientRowLeft}>
+                <Text style={{ fontSize: 24 }}>{act.icon}</Text>
+                <View>
+                  <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>{act.name}</Text>
+                  <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{act.duration} min</Text>
+                </View>
+              </View>
+              <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>{act.calories} kcal</Text>
+            </TouchableOpacity>
+          ))}
+
+          <TouchableOpacity style={[s.addBtn, { backgroundColor: colors.surfaceAlt }]} onPress={() => router.push('/modals/add-activity' as any)}>
+            <Text style={[s.addBtnText, { color: colors.textPrimary }]}>+</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Steps Section */}
+        <View style={[s.card, { backgroundColor: colors.surface }]}>
+          <View style={s.cardHeader}>
+            <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Pasos</Text>
+            <TouchableOpacity onPress={() => setSteps(0)}>
+              <Text style={{ color: colors.textMuted }}>Reiniciar</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={s.stepsRow}>
+            <Text style={{ fontSize: 24 }}>👟</Text>
+            <Text style={[s.stepsVal, { color: colors.textPrimary }]}>
+              {steps} <Text style={{ fontSize: 16, color: colors.textSecondary }}>/ 6000 pasos</Text>
+            </Text>
+          </View>
+          <View style={[s.progressBar, { backgroundColor: colors.border }]}>
+            <View style={[s.progressFill, { width: `${Math.min((steps / 6000) * 100, 100)}%`, backgroundColor: colors.primary }]} />
+          </View>
+          
+          <View style={s.stepsControls}>
+            <TouchableOpacity style={[s.stepBtn, { backgroundColor: colors.surfaceAlt }]} onPress={() => addSteps(-100)}>
+              <Text style={[s.stepBtnText, { color: colors.textPrimary }]}>- 100</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[s.stepBtn, { backgroundColor: colors.primary }]} onPress={() => addSteps(100)}>
+              <Text style={[s.stepBtnText, { color: colors.background }]}>+ 100</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+
+      </ScrollView>
+    </SafeAreaView>
   );
 }
 
-const ds = StyleSheet.create({
-  row:      { gap: 10, paddingHorizontal: Spacing.base, paddingBottom: 10 },
-  day:      { width: 50, height: 64, borderRadius: Radius.md, borderWidth: 1.5, justifyContent: 'center', alignItems: 'center', gap: 2 },
-  dayLabel: { fontSize: 11, fontWeight: '600', textTransform: 'uppercase' },
-  dayNum:   { fontSize: 16, fontWeight: '800' },
-});
-
 const s = StyleSheet.create({
   safe:          { flex: 1 },
-  header:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.base, paddingTop: Spacing.lg },
-  datePickerWrap:{ marginBottom: Spacing.md },
-  title:         { fontSize: 24, fontWeight: '800' },
-  scanBtn:       { borderRadius: Radius.md, overflow: 'hidden' },
-  scanGrad:      { paddingHorizontal: 16, paddingVertical: 10 },
-  scanText:      { color: '#fff', fontWeight: '700', fontSize: 14 },
-  list:          { padding: Spacing.base, paddingTop: 0 },
-  searchRow:     { flexDirection: 'row', gap: 8, marginBottom: Spacing.base },
-  input:         { flex: 1, borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 12, fontSize: 15, borderWidth: 1.5 },
-  searchBtn:     { borderRadius: Radius.md, paddingHorizontal: 14, justifyContent: 'center', borderWidth: 1.5 },
-  searchBtnText: { fontSize: 18 },
-  sectionLabel:  { fontSize: 14, fontWeight: '700', marginBottom: 10 },
-  logsSection:   { marginTop: Spacing.sm },
-  logsTitle:     { fontSize: 18, fontWeight: '700', marginBottom: Spacing.md },
-  mealGroup:     { marginBottom: Spacing.base },
-  mealGroupTitle:{ fontSize: 14, fontWeight: '600', marginBottom: 8, textTransform: 'capitalize' },
-  logItem:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 10, paddingHorizontal: 12, borderRadius: Radius.md, marginBottom: 6, borderWidth: 1 },
-  logName:       { fontSize: 14, fontWeight: '500' },
-  logTime:       { fontSize: 11, fontWeight: '400' },
-  logMacros:     { fontSize: 11, marginTop: 2 },
-  logCal:        { fontSize: 14, fontWeight: '600' },
-  holdHint:      { fontSize: 9, marginTop: 2 },
-  emptyState:    { alignItems: 'center', paddingVertical: 60 },
-  emptyEmoji:    { fontSize: 48, marginBottom: 12 },
-  emptyTitle:    { fontSize: 18, fontWeight: '700', marginBottom: 6 },
-  emptySub:      { fontSize: 14, textAlign: 'center' },
+  header:        { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 10 },
+  avatarWrap:    { width: 36, height: 36, borderRadius: 18, overflow: 'hidden' },
+  avatarImage:   { width: '100%', height: '100%' },
+  avatarPlaceholder: { flex: 1, alignItems: 'center', justifyContent: 'center' },
+  avatarText:    { color: '#000', fontWeight: 'bold' },
+  headerCenter:  { flexDirection: 'row', gap: 16 },
+  streakText:    { fontSize: 16, fontWeight: '600', color: '#fff' },
+  dateText:      { fontSize: 16, fontWeight: '600', color: '#fff' },
+  
+  scrollContent: { padding: 16, paddingBottom: 100, gap: 16 },
+
+  datePicker:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginVertical: 8 },
+  dateItem:      { alignItems: 'center', gap: 8 },
+  dateLabel:     { fontSize: 12, fontWeight: '600' },
+  dateNumWrap:   { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
+  dateNum:       { fontSize: 14, fontWeight: '700' },
+  dateDot:       { width: 4, height: 4, borderRadius: 2, position: 'absolute', bottom: -8 },
+
+  carousel:      { marginHorizontal: -16 },
+  carouselContent: { paddingHorizontal: 16, gap: 16 },
+
+  dotsRow:       { flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: -8 },
+  dotIndicator:  { width: 8, height: 8, borderRadius: 4 },
+
+  premiumBanner: { backgroundColor: '#4A1D24', borderRadius: Radius.lg, padding: 14, alignItems: 'center' },
+  premiumText:   { color: '#FFB4B4', fontWeight: 'bold', fontSize: 14 },
+
+  emptyBanner:   { borderRadius: Radius.lg, padding: 20, flexDirection: 'row', alignItems: 'center' },
+  emptyBannerTitle: { color: '#fff', fontSize: 18, fontWeight: 'bold', marginBottom: 16 },
+  planificarBtn: { paddingVertical: 8, paddingHorizontal: 16, borderRadius: Radius.full, alignSelf: 'flex-start' },
+  planificarText:{ color: '#000', fontWeight: 'bold' },
+
+  card:          { borderRadius: Radius.xl, padding: 20, borderWidth: 1, borderColor: '#2C2C2E' },
+  arcWrap:       { alignItems: 'center', marginTop: 10, height: 120 },
+  arcTextWrap:   { position: 'absolute', top: 50, alignItems: 'center' },
+  arcVal:        { fontSize: 24, fontWeight: '800' },
+  arcLabel:      { fontSize: 14 },
+  
+  macrosWrap:    { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, gap: 20 },
+  
+  endDayBtn:     { borderRadius: Radius.full, paddingVertical: 14, alignItems: 'center', marginTop: 30 },
+  endDayText:    { fontSize: 16, fontWeight: '600' },
+
+  cardHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
+  cardTitle:     { fontSize: 18, fontWeight: '700' },
+  nutrientRow:   { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#2C2C2E' },
+  nutrientLabel: { fontSize: 15 },
+
+  mealCard:      { borderRadius: Radius.xl, padding: 20 },
+  mealSub:       { fontSize: 13, marginBottom: 12 },
+  addBtn:        { borderRadius: Radius.full, paddingVertical: 12, alignItems: 'center', marginTop: 10 },
+  addBtnText:    { fontSize: 24, lineHeight: 28 },
+  logItem:       { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 },
+  logName:       { fontSize: 15 },
+  logCal:        { fontSize: 14 },
+
+  waterVal:      { fontSize: 24, fontWeight: 'bold' },
+  waterSub:      { fontSize: 14 },
+  waterControls: { flexDirection: 'row', gap: 12, marginTop: 16 },
+  waterBtn:      { flex: 1, borderRadius: Radius.full, paddingVertical: 12, alignItems: 'center' },
+  waterBtnText:  { fontSize: 24, lineHeight: 28 },
+
+  activitySummary: { flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 10, marginBottom: 16 },
+  activityTotal: { fontSize: 20, fontWeight: 'bold' },
+  nutrientRowLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+  
+  syncBtn: { backgroundColor: '#2C2C2E', paddingHorizontal: 12, paddingVertical: 6, borderRadius: Radius.md },
+  syncText: { fontSize: 12, fontWeight: '600' },
+  stepsRow: { flexDirection: 'row', alignItems: 'center', gap: 12, marginTop: 16 },
+  stepsVal: { fontSize: 24, fontWeight: 'bold' },
+  progressBar: { height: 8, borderRadius: 4, marginTop: 16, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 4 },
+
+  stepsControls: { flexDirection: 'row', gap: 12, marginTop: 20 },
+  stepBtn: { flex: 1, height: 44, borderRadius: Radius.full, alignItems: 'center', justifyContent: 'center' },
+  stepBtnText: { fontSize: 14, fontWeight: '700' },
 });

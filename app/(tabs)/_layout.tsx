@@ -2,12 +2,15 @@ import { Tabs } from 'expo-router';
 import { View, Text, StyleSheet } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
+import { FileText, BarChart2, MessageCircle, Calendar, User } from 'lucide-react-native';
 
-function TabIcon({ emoji, label, focused }: { emoji: string; label: string; focused: boolean }) {
+function TabIcon({ Icon, label, focused }: { Icon: any; label: string; focused: boolean }) {
   const colors = useTheme();
   return (
     <View style={styles.tabItem}>
-      <Text style={styles.emoji}>{emoji}</Text>
+      <View style={[styles.iconPill, focused && { backgroundColor: '#EAB308' }]}>
+        <Icon size={24} color={focused ? '#000000' : colors.tabInactive} strokeWidth={focused ? 2.5 : 2} />
+      </View>
       <Text style={[styles.tabLabel, { color: focused ? colors.tabActive : colors.tabInactive }]} numberOfLines={1}>{label}</Text>
     </View>
   );
@@ -28,57 +31,42 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen
-        name="dashboard/index"
-        options={{
-          title: t('tabs.dashboard'),
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="📊" label={t('tabs.dashboard')} focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="tracker/index"
         options={{
-          title: t('tabs.tracker'),
+          title: t('tabs.tracker', 'Plan'),
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🍽️" label={t('tabs.tracker')} focused={focused} />
+            <TabIcon Icon={FileText} label={t('tabs.tracker', 'Plan')} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
-        name="nutritionist/index"
+        name="dashboard/index"
         options={{
-          title: t('tabs.nutritionist', 'Nutritionist'),
+          title: t('tabs.dashboard', 'Progreso'),
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🍎" label={t('tabs.nutritionist', 'Nutritionist')} focused={focused} />
+            <TabIcon Icon={BarChart2} label={t('tabs.dashboard', 'Progreso')} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
-        name="trainer/index"
+        name="coach/index"
         options={{
-          title: t('tabs.trainer', 'Trainer'),
+          title: t('tabs.coach', 'Coach'),
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="💪" label={t('tabs.trainer', 'Trainer')} focused={focused} />
+            <TabIcon Icon={MessageCircle} label={t('tabs.coach', 'Coach')} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="planner/index"
         options={{
-          title: t('tabs.planner'),
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🗓️" label={t('tabs.planner')} focused={focused} />
-          ),
+          href: null,
         }}
       />
       <Tabs.Screen
         name="profile/index"
         options={{
-          title: t('tabs.profile'),
-          tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="👤" label={t('tabs.profile')} focused={focused} />
-          ),
+          href: null,
         }}
       />
     </Tabs>
@@ -92,7 +80,21 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     paddingTop: 8,
   },
-  tabItem:       { alignItems: 'center', gap: 4, paddingHorizontal: 4 },
-  emoji:         { fontSize: 22 },
-  tabLabel:      { fontSize: 10, fontWeight: '500' },
+  tabItem: { 
+    alignItems: 'center', 
+    justifyContent: 'center',
+    gap: 2, 
+    paddingHorizontal: 4,
+    marginTop: 4,
+  },
+  iconPill: {
+    paddingHorizontal: 20,
+    paddingVertical: 4,
+    borderRadius: 20,
+    marginBottom: 2,
+  },
+  tabLabel: { 
+    fontSize: 10, 
+    fontWeight: '600' 
+  },
 });

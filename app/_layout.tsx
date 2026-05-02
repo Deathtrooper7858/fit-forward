@@ -144,6 +144,26 @@ export default function RootLayout() {
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
         <Stack.Screen
+          name="modals/calendar"
+          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
+          name="modals/tracker-menu"
+          options={{ presentation: 'transparentModal', animation: 'fade' }}
+        />
+        <Stack.Screen
+          name="modals/add-activity"
+          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
+          name="modals/select-neat"
+          options={{ presentation: 'modal', animation: 'slide_from_left' }}
+        />
+        <Stack.Screen
+          name="modals/select-activity-level"
+          options={{ presentation: 'modal', animation: 'slide_from_left' }}
+        />
+        <Stack.Screen
           name="modals/body-measurements"
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
