@@ -116,13 +116,7 @@ export default function TrackerScreen() {
   const { profile }   = useAuthStore();
   const { todayLogs, removeLog, favoriteFoods, addFavorite, removeFavorite, addLog } = useNutritionStore();
 
-  useEffect(() => {
-    return () => {
-      if (audioRecorder.isRecording) {
-        audioRecorder.stop().catch(() => {});
-      }
-    };
-  }, []);
+
 
   const startRecording = async () => {
     try {

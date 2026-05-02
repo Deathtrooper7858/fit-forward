@@ -37,7 +37,8 @@
   "tabs": {
     "dashboard": "Panel",
     "tracker": "Registro",
-    "coach": "Coach",
+    "nutritionist": "Nutricionista",
+    "trainer": "Entrenador",
     "planner": "Planificador",
     "profile": "Perfil"
   },
@@ -131,7 +132,6 @@
     "tapToChange": "Toca para cambiar ›",
     "calories": "Calorías",
     "bmi": "IMC",
-    "sedentary": "Sedentario",
     "light": "Ligeramente Activo",
     "moderate": "Moderadamente Activo",
     "active": "Muy Activo",
@@ -142,6 +142,8 @@
   },
   "coach": {
     "title": "Fitz Coach",
+    "nutritionist": "Nutricionista",
+    "trainer": "Entrenador personal",
     "welcome": "¡Hola! Soy Fitz, tu coach de nutrición con IA. ¿Cómo puedo ayudarte hoy?",
     "typing": "Fitz está pensando...",
     "inputPlaceholder": "Pregunta lo que sea sobre nutrición...",
@@ -194,5 +196,19 @@
     "totalCalories": "Calorías Totales",
     "retake": "Repetir",
     "addAll": "Añadir Todo a {{meal}}"
+  },
+  "nutritionist": {
+    "welcome": "¡Hola! Soy Fitz, tu nutricionista IA. ¿Cómo puedo ayudarte con tu dieta hoy?",
+    "suggest1": "¿Qué debería comer después de entrenar? 💪",
+    "suggest2": "Dame una idea de desayuno alto en proteína 🍳",
+    "suggest3": "¿Cómo puedo reducir los antojos de azúcar? 🍬",
+    "suggest4": "¿Estoy comiendo suficiente proteína? 📊"
+  },
+  "trainer": {
+    "welcome": "¡Hola! Soy Fitz, tu entrenador personal IA. ¿En qué trabajamos hoy?",
+    "suggest1": "Dame una rutina de abdomen de 15 min 🔥",
+    "suggest2": "¿Cómo mejorar mis flexiones? 💪",
+    "suggest3": "Me duele la rodilla, ¿qué hago para pierna? 🦵",
+    "suggest4": "Sugiéreme un buen calentamiento 🏃‍♂️"
   }
 }

@@ -37,7 +37,8 @@
   "tabs": {
     "dashboard": "Dashboard",
     "tracker": "Tracker",
-    "coach": "Coach",
+    "nutritionist": "Nutritionist",
+    "trainer": "Trainer",
     "planner": "Planner",
     "profile": "Profile"
   },
@@ -131,7 +132,6 @@
     "tapToChange": "Tap to change ›",
     "calories": "Calories",
     "bmi": "BMI",
-    "sedentary": "Sedentary",
     "light": "Lightly Active",
     "moderate": "Moderately Active",
     "active": "Very Active",
@@ -142,6 +142,8 @@
   },
   "coach": {
     "title": "Fitz Coach",
+    "nutritionist": "Nutritionist",
+    "trainer": "Personal Trainer",
     "welcome": "Hello! I am Fitz, your AI nutrition coach. How can I help you today?",
     "typing": "Fitz is thinking...",
     "inputPlaceholder": "Ask anything about nutrition...",
@@ -194,5 +196,19 @@
     "totalCalories": "Total Calories",
     "retake": "Retake",
     "addAll": "Add All to {{meal}}"
+  },
+  "nutritionist": {
+    "welcome": "Hello! I am Fitz, your AI nutritionist. How can I help you with your diet today?",
+    "suggest1": "What should I eat post-workout? 💪",
+    "suggest2": "Give me a high-protein breakfast idea 🍳",
+    "suggest3": "How can I reduce sugar cravings? 🍬",
+    "suggest4": "Am I eating enough protein? 📊"
+  },
+  "trainer": {
+    "welcome": "Hi! I am Fitz, your AI personal trainer. What are we working on today?",
+    "suggest1": "Give me a 15-min core workout 🔥",
+    "suggest2": "How to improve my push-ups? 💪",
+    "suggest3": "I have knee pain, what leg exercises can I do? 🦵",
+    "suggest4": "Suggest a good warm-up routine 🏃‍♂️"
   }
 }

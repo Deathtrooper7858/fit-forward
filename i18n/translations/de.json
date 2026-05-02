@@ -48,5 +48,19 @@
     "typing": "Fitz denkt nach...",
     "inputPlaceholder": "Frage alles über Ernährung...",
     "limitReached": "Tageslimit erreicht"
+  },
+  "nutritionist": {
+    "welcome": "Hello! I am Fitz, your AI nutritionist. How can I help you with your diet today?",
+    "suggest1": "What should I eat post-workout? 💪",
+    "suggest2": "Give me a high-protein breakfast idea 🍳",
+    "suggest3": "How can I reduce sugar cravings? 🍬",
+    "suggest4": "Am I eating enough protein? 📊"
+  },
+  "trainer": {
+    "welcome": "Hi! I am Fitz, your AI personal trainer. What are we working on today?",
+    "suggest1": "Give me a 15-min core workout 🔥",
+    "suggest2": "How to improve my push-ups? 💪",
+    "suggest3": "I have knee pain, what leg exercises can I do? 🦵",
+    "suggest4": "Suggest a good warm-up routine 🏃‍♂️"
   }
 }

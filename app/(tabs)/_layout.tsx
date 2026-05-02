@@ -46,11 +46,20 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="coach/index"
+        name="nutritionist/index"
         options={{
-          title: t('tabs.coach'),
+          title: t('tabs.nutritionist', 'Nutritionist'),
           tabBarIcon: ({ focused }) => (
-            <TabIcon emoji="🤖" label={t('tabs.coach')} focused={focused} />
+            <TabIcon emoji="🍎" label={t('tabs.nutritionist', 'Nutritionist')} focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="trainer/index"
+        options={{
+          title: t('tabs.trainer', 'Trainer'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon emoji="💪" label={t('tabs.trainer', 'Trainer')} focused={focused} />
           ),
         }}
       />

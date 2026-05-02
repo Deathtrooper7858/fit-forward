@@ -32,9 +32,7 @@ function MessageBubble({ msg }: { msg: CoachMessage }) {
   return (
     <View style={[bubble.row, isUser && bubble.rowUser]}>
       {!isUser && (
-        <LinearGradient colors={['#7C5CFC', '#4338CA']} style={bubble.avatar}>
-          <Text style={bubble.avatarText}>F</Text>
-        </LinearGradient>
+        <Image source={require('../../../assets/honoka.jpg')} style={bubble.avatar} resizeMode="cover" />
       )}
       <View style={[bubble.box, isUser ? { backgroundColor: colors.primary, borderBottomRightRadius: 4 } : { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4 }]}>
         {msg.imageUrl && (
@@ -71,9 +69,7 @@ function TypingIndicator() {
   const colors = useTheme();
   return (
     <View style={[bubble.row, { paddingHorizontal: Spacing.base, marginTop: 4 }]}>
-      <LinearGradient colors={['#7C5CFC', '#4338CA']} style={bubble.avatar}>
-        <Text style={bubble.avatarText}>F</Text>
-      </LinearGradient>
+      <Image source={require('../../../assets/honoka.jpg')} style={bubble.avatar} resizeMode="cover" />
       <View style={[bubble.box, { backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border, borderBottomLeftRadius: 4, paddingHorizontal: 16, paddingVertical: 14 }]}>
         <ActivityIndicator color={colors.primary} size="small" />
       </View>
@@ -81,9 +77,10 @@ function TypingIndicator() {
   );
 }
 
-// ─── Coach Screen ─────────────────────────────────────────────────────────────
-export default function CoachScreen() {
+// ─── Trainer Screen ─────────────────────────────────────────────────────────────
+export default function TrainerScreen() {
   const [input, setInput]               = useState('');
+  const coachType = 'trainer';
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [isSending, setIsSending]       = useState(false); // local send guard
   const audioRecorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
@@ -108,12 +105,6 @@ export default function CoachScreen() {
     setTyping(false);
     setIsSending(false);
     checkAndResetDaily();
-
-    return () => {
-      if (audioRecorder.isRecording) {
-        audioRecorder.stop().catch(() => {});
-      }
-    };
   }, []);
 
   // Load coach history from Supabase
@@ -143,7 +134,7 @@ export default function CoachScreen() {
           setMessages([{
             id:        'welcome',
             role:      'model',
-            content:   t('coach.welcome'),
+            content:   t('trainer.welcome'),
             timestamp: new Date().toISOString(),
           }]);
         }
@@ -324,7 +315,7 @@ export default function CoachScreen() {
         targetCalories: profile.targetCalories ?? 2000,
         macros:         profile.macros         ?? { protein: 150, carbs: 200, fat: 67 },
         restrictions:   profile.restrictions,
-      }, language);
+      }, language, coachType);
 
       const reply = await sendCoachMessage(history, text, systemPrompt, currentImg ?? undefined);
 
@@ -364,11 +355,9 @@ export default function CoachScreen() {
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[s.header, { borderBottomColor: colors.border }]}>
-        <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.headerAvatar}>
-          <Text style={s.headerAvatarText}>F</Text>
-        </LinearGradient>
+        <Image source={require('../../../assets/honoka.jpg')} style={s.headerAvatar} resizeMode="cover" />
         <View style={{ flex: 1 }}>
-          <Text style={[s.headerName, { color: colors.textPrimary }]}>{t('coach.title')}</Text>
+          <Text style={[s.headerName, { color: colors.textPrimary }]}>{t('coach.trainer', 'Trainer')}</Text>
           <View style={s.onlineRow}>
             <View style={[s.onlineDot, { backgroundColor: colors.success }]} />
             <Text style={[s.onlineText, { color: colors.success }]}>{t('coach.online')}</Text>
@@ -382,6 +371,8 @@ export default function CoachScreen() {
           </View>
         )}
       </View>
+
+
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
@@ -404,10 +395,10 @@ export default function CoachScreen() {
                     <TouchableOpacity
                       key={i}
                       style={[s.chip, { backgroundColor: colors.surface, borderColor: colors.border }]}
-                      onPress={() => handleSend(t(`coach.suggest${i}`))}
+                      onPress={() => handleSend(t(`trainer.suggest${i}`))}
                       activeOpacity={0.75}
                     >
-                      <Text style={[s.chipText, { color: colors.textSecondary }]}>{t(`coach.suggest${i}`)}</Text>
+                      <Text style={[s.chipText, { color: colors.textSecondary }]}>{t(`trainer.suggest${i}`)}</Text>
                     </TouchableOpacity>
                   ))}
                 </View>
@@ -513,6 +504,9 @@ const s = StyleSheet.create({
   onlineText:           { fontSize: 11 },
   countBadge:           { borderRadius: Radius.full, paddingHorizontal: 10, paddingVertical: 4, borderWidth: 1 },
   countText:            { fontSize: 12, fontWeight: '600' },
+  typeTabsContainer:    { flexDirection: 'row', borderBottomWidth: 1 },
+  typeTab:              { flex: 1, paddingVertical: 12, alignItems: 'center' },
+  typeTabText:          { fontSize: 14, fontWeight: '600' },
   messages:             { paddingVertical: Spacing.base, paddingBottom: 16 },
   suggestionsWrap:      { padding: Spacing.base, gap: 8 },
   chip:                 { borderRadius: Radius.lg, paddingHorizontal: 14, paddingVertical: 10, borderWidth: 1 },

@@ -61,7 +61,7 @@ function EditModal({
 
 const em = StyleSheet.create({
   overlay:   { flex: 1, backgroundColor: 'rgba(0,0,0,0.7)', justifyContent: 'center', padding: 24 },
-  box:       { borderRadius: Radius.xl, padding: 24, borderWidth: 1 },
+  box:       { borderRadius: Radius.xl, padding: 24, borderWidth: 1, overflow: 'hidden' },
   title:     { fontSize: 17, fontWeight: '700', marginBottom: 16 },
   input:     { borderRadius: Radius.md, paddingHorizontal: 14, paddingVertical: 12, fontSize: 16, borderWidth: 1, marginBottom: 20 },
   row:       { flexDirection: 'row', gap: 10 },
@@ -71,6 +71,52 @@ const em = StyleSheet.create({
   saveGrad:  { paddingVertical: 12, alignItems: 'center' },
   saveText:  { color: '#fff', fontWeight: '700' },
 });
+
+// ─── Language Modal ───────────────────────────────────────────────────────────
+function LanguageModal({
+  visible, currentLang, onSelect, onClose,
+}: {
+  visible: boolean; currentLang: string; onSelect: (lang: any) => void; onClose: () => void;
+}) {
+  const { t } = useTranslation();
+  const colors = useTheme();
+  
+  const languages = [
+    { id: 'en', name: 'English' },
+    { id: 'es', name: 'Español' },
+    { id: 'fr', name: 'Français' },
+    { id: 'pt', name: 'Português' },
+    { id: 'it', name: 'Italiano' },
+    { id: 'de', name: 'Deutsch' },
+    { id: 'ru', name: 'Русский' },
+  ];
+
+  return (
+    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
+      <View style={em.overlay}>
+        <View style={[em.box, { backgroundColor: colors.surface, borderColor: colors.border, padding: 0 }]}>
+          <Text style={[em.title, { color: colors.textPrimary, margin: 24, marginBottom: 16 }]}>{t('profile.language')}</Text>
+          <ScrollView style={{ maxHeight: 300 }}>
+            {languages.map((l) => (
+              <TouchableOpacity
+                key={l.id}
+                style={{ padding: 16, paddingHorizontal: 24, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: currentLang === l.id ? colors.primary + '22' : 'transparent' }}
+                onPress={() => { onSelect(l.id); onClose(); }}
+              >
+                <Text style={{ fontSize: 16, color: currentLang === l.id ? colors.primary : colors.textPrimary, fontWeight: currentLang === l.id ? '700' : '400' }}>{l.name}</Text>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+          <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row' }}>
+            <TouchableOpacity style={[em.cancelBtn, { borderColor: colors.border }]} onPress={onClose}>
+              <Text style={[em.cancelText, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </View>
+    </Modal>
+  );
+}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function StatCard({ label, value, unit, color, onPress }: {
@@ -132,6 +178,8 @@ export default function ProfileScreen() {
     visible: boolean; field: string; title: string; placeholder: string;
     keyboardType?: 'numeric' | 'default'; initialValue?: string;
   }>({ visible: false, field: '', title: '', placeholder: '' });
+
+  const [langModalVisible, setLangModalVisible] = useState(false);
 
   const openEdit = (field: string, title: string, placeholder: string, keyboardType: 'numeric' | 'default' = 'default') => {
     setEditModal({
@@ -287,16 +335,7 @@ export default function ProfileScreen() {
   };
 
   const handleEditLanguage = () => {
-    Alert.alert(t('profile.language'), 'Select your language / Selecciona tu idioma:', [
-      { text: 'English',    onPress: () => setLanguage('en') },
-      { text: 'Español',    onPress: () => setLanguage('es') },
-      { text: 'Français',   onPress: () => setLanguage('fr') },
-      { text: 'Português',  onPress: () => setLanguage('pt') },
-      { text: 'Italiano',   onPress: () => setLanguage('it') },
-      { text: 'Deutsch',    onPress: () => setLanguage('de') },
-      { text: 'Русский',    onPress: () => setLanguage('ru') },
-      { text: t('common.cancel'), style: 'cancel' },
-    ]);
+    setLangModalVisible(true);
   };
 
   const handleNotImplemented = () => {
@@ -337,6 +376,13 @@ export default function ProfileScreen() {
         initialValue={editModal.initialValue}
         onSave={handleSaveEdit}
         onClose={() => setEditModal(p => ({ ...p, visible: false }))}
+      />
+
+      <LanguageModal
+        visible={langModalVisible}
+        currentLang={language}
+        onSelect={setLanguage}
+        onClose={() => setLangModalVisible(false)}
       />
 
       <ScrollView style={{ flex: 1, backgroundColor: colors.background }} showsVerticalScrollIndicator={false}>
