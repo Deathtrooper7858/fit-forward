@@ -139,11 +139,11 @@ function ActivityStep({ data, onChange }: { data: Partial<OnboardingData>; onCha
   const colors = useTheme();
 
   const ACTIVITY_LEVELS = [
-    { id: 'sedentary',   label: t('profile.sedentary'),    sub: 'Little or no exercise',     icon: '🛋️' },
-    { id: 'light',       label: t('profile.light'),        sub: '1–3 days/week',            icon: '🚶' },
-    { id: 'moderate',    label: t('profile.moderate'),     sub: '3–5 days/week',         icon: '🏃' },
-    { id: 'active',      label: t('profile.active'),       sub: '6–7 days/week',              icon: '🏋️' },
-    { id: 'very_active', label: t('profile.very_active'),  sub: 'Twice daily / intense sport',icon: '⚡' },
+    { id: 'sedentary',   label: t('profile.sedentary'),    sub: t('onboarding.activitySedentary'),     icon: '🛋️' },
+    { id: 'light',       label: t('profile.light'),        sub: t('onboarding.activityLight'),            icon: '🚶' },
+    { id: 'moderate',    label: t('profile.moderate'),     sub: t('onboarding.activityModerate'),         icon: '🏃' },
+    { id: 'active',      label: t('profile.active'),       sub: t('onboarding.activityActive'),              icon: '🏋️' },
+    { id: 'very_active', label: t('profile.very_active'),  sub: t('onboarding.activityVeryActive'),icon: '⚡' },
   ] as const;
 
   return (
@@ -196,7 +196,9 @@ function DietStep({ data, onChange }: { data: Partial<OnboardingData>; onChange:
               onPress={() => toggle(opt)}
               activeOpacity={0.75}
             >
-              <Text style={[step.dietPillText, { color: colors.textSecondary }, active && { color: colors.primary, fontWeight: '700' }]}>{opt}</Text>
+              <Text style={[step.dietPillText, { color: colors.textSecondary }, active && { color: colors.primary, fontWeight: '700' }]}>
+                {t(`onboarding.diet${opt.replace('-', '')}`)}
+              </Text>
             </TouchableOpacity>
           );
         })}
@@ -283,7 +285,7 @@ export default function OnboardingScreen() {
 
       const { data: authData } = await supabase.auth.getUser();
       if (!authData.user) {
-        Alert.alert('Error', 'User session not found. Please log in again.');
+        Alert.alert(t('common.error'), t('profile.userIdNotFound'));
         router.replace('/(auth)/welcome');
         return;
       }
@@ -332,7 +334,7 @@ export default function OnboardingScreen() {
       router.replace('/(tabs)/dashboard');
     } catch (err) {
       console.error('[Onboarding] Error:', err);
-      Alert.alert('Error', 'Failed to save your profile. Please try again.');
+      Alert.alert(t('common.error'), t('profile.updateFailed'));
     } finally {
       setSaving(false);
     }

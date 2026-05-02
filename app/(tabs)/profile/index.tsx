@@ -33,7 +33,7 @@ function EditModal({
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       >
         <View style={[em.box, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[em.title, { color: colors.textPrimary }]}>Unlock FitGO Pro</Text>
+          <Text style={[em.title, { color: colors.textPrimary }]}>{t('profile.unlockPro')}</Text>
           <TextInput
             style={[em.input, { backgroundColor: colors.surfaceAlt, color: colors.textPrimary, borderColor: colors.border }]}
             value={value}
@@ -199,7 +199,7 @@ export default function ProfileScreen() {
     }
 
     if (!userId) {
-      Alert.alert('Error', 'User ID not found. Please log in again.');
+      Alert.alert(t('common.error'), t('profile.userIdNotFound'));
       return;
     }
 
@@ -239,7 +239,7 @@ export default function ProfileScreen() {
       setProfile(newProfile);
     } catch (err) {
       console.error('Update profile error:', err);
-      Alert.alert('Error', 'Failed to update profile');
+      Alert.alert(t('common.error'), t('profile.updateFailed'));
     }
   };
 
@@ -265,7 +265,7 @@ export default function ProfileScreen() {
           userId = user?.id ?? '';
         }
         
-        if (!userId) throw new Error('User not authenticated');
+        if (!userId) throw new Error(t('profile.notAuth'));
 
         const fileName = `${userId}/${Date.now()}.${fileExt}`;
         const filePath = fileName;
@@ -287,7 +287,7 @@ export default function ProfileScreen() {
       }
     } catch (err) {
       console.error('Pick image error:', err);
-      Alert.alert('Error', 'Failed to upload profile picture');
+      Alert.alert(t('common.error'), t('profile.uploadFailed'));
     }
   };
 
@@ -308,7 +308,7 @@ export default function ProfileScreen() {
   };
 
   const handleEditGoal = () => {
-    Alert.alert(t('profile.currentGoal'), 'What is your current objective?', [
+    Alert.alert(t('profile.currentGoal'), t('profile.goalQuest'), [
       { text: t('profile.loseWeight'),  onPress: () => updateProfileField('goal', 'lose') },
       { text: t('profile.maintain'),     onPress: () => updateProfileField('goal', 'maintain') },
       { text: t('profile.gainMuscle'), onPress: () => updateProfileField('goal', 'gain') },
@@ -317,7 +317,7 @@ export default function ProfileScreen() {
   };
 
   const handleEditSex = () => {
-    Alert.alert(t('profile.sex'), 'Used for calculating basal metabolic rate:', [
+    Alert.alert(t('profile.sex'), t('profile.bmrQuest'), [
       { text: t('profile.male'),   onPress: () => updateProfileField('sex', 'male') },
       { text: t('profile.female'), onPress: () => updateProfileField('sex', 'female') },
       { text: t('common.cancel'), style: 'cancel' },
@@ -325,7 +325,7 @@ export default function ProfileScreen() {
   };
 
   const handleEditActivity = () => {
-    Alert.alert(t('profile.activity'), 'Select your daily activity level:', [
+    Alert.alert(t('profile.activity'), t('profile.activityQuest'), [
       { text: t('profile.sedentary'),   onPress: () => updateProfileField('activityLevel', 'sedentary') },
       { text: t('profile.lightlyActive'), onPress: () => updateProfileField('activityLevel', 'light') },
       { text: t('profile.moderatelyActive'), onPress: () => updateProfileField('activityLevel', 'moderate') },
@@ -339,7 +339,7 @@ export default function ProfileScreen() {
   };
 
   const handleNotImplemented = () => {
-    Alert.alert('Coming Soon', 'This feature is currently in development and will be available in a future update.');
+    Alert.alert(t('common.comingSoon'), t('common.notImplemented'));
   };
 
   const handleLogout = async () => {
@@ -426,7 +426,7 @@ export default function ProfileScreen() {
 
         {/* Stats */}
         <View style={s.statsRow}>
-          <StatCard label={t('profile.weight')}  value={profile?.weight ?? '--'}         unit="kg"   color={colors.primary}   onPress={() => openEdit('weight', t('profile.weight'), 'Enter weight in kg', 'numeric')} />
+          <StatCard label={t('profile.weight')}  value={profile?.weight ?? '--'}         unit="kg"   color={colors.primary}   onPress={() => openEdit('weight', t('profile.weight'), t('profile.enterWeight'), 'numeric')} />
           <StatCard label={t('profile.calories') || 'Calories'} value={profile?.targetCalories ?? '--'} unit="kcal" color={colors.accent} />
           <StatCard label={t('profile.bmi') || 'BMI'}      value={bmi}                             unit="bmi"  color={colors.secondary} />
         </View>
@@ -455,9 +455,9 @@ export default function ProfileScreen() {
         {/* Settings sections */}
         <View style={[s.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[s.sectionTitle, { color: colors.textMuted }]}>{t('profile.bodyHealth')}</Text>
-          <MenuRow icon="📏" label={t('profile.height')}       value={`${profile?.height ?? '--'} cm`} onPress={() => openEdit('height', t('profile.height'), 'Enter height in cm', 'numeric')} />
-          <MenuRow icon="⚖️" label={t('profile.weight')}       value={`${profile?.weight ?? '--'} kg`} onPress={() => openEdit('weight', t('profile.weight'), 'Enter weight in kg', 'numeric')} />
-          <MenuRow icon="🎂" label={t('profile.age')}          value={`${profile?.age ?? '--'} yrs`}  onPress={() => openEdit('age', t('profile.age'), 'Enter your age', 'numeric')} />
+          <MenuRow icon="📏" label={t('profile.height')}       value={`${profile?.height ?? '--'} cm`} onPress={() => openEdit('height', t('profile.height'), t('profile.enterHeight'), 'numeric')} />
+          <MenuRow icon="⚖️" label={t('profile.weight')}       value={`${profile?.weight ?? '--'} kg`} onPress={() => openEdit('weight', t('profile.weight'), t('profile.enterWeight'), 'numeric')} />
+          <MenuRow icon="🎂" label={t('profile.age')}          value={`${profile?.age ?? '--'} yrs`}  onPress={() => openEdit('age', t('profile.age'), t('profile.enterAge'), 'numeric')} />
           <MenuRow icon="⚧️" label={t('profile.sex')}          value={profile?.sex ? (profile.sex === 'male' ? t('profile.male') : t('profile.female')) : '--'} onPress={handleEditSex} />
           <MenuRow icon="🏃" label={t('profile.activity')}     value={profile?.activityLevel ? t(`profile.${profile.activityLevel}`) : '--'} onPress={handleEditActivity} />
           <MenuRow icon="📊" label={t('profile.measurements')} onPress={() => router.push('/modals/body-measurements')} />
@@ -468,7 +468,7 @@ export default function ProfileScreen() {
           <Text style={[s.sectionTitle, { color: colors.textMuted }]}>{t('profile.accountApp')}</Text>
           <MenuRow icon="👤" label={t('profile.editName')} onPress={() => openEdit('name', t('profile.editName'), t('profile.enterName'))} />
           <MenuRow icon="🍽️" label={t('profile.dietary')} value={profile?.restrictions?.join(', ') || 'None'} onPress={() => openEdit('restrictions', t('profile.dietary'), 'e.g. Vegan, Nut-free', 'default')} />
-          <MenuRow icon="🌙" label={t('profile.appearance')} value={theme === 'dark' ? 'Dark' : 'Light'} onPress={() => setTheme(theme === 'dark' ? 'light' : 'dark')} />
+          <MenuRow icon="🌙" label={t('profile.appearance')} value={theme === 'dark' ? t('profile.dark') : t('profile.lightMode')} onPress={() => setTheme(theme === 'dark' ? 'light' : 'dark')} />
           <MenuRow icon="🌐" label={t('profile.language')} value={language.toUpperCase()} onPress={handleEditLanguage} />
           <MenuRow icon="🔔" label={t('profile.notifications')} onPress={handleNotImplemented} />
         </View>

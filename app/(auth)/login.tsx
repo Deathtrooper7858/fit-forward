@@ -9,8 +9,10 @@ import { Colors, Spacing, Radius } from '../../constants';
 import { supabase } from '../../services';
 import { useAuthStore } from '../../store';
 import { useTheme } from '../../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 
 export default function LoginScreen() {
+  const { t } = useTranslation();
   const colors = useTheme();
   const [email, setEmail]       = useState('');
   const [password, setPassword] = useState('');
@@ -19,7 +21,7 @@ export default function LoginScreen() {
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields.');
+      Alert.alert(t('common.error'), t('auth.fillFields'));
       return;
     }
     setLoading(true);
@@ -27,7 +29,7 @@ export default function LoginScreen() {
     
     if (error) {
       setLoading(false);
-      Alert.alert('Login failed', error.message);
+      Alert.alert(t('auth.loginFailed'), error.message);
       return;
     }
     
@@ -46,14 +48,14 @@ export default function LoginScreen() {
             source={require('../../assets/fitgo.jpeg')} 
             style={styles.logoImage} 
           />
-          <Text style={[styles.title, { color: colors.textPrimary }]}>Welcome back</Text>
-          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Log in to continue your journey</Text>
+          <Text style={[styles.title, { color: colors.textPrimary }]}>{t('auth.login')}</Text>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('auth.loginSub')}</Text>
         </View>
 
         {/* Form */}
         <View style={styles.form}>
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Email</Text>
+            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>{t('auth.email')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
               value={email}
@@ -67,7 +69,7 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>Password</Text>
+            <Text style={[styles.fieldLabel, { color: colors.textSecondary }]}>{t('auth.password')}</Text>
             <TextInput
               style={[styles.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
               value={password}
@@ -83,7 +85,7 @@ export default function LoginScreen() {
             style={styles.forgotWrap}
             onPress={() => router.push('/(auth)/forgot-password')}
           >
-            <Text style={[styles.forgotText, { color: colors.primary }]}>Forgot password?</Text>
+            <Text style={[styles.forgotText, { color: colors.primary }]}>{t('auth.forgotPassword')}</Text>
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -93,16 +95,16 @@ export default function LoginScreen() {
             activeOpacity={0.8}
           >
             <LinearGradient colors={['#7C5CFC', '#4338CA']} style={styles.btnGradient}>
-              <Text style={styles.btnText}>{loading ? 'Signing in…' : 'Sign In'}</Text>
+              <Text style={styles.btnText}>{loading ? t('auth.signingIn') : t('auth.signIn')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
 
         {/* Footer */}
         <View style={styles.footer}>
-          <Text style={[styles.footerText, { color: colors.textSecondary }]}>Don't have an account? </Text>
+          <Text style={[styles.footerText, { color: colors.textSecondary }]}>{t('auth.noAccount').split('?')[0]}? </Text>
           <TouchableOpacity onPress={() => router.push('/(auth)/register')}>
-            <Text style={[styles.footerLink, { color: colors.primary }]}>Sign Up</Text>
+            <Text style={[styles.footerLink, { color: colors.primary }]}>{t('auth.register')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

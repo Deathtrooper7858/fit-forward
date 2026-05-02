@@ -8,7 +8,10 @@
     "comingSoon": "Coming Soon",
     "notImplemented": "This feature is currently in development.",
     "noData": "Nothing logged yet",
-    "tapToEdit": "Tap to edit"
+    "tapToEdit": "Tap to edit",
+    "or": "or",
+    "back": "Back",
+    "remove": "Remove"
   },
   "welcome": {
     "motto": "Fit-Go: Your best version",
@@ -35,13 +38,21 @@
     "email": "Email Address",
     "password": "Password",
     "signIn": "Sign In",
+    "signingIn": "Signing in...",
     "noAccount": "Don't have an account? Sign up",
     "forgotPassword": "Forgot Password?",
     "register": "Create Account",
     "registerSub": "Join FitGO today",
     "name": "Full Name",
     "signUp": "Create Account",
-    "haveAccount": "Already have an account? Login"
+    "haveAccount": "Already have an account? Login",
+    "fillFields": "Please fill in all fields.",
+    "loginFailed": "Login failed",
+    "registerFailed": "Registration failed",
+    "passwordShort": "Password must be at least 8 characters.",
+    "startTransformation": "Start your transformation today",
+    "creatingAccount": "Creating account...",
+    "continueGoogle": "Continue with Google"
   },
   "tabs": {
     "dashboard": "Dashboard",
@@ -69,7 +80,8 @@
     "streakStart": "Log today to begin",
     "of2L": "of 2L",
     "recentLogs": "Recent Logs",
-    "seeAll": "See all"
+    "seeAll": "See all",
+    "fallbackName": "there"
   },
   "tracker": {
     "title": "Tracker",
@@ -85,7 +97,18 @@
     "dinner": "Dinner",
     "snack": "Snack",
     "emptySub": "Search for food above, scan a barcode, or use AI photo recognition",
-    "photoRecognition": "Photo Recognition"
+    "photoRecognition": "Photo Recognition",
+    "micPermission": "Permission needed",
+    "micPermissionSub": "Please allow microphone access to use voice logging.",
+    "voiceSuccess": "Logged {{count}} items from your voice!",
+    "voiceFailed": "Voice Log Failed",
+    "voiceFailedSub": "Could not parse your voice. Try again.",
+    "searchFailed": "Search failed",
+    "searchFailedSub": "Please check your connection and try again.",
+    "removeEntry": "Remove Entry",
+    "removeConfirm": "Remove \"{{name}}\" from today's log?",
+    "holdToRemove": "Hold to remove",
+    "favorites": "Favorites"
   },
   "planner": {
     "title": "Meal Planner",
@@ -147,7 +170,20 @@
     "very_active": "Athlete",
     "protein": "Protein",
     "carbs": "Carbs",
-    "fat": "Fat"
+    "fat": "Fat",
+    "userIdNotFound": "User ID not found. Please log in again.",
+    "updateFailed": "Failed to update profile",
+    "notAuth": "User not authenticated",
+    "uploadFailed": "Failed to upload profile picture",
+    "goalQuest": "What is your current objective?",
+    "bmrQuest": "Used for calculating basal metabolic rate:",
+    "activityQuest": "Select your daily activity level:",
+    "enterWeight": "Enter weight in kg",
+    "enterHeight": "Enter height in cm",
+    "enterAge": "Enter your age",
+    "dark": "Dark",
+    "lightMode": "Light",
+    "unlockPro": "Unlock FitGO Pro"
   },
   "coach": {
     "title": "Fitz Coach",
@@ -182,7 +218,20 @@
     "dietSub": "Select all that apply — optional",
     "continue": "Continue →",
     "letsGo": "Let's go! 🚀",
-    "back": "← Back"
+    "back": "← Back",
+    "activitySedentary": "Little or no exercise",
+    "activityLight": "1–3 days/week",
+    "activityModerate": "3–5 days/week",
+    "activityActive": "6–7 days/week",
+    "activityVeryActive": "Twice daily / intense sport",
+    "dietVegetarian": "Vegetarian",
+    "dietVegan": "Vegan",
+    "dietGlutenFree": "Gluten-free",
+    "dietDairyFree": "Dairy-free",
+    "dietNutFree": "Nut-free",
+    "dietHalal": "Halal",
+    "dietKosher": "Kosher",
+    "dietKeto": "Keto"
   },
   "scan": {
     "title": "Scan Food",
@@ -206,18 +255,32 @@
     "retake": "Retake",
     "addAll": "Add All to {{meal}}"
   },
-  "nutritionist": {
-    "welcome": "Hello! I am Fitz, your AI nutritionist. How can I help you with your diet today?",
-    "suggest1": "What should I eat post-workout? 💪",
-    "suggest2": "Give me a high-protein breakfast idea 🍳",
-    "suggest3": "How can I reduce sugar cravings? 🍬",
-    "suggest4": "Am I eating enough protein? 📊"
-  },
-  "trainer": {
-    "welcome": "Hi! I am Fitz, your AI personal trainer. What are we working on today?",
-    "suggest1": "Give me a 15-min core workout 🔥",
-    "suggest2": "How to improve my push-ups? 💪",
-    "suggest3": "I have knee pain, what leg exercises can I do? 🦵",
-    "suggest4": "Suggest a good warm-up routine 🏃‍♂️"
+  "paywall": {
+    "unlock": "Unlock FitGO Pro",
+    "heroSub": "Everything you need to transform your body, powered by AI.",
+    "monthly": "Monthly",
+    "annual": "Annual",
+    "lifetime": "Lifetime",
+    "bestValue": "Best Value — Save 50%",
+    "priceNote": "Just $5/month",
+    "once": " once",
+    "month": "/month",
+    "year": "/year",
+    "features": {
+      "coach": "🤖 Unlimited AI Coach messages",
+      "photo": "📸 Food photo recognition",
+      "voice": "🎙️ Voice food logging",
+      "stats": "📊 Full body measurements tracking",
+      "planner": "📅 AI meal plan generation",
+      "shopping": "🛒 Auto shopping list",
+      "export": "📤 Export plans as PDF",
+      "analysis": "📈 Weekly AI analysis",
+      "recipes": "🍳 Pro recipe library",
+      "ads": "🚫 No ads ever"
+    },
+    "trial": "🎁 7-day free trial — cancel anytime",
+    "startTrial": "Start Free Trial",
+    "restore": "Restore Purchase",
+    "legal": "Payment will be charged to your account. Subscription auto-renews unless cancelled 24 hours before renewal."
   }
 }

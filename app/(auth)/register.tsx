@@ -8,8 +8,10 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Colors, Spacing, Radius } from '../../constants';
 import { supabase } from '../../services';
 import { useTheme } from '../../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 
 export default function RegisterScreen() {
+  const { t } = useTranslation();
   const colors = useTheme();
   const [name, setName]         = useState('');
   const [email, setEmail]       = useState('');
@@ -18,11 +20,11 @@ export default function RegisterScreen() {
 
   const handleRegister = async () => {
     if (!name || !email || !password) {
-      Alert.alert('Error', 'Please fill in all fields.');
+      Alert.alert(t('common.error'), t('auth.fillFields'));
       return;
     }
     if (password.length < 8) {
-      Alert.alert('Error', 'Password must be at least 8 characters.');
+      Alert.alert(t('common.error'), t('auth.passwordShort'));
       return;
     }
 
@@ -35,7 +37,7 @@ export default function RegisterScreen() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Registration failed', error.message);
+      Alert.alert(t('auth.registerFailed'), error.message);
       return;
     }
     
@@ -48,15 +50,15 @@ export default function RegisterScreen() {
       <View style={s.glow} />
       <ScrollView contentContainerStyle={s.content} keyboardShouldPersistTaps="handled">
         <TouchableOpacity style={s.back} onPress={() => router.back()}>
-          <Text style={[s.backText, { color: colors.primary }]}>← Back</Text>
+          <Text style={[s.backText, { color: colors.primary }]}>← {t('common.back')}</Text>
         </TouchableOpacity>
 
-        <Text style={[s.title, { color: colors.textPrimary }]}>Create account</Text>
-        <Text style={[s.subtitle, { color: colors.textSecondary }]}>Start your transformation today</Text>
+        <Text style={[s.title, { color: colors.textPrimary }]}>{t('auth.register')}</Text>
+        <Text style={[s.subtitle, { color: colors.textSecondary }]}>{t('auth.startTransformation')}</Text>
 
         <View style={s.form}>
           <View style={s.field}>
-            <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>Full Name</Text>
+            <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>{t('auth.name')}</Text>
             <TextInput
               style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
               value={name}
@@ -69,7 +71,7 @@ export default function RegisterScreen() {
           </View>
 
           <View style={s.field}>
-            <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>Email</Text>
+            <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>{t('auth.email')}</Text>
             <TextInput
               style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
               value={email}
@@ -83,12 +85,12 @@ export default function RegisterScreen() {
           </View>
 
           <View style={s.field}>
-            <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>Password</Text>
+            <Text style={[s.fieldLabel, { color: colors.textSecondary }]}>{t('auth.password')}</Text>
             <TextInput
               style={[s.input, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.textPrimary }]}
               value={password}
               onChangeText={setPassword}
-              placeholder="8+ characters"
+              placeholder={t('auth.passwordShort').split('.')[0]}
               placeholderTextColor={colors.textMuted}
               secureTextEntry
               autoComplete="new-password"
@@ -103,24 +105,24 @@ export default function RegisterScreen() {
           activeOpacity={0.85}
         >
           <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.btnGradient}>
-            <Text style={s.btnText}>{loading ? 'Creating account…' : 'Create Account'}</Text>
+            <Text style={s.btnText}>{loading ? t('auth.creatingAccount') : t('auth.signUp')}</Text>
           </LinearGradient>
         </TouchableOpacity>
 
         <View style={s.divider}>
           <View style={[s.divLine, { backgroundColor: colors.border }]} />
-          <Text style={[s.divText, { color: colors.textMuted }]}>or</Text>
+          <Text style={[s.divText, { color: colors.textMuted }]}>{t('common.or')}</Text>
           <View style={[s.divLine, { backgroundColor: colors.border }]} />
         </View>
 
         <TouchableOpacity style={[s.socialBtn, { backgroundColor: colors.surface, borderColor: colors.border }]} activeOpacity={0.8}>
-          <Text style={[s.socialText, { color: colors.textPrimary }]}>🔗  Continue with Google</Text>
+          <Text style={[s.socialText, { color: colors.textPrimary }]}>🔗  {t('auth.continueGoogle')}</Text>
         </TouchableOpacity>
 
         <View style={s.footer}>
-          <Text style={[s.footerText, { color: colors.textSecondary }]}>Already have an account? </Text>
+          <Text style={[s.footerText, { color: colors.textSecondary }]}>{t('auth.haveAccount').split('?')[0]}? </Text>
           <TouchableOpacity onPress={() => router.push('/(auth)/login')}>
-            <Text style={[s.footerLink, { color: colors.primary }]}>Sign In</Text>
+            <Text style={[s.footerLink, { color: colors.primary }]}>{t('auth.signIn')}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

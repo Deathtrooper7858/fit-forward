@@ -123,7 +123,7 @@ export default function DashboardScreen() {
 
   const target   = profile?.targetCalories ?? 2000;
   const macros   = profile?.macros ?? { protein: 150, carbs: 200, fat: 67 };
-  const name     = profile?.name?.split(' ')[0] ?? (language === 'es' ? 'ahí' : 'there');
+  const name     = profile?.name?.split(' ')[0] ?? t('dashboard.fallbackName');
   const hour     = new Date().getHours();
   const greeting = hour < 12 ? t('dashboard.greetingMorning') : hour < 17 ? t('dashboard.greetingAfternoon') : t('dashboard.greetingEvening');
 

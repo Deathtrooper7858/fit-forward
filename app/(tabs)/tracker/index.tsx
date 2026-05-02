@@ -122,7 +122,7 @@ export default function TrackerScreen() {
     try {
       const permission = await requestRecordingPermissionsAsync();
       if (permission.status !== 'granted') {
-        Alert.alert('Permission needed', 'Please allow microphone access to use voice logging.');
+        Alert.alert(t('tracker.micPermission'), t('tracker.micPermissionSub'));
         return;
       }
       
@@ -178,10 +178,10 @@ export default function TrackerScreen() {
             }
           }
           if (items.length > 0) {
-            Alert.alert('Success', `Logged ${items.length} items from your voice!`);
+            Alert.alert(t('common.success'), t('tracker.voiceSuccess', { count: items.length }));
           }
         } catch (err) {
-          Alert.alert('Voice Log Failed', 'Could not parse your voice. Try again.');
+          Alert.alert(t('tracker.voiceFailed'), t('tracker.voiceFailedSub'));
         } finally {
           setLoading(false);
         }
@@ -209,7 +209,7 @@ export default function TrackerScreen() {
       const foods = await searchFood(query.trim());
       setResults(foods);
     } catch {
-      Alert.alert('Search failed', 'Please check your connection and try again.');
+      Alert.alert(t('tracker.searchFailed'), t('tracker.searchFailedSub'));
     } finally {
       setLoading(false);
     }
@@ -224,12 +224,12 @@ export default function TrackerScreen() {
 
   const handleDeleteLog = (logId: string, foodName: string) => {
     Alert.alert(
-      'Remove Entry',
-      `Remove "${foodName}" from today's log?`,
+      t('tracker.removeEntry'),
+      t('tracker.removeConfirm', { name: foodName }),
       [
-        { text: 'Cancel', style: 'cancel' },
+        { text: t('common.cancel'), style: 'cancel' },
         {
-          text: 'Remove', style: 'destructive',
+          text: t('common.remove'), style: 'destructive',
           onPress: async () => {
             removeLog(logId);
             if (profile?.id) {
@@ -309,7 +309,7 @@ export default function TrackerScreen() {
             </View>
 
             {showFavorites && favoriteFoods.length > 0 && (
-              <Text style={[s.sectionLabel, { color: colors.textPrimary }]}>⭐ Favorites</Text>
+              <Text style={[s.sectionLabel, { color: colors.textPrimary }]}>⭐ {t('tracker.favorites')}</Text>
             )}
 
             {loading && <ActivityIndicator color={colors.primary} style={{ marginVertical: 20 }} />}
@@ -337,7 +337,7 @@ export default function TrackerScreen() {
                           </View>
                           <View style={{ alignItems: 'flex-end' }}>
                             <Text style={[s.logCal, { color: colors.accent }]}>{log.calories} kcal</Text>
-                            <Text style={[s.holdHint, { color: colors.textMuted }]}>Hold to remove</Text>
+                            <Text style={[s.holdHint, { color: colors.textMuted }]}>{t('tracker.holdToRemove')}</Text>
                           </View>
                         </TouchableOpacity>
                       ))}

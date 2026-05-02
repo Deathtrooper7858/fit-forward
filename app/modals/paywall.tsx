@@ -4,48 +4,50 @@ import { router } from 'expo-router';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTheme } from '../../hooks/useTheme';
 import { Spacing, Radius } from '../../constants';
-
-const PLANS = [
-  {
-    id:     'monthly',
-    label:  'Monthly',
-    price:  '$9.99',
-    period: '/month',
-    badge:  null,
-  },
-  {
-    id:     'annual',
-    label:  'Annual',
-    price:  '$59.99',
-    period: '/year',
-    badge:  'Best Value — Save 50%',
-    priceNote: 'Just $5/month',
-  },
-  {
-    id:     'lifetime',
-    label:  'Lifetime',
-    price:  '$149.99',
-    period: ' once',
-    badge:  null,
-  },
-];
-
-const FEATURES = [
-  '🤖 Unlimited AI Coach messages',
-  '📸 Food photo recognition',
-  '🎙️ Voice food logging',
-  '📊 Full body measurements tracking',
-  '📅 AI meal plan generation',
-  '🛒 Auto shopping list',
-  '📤 Export plans as PDF',
-  '📈 Weekly AI analysis',
-  '🍳 Pro recipe library',
-  '🚫 No ads ever',
-];
+import { useTranslation } from 'react-i18next';
 
 export default function PaywallModal() {
+  const { t } = useTranslation();
   const colors = useTheme();
   const [selected, setSelected] = React.useState('annual');
+
+  const PLANS = [
+    {
+      id:     'monthly',
+      label:  t('paywall.monthly'),
+      price:  '$9.99',
+      period: t('paywall.month'),
+      badge:  null,
+    },
+    {
+      id:     'annual',
+      label:  t('paywall.annual'),
+      price:  '$59.99',
+      period: t('paywall.year'),
+      badge:  t('paywall.bestValue'),
+      priceNote: t('paywall.priceNote'),
+    },
+    {
+      id:     'lifetime',
+      label:  t('paywall.lifetime'),
+      price:  '$149.99',
+      period: t('paywall.once'),
+      badge:  null,
+    },
+  ];
+
+  const FEATURES = [
+    t('paywall.features.coach'),
+    t('paywall.features.photo'),
+    t('paywall.features.voice'),
+    t('paywall.features.stats'),
+    t('paywall.features.planner'),
+    t('paywall.features.shopping'),
+    t('paywall.features.export'),
+    t('paywall.features.analysis'),
+    t('paywall.features.recipes'),
+    t('paywall.features.ads'),
+  ];
 
   return (
     <View style={[s.container, { backgroundColor: colors.background }]}>
@@ -55,8 +57,8 @@ export default function PaywallModal() {
         {/* Hero */}
         <LinearGradient colors={colors.theme === 'dark' ? ['#7C5CFC22', '#22D3EE11'] : [colors.primary + '15', colors.secondary + '08']} style={[s.hero, { borderColor: colors.primary + '33' }]}>
           <Text style={s.heroEmoji}>⭐</Text>
-          <Text style={[s.heroTitle, { color: colors.textPrimary }]}>Unlock FitGO Pro</Text>
-          <Text style={[s.heroSub, { color: colors.textSecondary }]}>Everything you need to transform your body, powered by AI.</Text>
+          <Text style={[s.heroTitle, { color: colors.textPrimary }]}>{t('paywall.unlock')}</Text>
+          <Text style={[s.heroSub, { color: colors.textSecondary }]}>{t('paywall.heroSub')}</Text>
         </LinearGradient>
 
         {/* Features */}
@@ -104,21 +106,21 @@ export default function PaywallModal() {
         </View>
 
         {/* Trial note */}
-        <Text style={[s.trial, { color: colors.textSecondary }]}>🎁 7-day free trial — cancel anytime</Text>
+        <Text style={[s.trial, { color: colors.textSecondary }]}>{t('paywall.trial')}</Text>
 
         {/* CTA */}
         <TouchableOpacity style={s.cta} activeOpacity={0.85}>
           <LinearGradient colors={['#F59E0B', '#D97706']} style={s.ctaGrad}>
-            <Text style={s.ctaText}>Start Free Trial</Text>
+            <Text style={s.ctaText}>{t('paywall.startTrial')}</Text>
           </LinearGradient>
         </TouchableOpacity>
 
         <TouchableOpacity style={s.restoreBtn} onPress={() => router.back()}>
-          <Text style={[s.restoreText, { color: colors.textSecondary }]}>Restore Purchase</Text>
+          <Text style={[s.restoreText, { color: colors.textSecondary }]}>{t('paywall.restore')}</Text>
         </TouchableOpacity>
 
         <Text style={[s.legal, { color: colors.textMuted }]}>
-          Payment will be charged to your account. Subscription auto-renews unless cancelled 24 hours before renewal.
+          {t('paywall.legal')}
         </Text>
       </ScrollView>
     </View>
