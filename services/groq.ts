@@ -296,18 +296,24 @@ Give 2-3 specific, actionable tips for next week. Be encouraging.`;
 
 // ─── Transcribe Audio ─────────────────────────────────────────────────────────
 export async function transcribeAudio(uri: string): Promise<string> {
-  const fileExt = uri.split('.').pop() || 'm4a';
+  const fileExt = uri.split('.').pop()?.split('?')[0] || 'm4a';
+  const mimeType = fileExt === 'wav' ? 'audio/wav' : fileExt === 'mp3' ? 'audio/mpeg' : 'audio/m4a';
+  
   const formData = new FormData();
   
-  // En React Native, para subir archivos con fetch/FormData se usa este formato de objeto:
   formData.append('file', {
     uri,
     name: `audio.${fileExt}`,
-    type: `audio/${fileExt}`,
+    type: mimeType,
   } as any);
   
   formData.append('model', AUDIO_MODEL);
 
+  if (!apiKey) {
+    throw new Error('Groq API Key is missing. Please add EXPO_PUBLIC_GROQ_API_KEY to your .env and restart Metro.');
+  }
+
+  console.log('[Groq] Transcribing:', uri, 'with key length:', apiKey.length);
   const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
     method: 'POST',
     headers: {
@@ -318,6 +324,7 @@ export async function transcribeAudio(uri: string): Promise<string> {
 
   if (!response.ok) {
     const err = await response.text();
+    console.error('[Groq] Transcription Error:', err);
     throw new Error(`Transcription error: ${err}`);
   }
 

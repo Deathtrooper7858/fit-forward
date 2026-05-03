@@ -29,6 +29,7 @@ export interface UserProfile {
   isPro:           boolean;
   role:            'user' | 'admin' | 'super_admin';
   onboardingDone:  boolean;
+  widgetsOrder?:   string[];
 }
 
 export interface FoodLog {
@@ -148,12 +149,21 @@ interface NutritionState {
   waterIntake:  number;      // ml
   selectedDate: string;
   streakDays:   number;
+  activityCals:  number;
+  activityLogs: ActivityLog[];
+  activeDays:    Record<string, boolean>;
+  plannedDays:   number;
   favoriteFoods: FoodItem[];
   dailyWater:    Record<string, number>; // date -> ml
   dailySteps:    Record<string, number>; // date -> steps
   dailySleep:    Record<string, number>; // date -> hours
-  activityCals:  number;
-  activityLogs: ActivityLog[];
+  dailyNeat:     Record<string, string>;
+  dailyExercise: Record<string, string>;
+  aiUsageCount:  number;
+  lastAiUsageDate: string;
+  updateActivity: (date: string) => void;
+  incrementAiUsage: () => void;
+  checkAndResetAiLimit: () => void;
   addLog:       (log: FoodLog) => void;
   removeLog:    (id: string) => void;
   updateLog:    (id: string, updates: Partial<FoodLog>) => void;
@@ -170,8 +180,6 @@ interface NutritionState {
   removeActivityLog: (id: string) => void;
   updateActivityLog: (id: string, updates: Partial<ActivityLog>) => void;
   setActivityLogs: (activities: ActivityLog[]) => void;
-  dailyNeat:     Record<string, string>;
-  dailyExercise: Record<string, string>;
   setNeat:      (level: string) => void;
   setExerciseLevel: (level: string) => void;
   addFavorite:  (food: FoodItem) => void;
@@ -189,36 +197,104 @@ export const useNutritionStore = create<NutritionState>()(
     (set, get) => ({
       todayLogs:    [],
       waterIntake:  0,
-      selectedDate: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD in local time
+      selectedDate: new Date().toLocaleDateString('en-CA'),
       streakDays:   0,
+      activityCals: 0,
+      activityLogs: [],
+      favoriteFoods: [],
+      activeDays:   {},
+      plannedDays:  0,
       dailyWater:   {},
       dailySteps:   {},
       dailySleep:   {},
-      activityCals: 0,
-      dailyNeat:     {},
-      dailyExercise: {},
-      activityLogs: [],
-      favoriteFoods: [],
+      dailyNeat:    {},
+      dailyExercise:{},
+      aiUsageCount: 0,
+      lastAiUsageDate: new Date().toLocaleDateString('en-CA'),
 
-      addLog:    (log) => set((s) => ({ todayLogs: [...s.todayLogs, log] })),
+      checkAndResetAiLimit: () => {
+        const today = new Date().toLocaleDateString('en-CA');
+        if (get().lastAiUsageDate !== today) {
+          set({ aiUsageCount: 0, lastAiUsageDate: today });
+        }
+      },
+
+      incrementAiUsage: () => {
+        get().checkAndResetAiLimit();
+        set((s) => ({ aiUsageCount: s.aiUsageCount + 1 }));
+      },
+
+      updateActivity: (date) => {
+        const { activeDays, plannedDays } = get();
+        if (activeDays[date]) return;
+
+        const newActiveDays = { ...activeDays, [date]: true };
+        const newPlannedDays = plannedDays + 1;
+
+        // Calculate Streak
+        let streak = 0;
+        let checkDate = new Date(); 
+        
+        while (true) {
+          const dateStr = checkDate.toLocaleDateString('en-CA');
+          if (newActiveDays[dateStr]) {
+            streak++;
+            checkDate.setDate(checkDate.getDate() - 1);
+          } else {
+            const todayStr = new Date().toLocaleDateString('en-CA');
+            if (dateStr === todayStr) {
+               checkDate.setDate(checkDate.getDate() - 1);
+               continue;
+            }
+            break;
+          }
+        }
+
+        set({ activeDays: newActiveDays, plannedDays: newPlannedDays, streakDays: streak });
+      },
+
+      addLog: (log) => {
+        set((s) => ({ todayLogs: [...s.todayLogs, log] }));
+        get().updateActivity(log.loggedAt.split('T')[0]);
+      },
       removeLog: (id)  => set((s) => ({ todayLogs: s.todayLogs.filter((l) => l.id !== id) })),
       updateLog: (id, updates) => set((s) => ({
         todayLogs: s.todayLogs.map((l) => (l.id === id ? { ...l, ...updates } : l)),
       })),
       setLogs:   (logs) => set({ todayLogs: logs }),
-      setWater:  (ml) => set((s) => ({ dailyWater: { ...s.dailyWater, [s.selectedDate]: ml } })),
-      addWater:  (ml) => set((s) => ({ 
-        dailyWater: { ...s.dailyWater, [s.selectedDate]: (s.dailyWater[s.selectedDate] || 0) + ml } 
-      })),
+      setWater:  (ml) => {
+        set((s) => ({ dailyWater: { ...s.dailyWater, [s.selectedDate]: ml } }));
+        if (ml > 0) get().updateActivity(get().selectedDate);
+      },
+      addWater:  (ml) => {
+        const date = get().selectedDate;
+        set((s) => ({ 
+          dailyWater: { ...s.dailyWater, [date]: (s.dailyWater[date] || 0) + ml } 
+        }));
+        get().updateActivity(date);
+      },
       setDate:   (date) => set({ selectedDate: date }),
       setStreak: (streakDays) => set({ streakDays }),
-      setSteps:  (steps) => set((s) => ({ dailySteps: { ...s.dailySteps, [s.selectedDate]: steps } })),
-      addSteps:  (steps) => set((s) => ({ 
-        dailySteps: { ...s.dailySteps, [s.selectedDate]: Math.max(0, (s.dailySteps[s.selectedDate] || 0) + steps) } 
-      })),
-      setSleep:  (hours) => set((s) => ({ dailySleep: { ...s.dailySleep, [s.selectedDate]: hours } })),
+      setSteps:  (steps) => {
+        set((s) => ({ dailySteps: { ...s.dailySteps, [s.selectedDate]: steps } }));
+        if (steps > 0) get().updateActivity(get().selectedDate);
+      },
+      addSteps:  (steps) => {
+        const date = get().selectedDate;
+        set((s) => ({ 
+          dailySteps: { ...s.dailySteps, [date]: Math.max(0, (s.dailySteps[date] || 0) + steps) } 
+        }));
+        if (steps > 0) get().updateActivity(date);
+      },
+      setSleep:  (hours) => {
+        set((s) => ({ dailySleep: { ...s.dailySleep, [s.selectedDate]: hours } }));
+        if (hours > 0) get().updateActivity(get().selectedDate);
+      },
       setActivity: (activityCals) => set({ activityCals }),
-      addActivityLog: (activity) => set((s) => ({ activityLogs: [...s.activityLogs, activity] })),
+      addActivityLog: (activity) => {
+        set((s) => ({ activityLogs: [...s.activityLogs, activity] }));
+        get().updateActivity(activity.loggedAt.split('T')[0]);
+      },
       removeActivityLog: (id) => set((s) => ({ activityLogs: s.activityLogs.filter(a => a.id !== id) })),
       updateActivityLog: (id, updates) => set((s) => ({
         activityLogs: s.activityLogs.map(a => a.id === id ? { ...a, ...updates } : a)
@@ -309,6 +385,7 @@ export const useNutritionStore = create<NutritionState>()(
         dailyExercise: {},
         activityLogs: [],
         favoriteFoods: [],
+        aiUsageCount: 0,
       }),
     }),
     {
@@ -324,6 +401,10 @@ export const useNutritionStore = create<NutritionState>()(
         dailyExercise: s.dailyExercise,
         activityLogs:  s.activityLogs,
         favoriteFoods: s.favoriteFoods,
+        activeDays:    s.activeDays,
+        plannedDays:   s.plannedDays,
+        aiUsageCount:  s.aiUsageCount,
+        lastAiUsageDate: s.lastAiUsageDate,
         // todayLogs: intentionally NOT persisted — reloaded from Supabase on mount
       }),
     }

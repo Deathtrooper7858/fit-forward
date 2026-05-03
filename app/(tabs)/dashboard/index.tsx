@@ -46,7 +46,7 @@ function ScoreRing({ consumed, target }: { consumed: number; target: number }) {
       <View style={ring.textWrap}>
         <Text style={[ring.consumed, { color: colors.textPrimary }]}>{consumed}</Text>
         <Text style={[ring.label, { color: colors.textSecondary }]}>
-          {consumed < target * 0.3 ? 'Bajo' : consumed > target * 0.9 ? 'Alto' : 'Medio'}
+          {consumed < target * 0.3 ? t('dashboard.low') : consumed > target * 0.9 ? t('dashboard.high') : t('dashboard.medium')}
         </Text>
       </View>
     </View>
@@ -62,10 +62,16 @@ const ring = StyleSheet.create({
 });
 
 // ─── Widget Card ────────────────────────────────────────────────────────────────
-function WidgetCard({ title, value, subValue, icon, onPress, customContent }: any) {
+function WidgetCard({ title, value, subValue, icon, onPress, customContent, onLongPress, isEditing, onMoveLeft, onMoveRight, canMoveLeft, canMoveRight }: any) {
   const colors = useTheme();
   return (
-    <TouchableOpacity style={[w.card, { backgroundColor: colors.surface }]} onPress={onPress} activeOpacity={0.8} delayLongPress={500} onLongPress={() => Alert.alert('Modo edición', 'Mantén presionado y arrastra para mover el widget (Próximamente)')}>
+    <TouchableOpacity 
+      style={[w.card, { backgroundColor: colors.surface }, isEditing && { borderColor: colors.primary, borderWidth: 2 }]} 
+      onPress={isEditing ? undefined : onPress} 
+      activeOpacity={0.8} 
+      delayLongPress={500} 
+      onLongPress={onLongPress}
+    >
       <View style={w.header}>
         <Text style={w.icon}>{icon}</Text>
         <Text style={[w.title, { color: colors.textPrimary }]}>{title}</Text>
@@ -74,6 +80,25 @@ function WidgetCard({ title, value, subValue, icon, onPress, customContent }: an
         <View style={w.content}>
           <Text style={[w.value, { color: colors.textPrimary }]}>{value}</Text>
           {subValue && <Text style={[w.subValue, { color: colors.textSecondary }]}>{subValue}</Text>}
+        </View>
+      )}
+      
+      {isEditing && (
+        <View style={[StyleSheet.absoluteFill, w.editOverlay]}>
+          <TouchableOpacity 
+            style={[w.moveBtn, !canMoveLeft && { opacity: 0.3 }]} 
+            onPress={onMoveLeft} 
+            disabled={!canMoveLeft}
+          >
+            <Text style={w.moveIcon}>←</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[w.moveBtn, !canMoveRight && { opacity: 0.3 }]} 
+            onPress={onMoveRight} 
+            disabled={!canMoveRight}
+          >
+            <Text style={w.moveIcon}>→</Text>
+          </TouchableOpacity>
         </View>
       )}
     </TouchableOpacity>
@@ -88,6 +113,9 @@ const w = StyleSheet.create({
   content: { flex: 1, justifyContent: 'center' },
   value: { fontSize: 28, fontWeight: '800' },
   subValue: { fontSize: 12, marginTop: 4 },
+  editOverlay: { backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: Radius.xl, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 10 },
+  moveBtn: { backgroundColor: '#7C5CFC', width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  moveIcon: { color: '#FFF', fontSize: 20, fontWeight: 'bold' },
 });
 
 // ─── Dashboard (Progreso) Screen ────────────────────────────────────────────────
@@ -95,15 +123,13 @@ export default function DashboardScreen() {
   const { t } = useTranslation();
   const colors = useTheme();
   const { language } = useSettingsStore();
-  const { profile } = useAuthStore();
-  const { todayLogs, waterIntake, dailySteps, selectedDate, totals, fetchLogs, dailySleep } = useNutritionStore();
+  const { profile, setProfile } = useAuthStore();
+  const { todayLogs, dailySleep, selectedDate, totals, fetchLogs } = useNutritionStore();
   const { latest } = useBodyStore();
   
   const { calories } = useMemo(() => totals(), [todayLogs]);
   const target = profile?.targetCalories ?? 2000;
   const name = profile?.name?.split(' ')[0] ?? t('dashboard.fallbackName');
-  const hour = new Date().getHours();
-  const greeting = hour < 12 ? t('dashboard.greetingMorning') : hour < 17 ? t('dashboard.greetingAfternoon') : t('dashboard.greetingEvening');
 
   useEffect(() => {
     async function loadTodayData() {
@@ -116,11 +142,22 @@ export default function DashboardScreen() {
 
   const currentWeight = latest()?.weight || profile?.weight || 0;
   const targetWeight = profile?.goal === 'lose' ? currentWeight - 5 : profile?.goal === 'gain' ? currentWeight + 5 : currentWeight; // placeholder logic
-  const steps = dailySteps[selectedDate] || 0;
   const sleepHours = dailySleep[selectedDate] || 0;
 
-  // Widget Order State (Mock for now, to support future drag drop)
-  const [widgetsOrder, setWidgetsOrder] = useState(['weight', 'bodyFat', 'sleep', 'calories', 'steps', 'water', 'macros', 'measurements', 'photos']);
+  const [isEditing, setIsEditing] = useState(false);
+  const [widgetsOrder, setWidgetsOrder] = useState(
+    profile?.widgetsOrder?.length 
+      ? profile.widgetsOrder 
+      : ['weight', 'bodyFat', 'sleep', 'calories', 'macros', 'measurements', 'photos', 'achievements']
+  );
+
+  const saveWidgetsOrder = async () => {
+    setIsEditing(false);
+    if (profile?.id) {
+      setProfile({ ...profile, widgetsOrder });
+      await supabase.from('users').update({ widgets_order: widgetsOrder }).eq('id', profile.id);
+    }
+  };
 
   const getGoalInfo = () => {
     switch (profile?.goal) {
@@ -131,22 +168,40 @@ export default function DashboardScreen() {
   };
   const goalInfo = getGoalInfo();
 
-  const renderWidget = (id: string) => {
+  const moveWidget = (index: number, direction: 1 | -1) => {
+    if (index + direction < 0 || index + direction >= widgetsOrder.length) return;
+    const newOrder = [...widgetsOrder];
+    const temp = newOrder[index];
+    newOrder[index] = newOrder[index + direction];
+    newOrder[index + direction] = temp;
+    setWidgetsOrder(newOrder);
+  };
+
+  const renderWidget = (id: string, index: number) => {
+    const commonProps = {
+      isEditing,
+      onLongPress: () => setIsEditing(true),
+      onMoveLeft: () => moveWidget(index, -1),
+      onMoveRight: () => moveWidget(index, 1),
+      canMoveLeft: index > 0,
+      canMoveRight: index < widgetsOrder.length - 1,
+    };
+
     switch (id) {
       case 'weight':
         return (
-          <WidgetCard key="weight" title="Peso Balanza" icon="⚖️"
+          <WidgetCard key={id} {...commonProps} title={t('dashboard.weightWidget')} icon="⚖️"
             value={`${currentWeight}`} subValue="kg"
             onPress={() => router.push('/modals/body-measurements')}
           />
         );
       case 'sleep':
         return (
-          <WidgetCard key="sleep" title="Sueño" icon="🌙"
+          <WidgetCard key={id} {...commonProps} title={t('dashboard.sleepWidget')} icon="🌙"
             customContent={
               <View style={w.content}>
                  <Text style={[w.value, { color: colors.textPrimary }]}>{sleepHours > 0 ? `${sleepHours}h` : '--'}</Text>
-                 <Text style={[w.subValue, { color: colors.textSecondary }]}>{sleepHours > 0 ? 'Registrado hoy' : 'Toca para añadir'}</Text>
+                 <Text style={[w.subValue, { color: colors.textSecondary }]}>{sleepHours > 0 ? t('dashboard.loggedToday') : t('dashboard.tapToAdd')}</Text>
               </View>
             }
             onPress={() => router.push('/modals/sleep' as any)}
@@ -154,35 +209,11 @@ export default function DashboardScreen() {
         );
       case 'calories':
         return (
-          <WidgetCard key="calories" title="Calorías" icon="⚡"
+          <WidgetCard key={id} {...commonProps} title={t('dashboard.caloriesWidget')} icon="⚡"
             customContent={
               <View style={w.content}>
                 <Text style={{fontSize: 24, fontWeight: '800', color: colors.textPrimary}}>{calories}</Text>
-                <Text style={[w.subValue, { color: colors.textSecondary }]}>Registra tu comida</Text>
-              </View>
-            }
-            onPress={() => router.push('/(tabs)/tracker')}
-          />
-        );
-      case 'steps':
-        return (
-          <WidgetCard key="steps" title="Pasos" icon="👟"
-            customContent={
-              <View style={w.content}>
-                <Text style={{fontSize: 24, fontWeight: '800', color: colors.textPrimary}}>{steps}</Text>
-                <Text style={[w.subValue, { color: colors.textSecondary }]}>Sincroniza Health</Text>
-              </View>
-            }
-            onPress={() => router.push('/(tabs)/tracker')}
-          />
-        );
-      case 'water':
-        return (
-          <WidgetCard key="water" title="Agua" icon="💧"
-            customContent={
-              <View style={w.content}>
-                <Text style={{fontSize: 24, fontWeight: '800', color: colors.textPrimary}}>{(waterIntake / 1000).toFixed(1)} L 🚩</Text>
-                <Text style={[w.subValue, { color: colors.textSecondary }]}>Promedio Semanal</Text>
+                <Text style={[w.subValue, { color: colors.textSecondary }]}>{t('dashboard.logFood')}</Text>
               </View>
             }
             onPress={() => router.push('/(tabs)/tracker')}
@@ -190,14 +221,14 @@ export default function DashboardScreen() {
         );
       case 'bodyFat':
         return (
-          <WidgetCard key="bodyFat" title="Grasa Corporal" icon="🔥"
-            value={latest()?.bodyFat ? `${latest()?.bodyFat}%` : '--'} subValue="Toca para actualizar"
+          <WidgetCard key={id} {...commonProps} title={t('dashboard.bodyFatWidget')} icon="🔥"
+            value={latest()?.bodyFat ? `${latest()?.bodyFat}%` : '--'} subValue={t('dashboard.tapToUpdate')}
             onPress={() => router.push('/modals/body-measurements')}
           />
         );
       case 'macros':
         return (
-          <WidgetCard key="macros" title="Macros" icon="🥗"
+          <WidgetCard key={id} {...commonProps} title={t('dashboard.macrosWidget')} icon="🥗"
             customContent={
               <View style={[w.content, { gap: 4 }]}>
                 <Text style={{ fontSize: 13, color: colors.protein }}>P: {totals().protein}g</Text>
@@ -210,22 +241,35 @@ export default function DashboardScreen() {
         );
       case 'measurements':
         return (
-          <WidgetCard key="measurements" title="Medidas" icon="📏"
-            value="Ver historial" subValue="Cintura, pecho, etc."
+          <WidgetCard key={id} {...commonProps} title={t('dashboard.measurementsWidget')} icon="📏"
+            value={t('dashboard.seeHistory', 'Ver historial')} subValue={t('dashboard.measurementsSub', 'Cintura, pecho, etc.')}
             onPress={() => router.push('/modals/body-measurements')}
           />
         );
       case 'photos':
         return (
-          <WidgetCard key="photos" title="" icon=""
+          <WidgetCard key={id} {...commonProps} title={t('dashboard.photosWidget')} icon=""
             customContent={
               <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
                 <Text style={{ fontSize: 32, color: colors.textSecondary }}>📷</Text>
-                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginTop: 8 }}>Añadir fotos</Text>
-                <Text style={[w.subValue, { color: colors.textSecondary }]}>para ver el progreso</Text>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginTop: 8 }}>{t('dashboard.addPhotos')}</Text>
+                <Text style={[w.subValue, { color: colors.textSecondary }]}>{t('dashboard.seeProgress')}</Text>
               </View>
             }
-            onPress={() => Alert.alert('Fotos', 'Añadir fotos (Próximamente)')}
+            onPress={() => Alert.alert(t('dashboard.photosWidget'), t('common.comingSoon', 'Próximamente'))}
+          />
+        );
+      case 'achievements':
+        return (
+          <WidgetCard key={id} {...commonProps} title={t('dashboard.achievementsWidget', 'Logros')} icon="🏆"
+            customContent={
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 32, color: colors.textSecondary }}>🏅</Text>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginTop: 8 }}>{t('dashboard.viewAchievements', 'Ver Medallas')}</Text>
+                <Text style={[w.subValue, { color: colors.textSecondary }]}>{t('dashboard.achievementsSub', 'Desafíos completados')}</Text>
+              </View>
+            }
+            onPress={() => Alert.alert(t('dashboard.achievementsWidget', 'Logros'), t('common.comingSoon', 'Próximamente'))}
           />
         );
       default: return null;
@@ -238,7 +282,6 @@ export default function DashboardScreen() {
         {/* Header */}
         <View style={s.header}>
           <View>
-            <Text style={[s.greeting, { color: colors.textPrimary }]}>{greeting}, {name} 👋</Text>
             <Text style={[s.date, { color: colors.textSecondary }]}>{new Date().toLocaleDateString(language, { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
           </View>
           <TouchableOpacity style={s.avatar} onPress={() => router.push('/(tabs)/profile')}>
@@ -254,8 +297,7 @@ export default function DashboardScreen() {
 
         {/* Nutritional Score Card */}
         <View style={s.sectionHeader}>
-          <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>Score Nutricional</Text>
-          <Text style={{ color: colors.textPrimary }}>→</Text>
+          <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>{t('dashboard.scoreTitle')}</Text>
         </View>
         <View style={[s.cardFull, { backgroundColor: colors.surface }]}>
           <ScoreRing consumed={calories} target={target} />
@@ -263,8 +305,7 @@ export default function DashboardScreen() {
 
         {/* Phase Card */}
         <View style={s.sectionHeader}>
-          <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>Fase</Text>
-          <Text style={{ color: colors.textPrimary }}>→</Text>
+          <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>{t('dashboard.phaseTitle')}</Text>
         </View>
         <View style={[s.cardFull, { backgroundColor: colors.surface }]}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
@@ -279,21 +320,25 @@ export default function DashboardScreen() {
             <View style={[s.progressFill, { backgroundColor: colors.secondary, width: '30%' }]} />
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, marginBottom: 24 }}>
-            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>📅 Llegarás en</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>11 semanas</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>📅 {t('dashboard.targetDate', 'Llegarás en')}</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('dashboard.weeksLeft', { count: 11 })}</Text>
           </View>
           <TouchableOpacity style={[s.updateBtn, { backgroundColor: '#7C5CFC' }]} onPress={() => router.push('/modals/body-measurements')}>
-            <Text style={[s.updateBtnText, { color: '#FFF' }]}>Actualizar Progreso</Text>
+            <Text style={[s.updateBtnText, { color: '#FFF' }]}>{t('dashboard.updateProgress')}</Text>
           </TouchableOpacity>
         </View>
 
         {/* Statistics Grid */}
         <View style={s.sectionHeader}>
-          <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>Estadísticas</Text>
-          <Text style={{ color: colors.textPrimary }}>→</Text>
+          <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>{t('dashboard.statsTitle')}</Text>
+          {isEditing && (
+            <TouchableOpacity onPress={saveWidgetsOrder} style={s.doneBtn}>
+              <Text style={s.doneText}>{t('common.done', 'Listo')}</Text>
+            </TouchableOpacity>
+          )}
         </View>
         <View style={s.widgetGrid}>
-          {widgetsOrder.map(id => renderWidget(id))}
+          {widgetsOrder.map((id, index) => renderWidget(id, index))}
         </View>
 
         <View style={{ height: 40 }} />
@@ -320,4 +365,6 @@ const s = StyleSheet.create({
   updateBtn: { height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
   updateBtnText: { fontSize: 16, fontWeight: '700' },
   widgetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md, justifyContent: 'space-between' },
+  doneBtn: { backgroundColor: '#7C5CFC', paddingHorizontal: 16, paddingVertical: 6, borderRadius: Radius.full },
+  doneText: { color: '#FFF', fontWeight: 'bold', fontSize: 14 },
 });

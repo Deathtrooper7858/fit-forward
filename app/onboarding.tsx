@@ -293,20 +293,12 @@ const FOOD_CATEGORIES = [
     title: 'proteins',
     min: 2,
     items: [
-      { id: 'pollo', label: 'Pollo', emoji: '🍗' },
-      { id: 'carne', label: 'Carne', emoji: '🥩' },
-      { id: 'pescado', label: 'Pescado', emoji: '🐟' },
-      { id: 'atun', label: 'Atún', emoji: '🥫' },
-      { id: 'camarones', label: 'Camarones', emoji: '🍤' },
-      { id: 'huevo', label: 'Huevo', emoji: '🥚' },
-      { id: 'pavo', label: 'Pavo', emoji: '🦃' },
-      { id: 'cerdo', label: 'Cerdo', emoji: '🥓' },
-      { id: 'jamon', label: 'Jamón', emoji: '🍖' },
-      { id: 'tofu', label: 'Tofu', emoji: '🧊' },
-      { id: 'carne_soya', label: 'Carne de Soya', emoji: '📦' },
-      { id: 'tempeh', label: 'Tempeh', emoji: '🧱' },
-      { id: 'seitan', label: 'Seitan', emoji: '🍞' },
-      { id: 'proteina_polvo', label: 'Proteína en Polvo', emoji: '🥛' },
+      { id: 'chicken', label: 'chicken', emoji: '🍗' },
+      { id: 'beef', label: 'beef', emoji: '🥩' },
+      { id: 'fish', label: 'fish', emoji: '🐟' },
+      { id: 'eggs', label: 'eggs', emoji: '🥚' },
+      { id: 'tofu', label: 'tofu', emoji: '🧊' },
+      { id: 'protein_powder', label: 'protein_powder', emoji: '🥛' },
     ]
   },
   {
@@ -314,22 +306,11 @@ const FOOD_CATEGORIES = [
     title: 'carbs',
     min: 3,
     items: [
-      { id: 'arroz', label: 'Arroz', emoji: '🍚' },
-      { id: 'papa', label: 'Papa', emoji: '🥔' },
-      { id: 'batata', label: 'Batata', emoji: '🍠' },
-      { id: 'yuca', label: 'Yuca', emoji: '🎋' },
-      { id: 'lentejas', label: 'Lentejas', emoji: '🥣' },
-      { id: 'frijoles', label: 'Frijoles', emoji: '🫘' },
-      { id: 'garbanzos', label: 'Garbanzos', emoji: '🥣' },
-      { id: 'arvejas', label: 'Arvejas', emoji: '🫛' },
-      { id: 'quinua', label: 'Quinua', emoji: '🥣' },
-      { id: 'pasta', label: 'Pasta', emoji: '🍝' },
-      { id: 'mazorca', label: 'Mazorca', emoji: '🌽' },
-      { id: 'popcorn', label: 'Popcorn', emoji: '🍿' },
-      { id: 'avena', label: 'Avena', emoji: '🥣' },
-      { id: 'pan', label: 'Pan', emoji: '🍞' },
-      { id: 'tortilla', label: 'Tortilla', emoji: '🥙' },
-      { id: 'cereal', label: 'Cereal', emoji: '🥣' },
+      { id: 'rice', label: 'rice', emoji: '🍚' },
+      { id: 'potato', label: 'potato', emoji: '🥔' },
+      { id: 'pasta', label: 'pasta', emoji: '🍝' },
+      { id: 'oats', label: 'oats', emoji: '🥣' },
+      { id: 'bread', label: 'bread', emoji: '🍞' },
     ]
   },
   {
@@ -337,13 +318,10 @@ const FOOD_CATEGORIES = [
     title: 'fats',
     min: 2,
     items: [
-      { id: 'aguacate', label: 'Aguacate', emoji: '🥑' },
-      { id: 'mani', label: 'Maní', emoji: '🥜' },
-      { id: 'mantequilla_mani', label: 'Mantequilla de Maní', emoji: '🍯' },
-      { id: 'almendras', label: 'Almendras', emoji: '🌰' },
-      { id: 'aceite_oliva', label: 'Aceite de Oliva', emoji: '🫒' },
-      { id: 'nueces', label: 'Nueces', emoji: '🥥' },
-      { id: 'chia', label: 'Chía', emoji: '🌱' },
+      { id: 'avocado', label: 'avocado', emoji: '🥑' },
+      { id: 'nuts', label: 'nuts', emoji: '🥜' },
+      { id: 'peanutButter', label: 'peanutButter', emoji: '🍯' },
+      { id: 'oliveOil', label: 'oliveOil', emoji: '🫒' },
     ]
   },
   {
@@ -351,24 +329,10 @@ const FOOD_CATEGORIES = [
     title: 'fruits',
     min: 2,
     items: [
-      { id: 'banano', label: 'Banano', emoji: '🍌' },
-      { id: 'fresas', label: 'Fresas', emoji: '🍓' },
-      { id: 'manzana', label: 'Manzana', emoji: '🍎' },
-      { id: 'arandanos', label: 'Arándanos', emoji: '🫐' },
-      { id: 'pina', label: 'Piña', emoji: '🍍' },
-      { id: 'papaya', label: 'Papaya', emoji: '🥭' },
-      { id: 'mandarina', label: 'Mandarina', emoji: '🍊' },
-      { id: 'naranja', label: 'Naranja', emoji: '🍊' },
-      { id: 'kiwi', label: 'Kiwi', emoji: '🥝' },
-      { id: 'mango', label: 'Mango', emoji: '🥭' },
-      { id: 'sandia', label: 'Sandía', emoji: '🍉' },
-      { id: 'pera', label: 'Pera', emoji: '🍐' },
-      { id: 'durazno', label: 'Durazno', emoji: '🍑' },
-      { id: 'uvas', label: 'Uvas', emoji: '🍇' },
-      { id: 'granadilla', label: 'Granadilla', emoji: '🍊' },
-      { id: 'melon', label: 'Melón', emoji: '🍈' },
-      { id: 'datiles', label: 'Dátiles', emoji: '🫘' },
-      { id: 'pitahaya', label: 'Pitahaya', emoji: '🌵' },
+      { id: 'banana', label: 'banana', emoji: '🍌' },
+      { id: 'apple', label: 'apple', emoji: '🍎' },
+      { id: 'berries', label: 'berries', emoji: '🍓' },
+      { id: 'orange', label: 'orange', emoji: '🍊' },
     ]
   },
   {
@@ -376,17 +340,11 @@ const FOOD_CATEGORIES = [
     title: 'veggies',
     min: 2,
     items: [
-      { id: 'lechuga', label: 'Lechuga', emoji: '🥬' },
-      { id: 'tomate', label: 'Tomate', emoji: '🍅' },
-      { id: 'albahaca', label: 'Albahaca', emoji: '🌿' },
-      { id: 'coliflor', label: 'Coliflor', emoji: '🥦' },
-      { id: 'ahuyama', label: 'Ahuyama', emoji: '🎃' },
-      { id: 'pimiento', label: 'Pimiento', emoji: '🫑' },
-      { id: 'habichuelas', label: 'Habichuelas', emoji: '🫛' },
-      { id: 'remolacha', label: 'Remolacha', emoji: '🍠' },
-      { id: 'rabano', label: 'Rábano', emoji: '🥕' },
-      { id: 'berenjena', label: 'Berenjena', emoji: '🍆' },
-      { id: 'champinones', label: 'Champiñones', emoji: '🍄' },
+      { id: 'broccoli', label: 'broccoli', emoji: '🥦' },
+      { id: 'spinach', label: 'spinach', emoji: '🥬' },
+      { id: 'carrot', label: 'carrot', emoji: '🥕' },
+      { id: 'tomato', label: 'tomato', emoji: '🍅' },
+      { id: 'onion', label: 'onion', emoji: '🧅' },
     ]
   },
   {
@@ -394,14 +352,9 @@ const FOOD_CATEGORIES = [
     title: 'condiments',
     min: 1,
     items: [
-      { id: 'mostaza', label: 'Mostaza', emoji: '🍯' },
-      { id: 'salsa_soya', label: 'Salsa de Soya', emoji: '🍶' },
-      { id: 'salsa_tomate', label: 'Salsa de Tomate', emoji: '🥫' },
-      { id: 'pimenton', label: 'Pimentón', emoji: '🧂' },
-      { id: 'canela', label: 'Canela', emoji: '🪵' },
-      { id: 'curcuma', label: 'Cúrcuma', emoji: '🥣' },
-      { id: 'cacao_polvo', label: 'Cacao en Polvo', emoji: '🥣' },
-      { id: 'curry', label: 'Curry', emoji: '🥣' },
+      { id: 'salt', label: 'salt', emoji: '🧂' },
+      { id: 'soySauce', label: 'soySauce', emoji: '🍶' },
+      { id: 'hotSauce', label: 'hotSauce', emoji: '🥫' },
     ]
   }
 ];
@@ -470,7 +423,7 @@ function DietStep({ data, onChange }: { data: Partial<OnboardingData>; onChange:
                     { color: colors.textSecondary }, 
                     active && { color: colors.textPrimary, fontWeight: '700' }
                   ]}>
-                    {item.label}
+                    {t(`onboarding.foodItems.${item.label}`)}
                   </Text>
                 </TouchableOpacity>
               );

@@ -1,8 +1,10 @@
-import { Tabs } from 'expo-router';
-import { View, Text, StyleSheet } from 'react-native';
+import { Tabs, router, usePathname } from 'expo-router';
+import { View, Text, StyleSheet, PanResponder, Dimensions } from 'react-native';
 import { useTheme } from '../../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
-import { FileText, BarChart2, MessageCircle, Calendar, User } from 'lucide-react-native';
+import { FileText, BarChart2, MessageCircle, Calendar } from 'lucide-react-native';
+import { useAuthStore } from '../../store';
+import React, { useRef } from 'react';
 
 function TabIcon({ Icon, label, focused }: { Icon: any; label: string; focused: boolean }) {
   const colors = useTheme();
@@ -19,8 +21,50 @@ function TabIcon({ Icon, label, focused }: { Icon: any; label: string; focused: 
 export default function TabsLayout() {
   const { t } = useTranslation();
   const colors = useTheme();
+  const { profile } = useAuthStore();
+  const isPro = profile?.isPro ?? false;
+  const pathname = usePathname();
+  const { width } = Dimensions.get('window');
+
+  const tabs = ['/tracker', '/dashboard', '/planner', '/coach'];
+  const currentIndex = tabs.findIndex(t => pathname.includes(t));
+
+  const stateRef = useRef({ currentIndex, isPro });
+  stateRef.current = { currentIndex, isPro };
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_, gestureState) => {
+        const { dx, dy, x0 } = gestureState;
+        const isEdge = x0 < 50 || x0 > width - 50;
+        return isEdge && Math.abs(dx) > Math.abs(dy) * 2 && Math.abs(dx) > 30;
+      },
+      onPanResponderRelease: (_, gestureState) => {
+        const { dx } = gestureState;
+        const { currentIndex: currentIdx, isPro: pro } = stateRef.current;
+        
+        if (dx > -50) {
+          // Swipe Right -> Next Tab
+          if (currentIdx !== -1 && currentIdx < tabs.length - 1) {
+            const next = tabs[currentIdx + 1];
+            if (next === '/planner' && !pro) {
+              router.push('/modals/paywall');
+            } else {
+              router.push(next as any);
+            }
+          }
+        } else if (dx < 50) {
+          // Swipe Left -> Previous Tab
+          if (currentIdx > 0) {
+            router.push(tabs[currentIdx - 1] as any);
+          }
+        }
+      },
+    })
+  ).current;
   
   return (
+    <View style={{ flex: 1 }} {...panResponder.panHandlers}>
     <Tabs
       screenOptions={{
         headerShown: false,
@@ -33,19 +77,36 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="tracker/index"
         options={{
-          title: t('tabs.tracker', 'Plan'),
+          title: t('tabs.tracker', 'Main'),
           tabBarIcon: ({ focused }) => (
-            <TabIcon Icon={FileText} label={t('tabs.tracker', 'Plan')} focused={focused} />
+            <TabIcon Icon={FileText} label={t('tabs.tracker', 'Main')} focused={focused} />
           ),
         }}
       />
       <Tabs.Screen
         name="dashboard/index"
         options={{
-          title: t('tabs.dashboard', 'Progreso'),
+          title: t('tabs.dashboard', 'Progress'),
           tabBarIcon: ({ focused }) => (
-            <TabIcon Icon={BarChart2} label={t('tabs.dashboard', 'Progreso')} focused={focused} />
+            <TabIcon Icon={BarChart2} label={t('tabs.dashboard', 'Progress')} focused={focused} />
           ),
+        }}
+      />
+      <Tabs.Screen
+        name="planner/index"
+        options={{
+          title: t('tabs.planner', 'Planner'),
+          tabBarIcon: ({ focused }) => (
+            <TabIcon Icon={Calendar} label={t('tabs.planner', 'Planner')} focused={focused} />
+          ),
+        }}
+        listeners={{
+          tabPress: (e) => {
+            if (!isPro) {
+              e.preventDefault();
+              router.push('/modals/paywall');
+            }
+          },
         }}
       />
       <Tabs.Screen
@@ -58,18 +119,13 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="planner/index"
-        options={{
-          href: null,
-        }}
-      />
-      <Tabs.Screen
         name="profile/index"
         options={{
           href: null,
         }}
       />
     </Tabs>
+    </View>
   );
 }
 

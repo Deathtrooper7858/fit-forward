@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import * as ImagePicker from 'expo-image-picker';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image, ScrollView, TextInput } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -12,7 +13,10 @@ import { useTheme } from '../../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { SuccessModal } from '../../components/SuccessModal';
 
-type ScanMode = 'barcode' | 'photo';
+import { useAudioRecorder, useAudioRecorderState, AudioModule, RecordingPresets, requestRecordingPermissionsAsync, setAudioModeAsync } from 'expo-audio';
+import { transcribeAudio, parseVoiceLog } from '../../services/groq';
+
+type ScanMode = 'barcode' | 'photo' | 'text';
 type Meal = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
 export default function ScanModal() {
@@ -22,6 +26,10 @@ export default function ScanModal() {
   const [scanned, setScanned]           = useState(false);
   const [loading, setLoading]           = useState(false);
   const [mode, setMode]                 = useState<ScanMode>('barcode');
+  const [textInput, setTextInput]       = useState('');
+  const recorder = useAudioRecorder(RecordingPresets.HIGH_QUALITY);
+  const recorderState = useAudioRecorderState(recorder, 500);
+
   const [photoResult, setPhotoResult]   = useState<{
     foods: { 
       name: string; grams: number; calories: number; protein: number; carbs: number; fat: number;
@@ -41,13 +49,154 @@ export default function ScanModal() {
   const cameraRef = useRef<any>(null);
   const colors = useTheme();
   const { language } = useSettingsStore();
-  const { addLog, fetchLogs, selectedDate } = useNutritionStore();
+  const { addLog, fetchLogs, selectedDate, aiUsageCount, incrementAiUsage } = useNutritionStore();
   const { profile } = useAuthStore();
   const [showSuccess, setShowSuccess] = useState(false);
+  const [flash, setFlash] = useState<'off' | 'on' | 'auto'>('off');
+  const [facing, setFacing] = useState<'back' | 'front'>('back');
 
   useEffect(() => {
     if (!permission?.granted) requestPermission();
   }, []);
+
+  const checkAiLimit = (): boolean => {
+    if (profile?.isPro) return true;
+    if (aiUsageCount >= 15) {
+      Alert.alert(
+        t('scan.limitReached') || 'AI Limit Reached',
+        t('scan.limitReachedSub') || 'You have reached the daily limit of 15 AI-powered registrations. Upgrade to Pro for unlimited use!',
+        [
+          { text: t('common.cancel'), style: 'cancel' },
+          { text: t('onboarding.proBtn'), onPress: () => router.push('/modals/paywall') }
+        ]
+      );
+      return false;
+    }
+    return true;
+  };
+
+  const recordingStatus = useRef<'idle' | 'starting' | 'recording' | 'stopping'>('idle');
+
+  const startRecording = async () => {
+    if (recordingStatus.current !== 'idle') return;
+    if (!profile?.isPro) {
+      router.push('/modals/paywall');
+      return;
+    }
+    
+    try {
+      const perm = await requestRecordingPermissionsAsync();
+      if (perm.status !== 'granted') {
+        Alert.alert(t('tracker.micPermission'), t('tracker.micPermissionSub'));
+        return;
+      }
+
+      await setAudioModeAsync({
+        allowsRecording: true,
+        playsInSilentMode: true,
+      });
+
+      recordingStatus.current = 'starting';
+      console.log('[Audio] Preparing...');
+      await recorder.prepareToRecordAsync();
+      console.log('[Audio] Starting...');
+      recorder.record();
+      recordingStatus.current = 'recording';
+      console.log('[Audio] Recording active');
+    } catch (err) {
+      recordingStatus.current = 'idle';
+      console.error('Start error:', err);
+    }
+  };
+
+  const stopRecording = async () => {
+    // If it's still starting, we wait a bit then stop
+    if (recordingStatus.current === 'starting') {
+      let waitCount = 0;
+      while (recordingStatus.current === 'starting' && waitCount < 10) {
+        await new Promise(r => setTimeout(r, 100));
+        waitCount++;
+      }
+    }
+
+    if (recordingStatus.current !== 'recording') {
+      recordingStatus.current = 'idle';
+      return;
+    }
+
+    recordingStatus.current = 'stopping';
+    try {
+      setLoading(true);
+      console.log('[Audio] Stopping...');
+      await recorder.stop();
+      
+      let audioUri = recorder.uri;
+      let attempts = 0;
+      while (!audioUri && attempts < 20) {
+        await new Promise(r => setTimeout(r, 200));
+        audioUri = recorder.uri;
+        attempts++;
+      }
+
+      if (audioUri) {
+        const text = await transcribeAudio(audioUri);
+        if (text?.trim()) {
+          setTextInput(prev => prev ? `${prev} ${text}` : text);
+        } else {
+          Alert.alert(t('common.error'), 'No se detectó voz. Intenta hablar más claro.');
+        }
+      } else {
+        Alert.alert(t('common.error'), 'Error de hardware: No se generó el archivo de audio.');
+      }
+    } catch (err: any) {
+      console.error('Stop error:', err);
+      Alert.alert(t('common.error'), `Error al procesar audio: ${err.message || 'Error desconocido'}`);
+    } finally {
+      recordingStatus.current = 'idle';
+      setLoading(false);
+    }
+  };
+
+  const handleTextAnalyze = async () => {
+    if (!textInput.trim() || !checkAiLimit()) return;
+    setLoading(true);
+
+    try {
+      const items = await parseVoiceLog(textInput, language);
+      if (!items || items.length === 0) {
+        Alert.alert(t('common.error'), t('scan.noFoodsFound') || 'No se detectaron alimentos. Intenta ser más específico.');
+        return;
+      }
+
+      setPhotoResult({
+        foods: items,
+        totalCalories: items.reduce((acc: number, f: any) => acc + f.calories, 0),
+        confidence: 'high',
+        notes: textInput
+      });
+
+      setEditedFoods(items.map((f: any) => ({
+        ...f,
+        originalGrams: f.grams,
+        originalCal: f.calories,
+        originalProt: f.protein,
+        originalCarbs: f.carbs,
+        originalFat: f.fat,
+        originalSugar: f.sugar,
+        originalFiber: f.fiber,
+        originalSodium: f.sodium,
+        originalIron: f.iron,
+        originalSatFat: f.saturatedFat,
+        originalTransFat: f.transFat,
+      })));
+      setCapturedUri('text'); // Flag to indicate text mode
+      incrementAiUsage();
+    } catch (err) {
+      Alert.alert(t('common.error'), 'AI analysis failed');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const getAutoMeal = (): Meal => {
     const h = new Date().getHours();
@@ -99,8 +248,50 @@ export default function ScanModal() {
     }
   };
 
+  const handlePickImage = async () => {
+    if (loading || !checkAiLimit()) return;
+
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        quality: 0.3,
+        base64: true,
+      });
+
+      if (!result.canceled && result.assets[0].base64) {
+        setLoading(true);
+        setCapturedUri(result.assets[0].uri);
+
+        const analysis = await analyzeFoodPhoto(result.assets[0].base64, language);
+        setPhotoResult(analysis);
+        
+        setEditedFoods(analysis.foods.map(f => ({
+          ...f,
+          originalGrams: f.grams,
+          originalCal: f.calories,
+          originalProt: f.protein,
+          originalCarbs: f.carbs,
+          originalFat: f.fat,
+          originalSugar: f.sugar,
+          originalFiber: f.fiber,
+          originalSodium: f.sodium,
+          originalIron: f.iron,
+          originalSatFat: f.saturatedFat,
+          originalTransFat: f.transFat,
+        })));
+        incrementAiUsage();
+      }
+    } catch (err: any) {
+      console.error('Picker Error:', err);
+      Alert.alert(t('scan.analysisFailed'), t('scan.analysisFailedSub', { error: err?.message || err }));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleTakePhoto = async () => {
-    if (loading || !cameraRef.current) return;
+    if (loading || !cameraRef.current || !checkAiLimit()) return;
     setLoading(true);
 
     try {
@@ -129,9 +320,10 @@ export default function ScanModal() {
         originalSatFat: f.saturatedFat,
         originalTransFat: f.transFat,
       })));
+      incrementAiUsage();
     } catch (err: any) {
       console.error('Analysis Error:', err);
-      Alert.alert('Analysis Failed', `Could not analyze the food photo.\n\nError: ${err?.message || err}`, [
+      Alert.alert(t('scan.analysisFailed'), t('scan.analysisFailedSub', { error: err?.message || err }), [
         { text: 'OK' },
       ]);
     } finally {
@@ -311,40 +503,126 @@ export default function ScanModal() {
     );
   } else {
     content = (
-      <View style={s.container}>
+      <View style={[s.container, { backgroundColor: '#000' }]}>
         <CameraView
           ref={cameraRef}
           style={StyleSheet.absoluteFill}
-          facing="back"
+          facing={facing}
+          flash={flash}
+          enableTorch={flash === 'on'}
           onBarcodeScanned={mode === 'barcode' && !scanned ? handleBarcode : undefined}
           barcodeScannerSettings={mode === 'barcode' ? { barcodeTypes: ['ean13', 'ean8', 'upc_a', 'upc_e', 'qr', 'code128'] } : undefined}
         />
+
         <View style={s.overlay}>
           <View style={s.header}>
-            <TouchableOpacity style={s.closeBtn} onPress={() => router.back()}><Text style={s.closeText}>✕</Text></TouchableOpacity>
-            <Text style={s.title}>{mode === 'barcode' ? t('scan.barcodeTitle') : t('scan.photoTitle')}</Text>
-            <View style={{ width: 40 }} />
+            <TouchableOpacity style={s.closeBtn} onPress={() => router.back()}>
+            <Text style={s.closeText}>✕</Text>
+          </TouchableOpacity>
+          <Text style={[s.title, { color: '#fff' }]}>FitGO AI</Text>
+          <TouchableOpacity 
+            style={s.closeBtn} 
+            onPress={() => setFlash(f => f === 'off' ? 'on' : f === 'on' ? 'auto' : 'off')}
+          >
+            <Text style={{ fontSize: 18 }}>{flash === 'off' ? '🌑' : flash === 'on' ? '💡' : 'A💡'}</Text>
+          </TouchableOpacity>
+        </View>
+
+          <View style={s.tabContainer}>
+            <View style={[s.modeRow, { backgroundColor: 'rgba(255,255,255,0.1)' }]}>
+              <TouchableOpacity 
+                style={[s.modePill, mode === 'barcode' && [s.modePillActive, { backgroundColor: colors.tabActive }]]} 
+                onPress={() => setMode('barcode')}
+              >
+                <Text style={[s.modeText, mode === 'barcode' && s.modeTextActive]} numberOfLines={1} adjustsFontSizeToFit>🔍 {t('scan.barcode')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[s.modePill, mode === 'photo' && [s.modePillActive, { backgroundColor: colors.tabActive }]]} 
+                onPress={() => setMode('photo')}
+              >
+                <Text style={[s.modeText, mode === 'photo' && s.modeTextActive]} numberOfLines={1} adjustsFontSizeToFit>📸 {t('scan.photo')}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[s.modePill, mode === 'text' && [s.modePillActive, { backgroundColor: colors.tabActive }]]} 
+                onPress={() => setMode('text')}
+              >
+                <Text style={[s.modeText, mode === 'text' && s.modeTextActive]} numberOfLines={1} adjustsFontSizeToFit>✍️ {t('scan.text')}</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <View style={s.modeRow}>
-            <TouchableOpacity style={[s.modePill, mode === 'barcode' && { borderColor: colors.primary, backgroundColor: 'rgba(124,92,252,0.3)' }]} onPress={() => { setMode('barcode'); setScanned(false); }}><Text style={[s.modeText, mode === 'barcode' && s.modeTextActive]}>🔍 {t('scan.barcode')}</Text></TouchableOpacity>
-            <TouchableOpacity style={[s.modePill, mode === 'photo' && { borderColor: colors.primary, backgroundColor: 'rgba(124,92,252,0.3)' }]} onPress={() => { setMode('photo'); setScanned(false); }}><Text style={[s.modeText, mode === 'photo' && s.modeTextActive]}>📸 {t('scan.photo')}</Text></TouchableOpacity>
-          </View>
+
           <View style={s.viewfinderWrap}>
             {mode === 'barcode' ? (
-              <View style={s.viewfinder}>
-                <View style={[s.corner, s.tl, { borderColor: colors.primary }]} /><View style={[s.corner, s.tr, { borderColor: colors.primary }]} /><View style={[s.corner, s.bl, { borderColor: colors.primary }]} /><View style={[s.corner, s.br, { borderColor: colors.primary }]} />
-              </View>
+              <>
+                <View style={s.viewfinder}>
+                  <View style={[s.corner, s.tl, { borderColor: colors.tabActive }]} />
+                  <View style={[s.corner, s.tr, { borderColor: colors.tabActive }]} />
+                  <View style={[s.corner, s.bl, { borderColor: colors.tabActive }]} />
+                  <View style={[s.corner, s.br, { borderColor: colors.tabActive }]} />
+                </View>
+                <Text style={s.scanHint}>{scanned ? `✅ ${t('scan.barcodeScanned')}` : t('scan.barcodeHint')}</Text>
+              </>
+            ) : mode === 'photo' ? (
+              <>
+                <View style={s.viewfinder}>
+                  <View style={[s.corner, s.tl, { borderColor: '#fff' }]} />
+                  <View style={[s.corner, s.tr, { borderColor: '#fff' }]} />
+                  <View style={[s.corner, s.bl, { borderColor: '#fff' }]} />
+                  <View style={[s.corner, s.br, { borderColor: '#fff' }]} />
+                </View>
+
+                <View style={s.photoInstructions}>
+                  <Text style={s.photoHint}>{t('scan.photoHint') || 'Point at your meal'}</Text>
+                  <Text style={s.photoHintSub}>{t('scan.photoHintSub') || 'AI will analyze and estimate nutrition'}</Text>
+                </View>
+
+                <View style={s.statusWrap}>
+                  <View style={s.photoControls}>
+                    <TouchableOpacity style={s.galleryBtn} onPress={handlePickImage}>
+                      <Text style={{ fontSize: 20 }}>🖼️</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={s.shutterOuter} onPress={handleTakePhoto} disabled={loading}>
+                      <LinearGradient colors={[colors.tabActive, colors.tabActive + 'CC']} style={s.shutterInner}>
+                        {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.shutterIcon}>📸</Text>}
+                      </LinearGradient>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity style={s.galleryBtn} onPress={() => setFacing(f => f === 'back' ? 'front' : 'back')}>
+                      <Text style={{ fontSize: 20 }}>🔄</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {!profile?.isPro && <Text style={s.limitNote}>{t('scan.aiLimitNote', { count: 15 - aiUsageCount }) || `${15 - aiUsageCount} AI scans left today`}</Text>}
+                </View>
+              </>
             ) : (
-              <View style={s.photoInstructions}><Text style={s.photoEmoji}>🍽️</Text><Text style={s.photoHint}>{t('scan.photoHint')}</Text><Text style={s.photoHintSub}>{t('scan.photoHintSub')}</Text></View>
-            )}
-          </View>
-          <View style={s.statusWrap}>
-            {mode === 'barcode' ? (
-              <View style={s.statusPill}>
-                {loading ? <ActivityIndicator color={colors.primary} size="small" /> : <Text style={s.statusText}>{scanned ? `✅ ${t('scan.barcodeScanned') || 'Scanned'}` : (t('scan.pointBarcode') || 'Point at barcode')}</Text>}
-              </View>
-            ) : (
-              loading ? <View style={s.statusPill}><ActivityIndicator color={colors.primary} size="small" /><Text style={s.statusText}>{t('scan.analyzing')}</Text></View> : <TouchableOpacity style={s.shutterOuter} onPress={handleTakePhoto} activeOpacity={0.8}><LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.shutterInner}><Text style={s.shutterIcon}>📸</Text></LinearGradient></TouchableOpacity>
+              <ScrollView contentContainerStyle={s.textInputWrap} style={{ width: '100%' }}>
+                <View style={[s.textCard, { backgroundColor: 'rgba(255,255,255,0.05)', borderColor: colors.border }]}>
+                  <TextInput
+                    style={[s.textInputArea, { color: '#fff' }]}
+                    placeholder={t('scan.textPlaceholder') || "Describe what you ate..."}
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    multiline
+                    value={textInput}
+                    onChangeText={setTextInput}
+                  />
+                  <TouchableOpacity 
+                    style={[s.voiceBtn, recorderState.isRecording && { backgroundColor: colors.error }]} 
+                    onPressIn={startRecording}
+                    onPressOut={stopRecording}
+                  >
+                    <Text style={{ fontSize: 24 }}>{recorderState.isRecording ? '🛑' : '🎤'}</Text>
+                    {!profile?.isPro && <View style={s.lockBadge}><Text style={{ fontSize: 10 }}>🔒</Text></View>}
+                  </TouchableOpacity>
+                </View>
+                {recorderState.isRecording && <Text style={[s.recordingStatus, { color: colors.error }]}>{t('scan.recording') || 'Recording...'}</Text>}
+                <TouchableOpacity style={s.analyzeBtn} onPress={handleTextAnalyze} disabled={loading || !textInput.trim()}>
+                  <LinearGradient colors={[colors.tabActive, colors.tabActive + 'CC']} style={s.analyzeGrad}>
+                    {loading ? <ActivityIndicator color="#fff" size="small" /> : <Text style={s.analyzeText}>{t('scan.analyze') || 'Analyze with AI'}</Text>}
+                  </LinearGradient>
+                </TouchableOpacity>
+                {!profile?.isPro && <Text style={s.limitNote}>{t('scan.aiLimitNote', { count: 15 - aiUsageCount }) || `${15 - aiUsageCount} AI scans left today`}</Text>}
+              </ScrollView>
             )}
           </View>
         </View>
@@ -372,38 +650,44 @@ const CORNER_SIZE = 24;
 const CORNER_THICKNESS = 3;
 
 const s = StyleSheet.create({
-  container:    { flex: 1, backgroundColor: '#000' },
+  container:    { flex: 1 },
   center:       { flex: 1, justifyContent: 'center', alignItems: 'center', padding: Spacing.base },
   noPermText:   { fontSize: 16, textAlign: 'center', marginBottom: 20 },
   permBtn:      { borderRadius: Radius.md, overflow: 'hidden' },
   permGrad:     { paddingHorizontal: 24, paddingVertical: 14 },
   permBtnText:  { color: '#fff', fontWeight: '700', fontSize: 16 },
   overlay:      { flex: 1 },
-  header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.base, paddingTop: 56, paddingBottom: 12 },
-  closeBtn:     { width: 40, height: 40, borderRadius: 20, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' },
-  closeText:    { color: '#fff', fontSize: 16, fontWeight: '700' },
-  title:        { fontSize: 18, fontWeight: '700', color: '#fff' },
-  modeRow:      { flexDirection: 'row', gap: 8, paddingHorizontal: Spacing.base, marginBottom: 8 },
-  modePill:     { flex: 1, borderRadius: Radius.full, paddingVertical: 10, alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.15)' },
-  modeText:     { color: 'rgba(255,255,255,0.6)', fontSize: 14, fontWeight: '600' },
+  header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.base, paddingTop: 56, paddingBottom: 16 },
+  closeBtn:     { width: 36, height: 36, borderRadius: 18, justifyContent: 'center', alignItems: 'center' },
+  closeText:    { color: '#fff', fontSize: 14, fontWeight: '700' },
+  title:        { fontSize: 17, fontWeight: '800', letterSpacing: 0.5 },
+  tabContainer: { paddingHorizontal: Spacing.base, marginBottom: 16 },
+  modeRow:      { flexDirection: 'row', borderRadius: Radius.full, padding: 4, overflow: 'hidden' },
+  modePill:     { flex: 1, borderRadius: Radius.full, paddingVertical: 10, alignItems: 'center', justifyContent: 'center' },
+  modePillActive:{ 
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  modeText:     { color: 'rgba(255,255,255,0.4)', fontSize: 13, fontWeight: '700' },
   modeTextActive:{ color: '#fff' },
   viewfinderWrap:{ flex: 1, justifyContent: 'center', alignItems: 'center' },
-  viewfinder:   { width: 260, height: 180 },
+  viewfinder:   { width: 280, height: 200 },
   corner:       { position: 'absolute', width: CORNER_SIZE, height: CORNER_SIZE, borderWidth: CORNER_THICKNESS },
-  tl:           { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 4 },
-  tr:           { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: 4 },
-  bl:           { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 4 },
-  br:           { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0, borderBottomRightRadius: 4 },
-  photoInstructions: { alignItems: 'center', gap: 12, paddingHorizontal: 40 },
-  photoEmoji:   { fontSize: 48 },
-  photoHint:    { fontSize: 18, fontWeight: '700', color: '#fff', textAlign: 'center' },
-  photoHintSub: { fontSize: 13, color: 'rgba(255,255,255,0.6)', textAlign: 'center' },
-  statusWrap:   { padding: Spacing.base, paddingBottom: 60, alignItems: 'center' },
-  statusPill:   { flexDirection: 'row', gap: 8, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: Radius.full, paddingHorizontal: 20, paddingVertical: 12, alignItems: 'center' },
-  statusText:   { color: '#fff', fontSize: 14, fontWeight: '500' },
-  shutterOuter: { width: 72, height: 72, borderRadius: 36, borderWidth: 3, borderColor: 'rgba(255,255,255,0.4)', justifyContent: 'center', alignItems: 'center' },
-  shutterInner: { width: 60, height: 60, borderRadius: 30, justifyContent: 'center', alignItems: 'center' },
-  shutterIcon:  { fontSize: 28 },
+  tl:           { top: 0, left: 0, borderRightWidth: 0, borderBottomWidth: 0, borderTopLeftRadius: 16 },
+  tr:           { top: 0, right: 0, borderLeftWidth: 0, borderBottomWidth: 0, borderTopRightRadius: 16 },
+  bl:           { bottom: 0, left: 0, borderRightWidth: 0, borderTopWidth: 0, borderBottomLeftRadius: 16 },
+  br:           { bottom: 0, right: 0, borderLeftWidth: 0, borderTopWidth: 0, borderBottomRightRadius: 16 },
+  photoInstructions: { position: 'absolute', top: 60, width: '100%', alignItems: 'center', paddingHorizontal: 40 },
+  photoHint:    { fontSize: 22, fontWeight: '800', color: '#fff', textAlign: 'center', marginBottom: 8, textShadowColor: 'rgba(0,0,0,0.5)', textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 10 },
+  photoHintSub: { fontSize: 15, color: 'rgba(255,255,255,0.8)', textAlign: 'center', fontWeight: '500' },
+  scanHint:     { marginTop: 24, fontSize: 15, color: 'rgba(255,255,255,0.6)', fontWeight: '600' },
+  statusWrap:   { position: 'absolute', bottom: 0, width: '100%', padding: Spacing.base, paddingBottom: 60, alignItems: 'center' },
+  shutterOuter: { width: 84, height: 84, borderRadius: 42, backgroundColor: 'rgba(255,255,255,0.2)', padding: 4, justifyContent: 'center', alignItems: 'center' },
+  shutterInner: { width: '100%', height: '100%', borderRadius: 40, justifyContent: 'center', alignItems: 'center' },
+  shutterIcon:  { fontSize: 32 },
   resultHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: Spacing.base, paddingTop: 56, paddingBottom: 12 },
   capturedImage:{ width: '100%', height: 200, borderRadius: Radius.xl, marginBottom: Spacing.base },
   confidenceBadge: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: Radius.full, borderWidth: 1.5, paddingHorizontal: 12, paddingVertical: 6, marginBottom: Spacing.base },
@@ -430,4 +714,16 @@ const s = StyleSheet.create({
   addAllBtn:     { flex: 2, borderRadius: Radius.md, overflow: 'hidden' },
   addAllGrad:    { paddingVertical: 14, alignItems: 'center' },
   addAllText:    { color: '#fff', fontWeight: '700', fontSize: 15 },
+  photoControls: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 48, width: '100%', marginBottom: 12 },
+  galleryBtn:    { width: 48, height: 48, borderRadius: 24, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
+  textInputWrap: { width: '100%', padding: Spacing.base, gap: 16, paddingTop: 12 },
+  textCard:      { borderRadius: Radius.xl, borderWidth: 1, padding: 16, minHeight: 160, flexDirection: 'row', alignItems: 'flex-end' },
+  textInputArea: { flex: 1, height: '100%', fontSize: 17, textAlignVertical: 'top', paddingTop: 0, fontWeight: '500' },
+  voiceBtn:      { width: 52, height: 52, borderRadius: 26, backgroundColor: 'rgba(255,255,255,0.1)', justifyContent: 'center', alignItems: 'center' },
+  lockBadge:     { position: 'absolute', top: -2, right: -2, backgroundColor: '#FFD700', borderRadius: 10, padding: 3 },
+  analyzeBtn:    { borderRadius: Radius.xl, overflow: 'hidden', marginTop: 8 },
+  analyzeGrad:   { paddingVertical: 16, alignItems: 'center' },
+  analyzeText:   { color: '#fff', fontWeight: '800', fontSize: 16, letterSpacing: 0.5 },
+  recordingStatus: { textAlign: 'center', fontSize: 15, fontWeight: '700', letterSpacing: 1 },
+  limitNote:     { textAlign: 'center', fontSize: 13, color: 'rgba(255,255,255,0.4)', marginTop: 12, fontWeight: '600' },
 });

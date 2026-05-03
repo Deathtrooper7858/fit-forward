@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 export default function CalendarModal() {
   const { t } = useTranslation();
   const colors = useTheme();
-  const { streakDays, selectedDate, setDate } = useNutritionStore();
+  const { streakDays, plannedDays, activeDays, selectedDate, setDate } = useNutritionStore();
   const { profile } = useAuthStore();
 
   const [viewDate, setViewDate] = useState(new Date(selectedDate));
@@ -78,10 +78,10 @@ export default function CalendarModal() {
               <Text style={{ fontSize: 40 }}>🔥</Text>
             </View>
             <Text style={[s.flameLabel, { color: colors.textPrimary }]}>{t('planner.planned')}</Text>
-            <Text style={[s.flameNum, { color: '#22C55E' }]}>0</Text>
-            <Text style={[s.flameSub, { color: colors.textSecondary }]}>{t('planner.currentStreak')}</Text>
+            <Text style={[s.flameNum, { color: '#22C55E' }]}>{plannedDays}</Text>
+            <Text style={[s.flameSub, { color: colors.textSecondary }]}>{t('planner.totalDays')}</Text>
             <View style={[s.divider, { backgroundColor: colors.border }]} />
-            <Text style={[s.flameBest, { color: colors.textPrimary }]}>🏆 Récord: 0</Text>
+            <Text style={[s.flameBest, { color: colors.textPrimary }]}>🏆 Récord: {plannedDays}</Text>
           </View>
         </View>
 
@@ -110,6 +110,7 @@ export default function CalendarModal() {
               const day = i + 1;
               const dayDate = new Date(calendarData.year, calendarData.month, day).toLocaleDateString('en-CA');
               const isSelected = dayDate === selectedDate;
+              const isActive = activeDays[dayDate];
               
               return (
                 <TouchableOpacity 
@@ -122,7 +123,7 @@ export default function CalendarModal() {
                       {day}
                     </Text>
                   </View>
-                  <View style={[s.dot, { backgroundColor: colors.textMuted }]} />
+                  <View style={[s.dot, { backgroundColor: isActive ? '#22C55E' : colors.textMuted }]} />
                 </TouchableOpacity>
               );
             })}
