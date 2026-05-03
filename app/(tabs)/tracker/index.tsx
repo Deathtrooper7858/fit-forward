@@ -256,9 +256,7 @@ export default function TrackerScreen() {
               <MacroBar label={t('profile.fat')} current={fat} target={macros.fat} color={colors.fat} />
             </View>
 
-            <TouchableOpacity style={[s.endDayBtn, { backgroundColor: colors.border }]}>
-              <Text style={[s.endDayText, { color: colors.textMuted }]}>{t('tracker.endDay')}</Text>
-            </TouchableOpacity>
+
           </View>
 
           {/* Other Nutrients Card */}
@@ -485,8 +483,7 @@ const s = StyleSheet.create({
   
   macrosWrap:    { flexDirection: 'row', justifyContent: 'space-between', marginTop: 16, gap: 20 },
   
-  endDayBtn:     { borderRadius: Radius.full, paddingVertical: 14, alignItems: 'center', marginTop: 30 },
-  endDayText:    { fontSize: 16, fontWeight: '600' },
+
 
   cardHeader:    { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 },
   cardTitle:     { fontSize: 18, fontWeight: '700' },

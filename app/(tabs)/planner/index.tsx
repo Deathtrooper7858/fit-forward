@@ -9,6 +9,8 @@ import { generateMealPlan, generateWeeklyAnalysis } from '../../../services/groq
 import { supabase } from '../../../services/supabase';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../hooks/useTheme';
+import { SuccessModal } from '../../../components/SuccessModal';
+
 
 const DAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
@@ -30,7 +32,9 @@ export default function PlannerScreen() {
   const [plans, setPlans]         = useState<Record<string, PlanItem[]>>({});
   const [analysis, setAnalysis]   = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
   const { profile }               = useAuthStore();
+
   const { streakDays, totals }    = useNutritionStore();
   const isPro                     = profile?.isPro ?? false;
 
@@ -114,7 +118,8 @@ export default function PlannerScreen() {
         }
       }
 
-      Alert.alert('✅ ' + t('common.success'), t('planner.planReady'));
+      setShowSuccess(true);
+
     } catch (err: any) {
       Alert.alert(t('common.error'), err?.message ?? t('planner.analysisFailedSub'));
     } finally {
@@ -245,7 +250,15 @@ export default function PlannerScreen() {
 
         <View style={{ height: 32 }} />
       </ScrollView>
+
+      <SuccessModal
+        visible={showSuccess}
+        title={t('common.success')}
+        message={t('planner.planReady')}
+        onClose={() => setShowSuccess(false)}
+      />
     </SafeAreaView>
+
   );
 }
 

@@ -13,6 +13,8 @@ import { decode } from 'base64-arraybuffer';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
+import { SuccessModal } from '../../components/SuccessModal';
+
 
 interface Field {
   key: keyof BodyMeasurement;
@@ -41,6 +43,8 @@ export default function BodyMeasurementsModal() {
   const [values, setValues] = useState<Partial<Record<keyof BodyMeasurement, string>>>({});
   const [photo, setPhoto] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+
 
   const pickImage = async () => {
     const { granted } = await ImagePicker.requestCameraPermissionsAsync();
@@ -119,9 +123,8 @@ export default function BodyMeasurementsModal() {
         });
       }
 
-      Alert.alert('✅ ' + t('common.success'), t('planner.planReady'), [
-        { text: 'OK', onPress: () => router.back() },
-      ]);
+      setShowSuccess(true);
+
     } catch (err) {
       Alert.alert('Error', 'Failed to save measurements.');
     } finally {
@@ -235,7 +238,18 @@ export default function BodyMeasurementsModal() {
           <View style={{ height: 40 }} />
         </ScrollView>
       </KeyboardAvoidingView>
+
+      <SuccessModal
+        visible={showSuccess}
+        title={t('common.success')}
+        message={t('planner.planReady')}
+        onClose={() => {
+          setShowSuccess(false);
+          router.back();
+        }}
+      />
     </SafeAreaView>
+
   );
 }
 
