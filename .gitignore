@@ -3,6 +3,7 @@ node_modules/
 dist/
 build/
 .env
+.env.local
 *.jks
 *.p8
 *.p12

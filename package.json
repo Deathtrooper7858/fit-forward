@@ -4,9 +4,15 @@
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start",
+    "start:prod": "cross-env NODE_ENV=production expo start --no-dev",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "audit:prod": "npm audit --omit=dev"
+  },
+  "overrides": {
+    "postcss": "^8.5.10",
+    "uuid": "^14.0.0"
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
@@ -48,8 +54,12 @@
     "zustand": "^5.0.12"
   },
   "devDependencies": {
+    "@babel/core": "^7.29.0",
     "@types/react": "~19.2.10",
     "babel-preset-expo": "~55.0.19",
+    "cross-env": "^10.1.0",
+    "electron-to-chromium": "^1.5.349",
+    "semver": "^7.7.4",
     "typescript": "~5.9.2"
   },
   "private": true

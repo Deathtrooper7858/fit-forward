@@ -2,8 +2,10 @@
   "extends": "expo/tsconfig.base",
   "compilerOptions": {
     "strict": true,
-    "jsx": "react-jsx",
+    "strictNullChecks": true,
+    "target": "es2021",
     "module": "esnext",
+    "jsx": "react-jsx",
     "moduleResolution": "bundler"
   },
   "include": [

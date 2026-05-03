@@ -4,8 +4,8 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTheme } from '../../../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { useLocalSearchParams } from 'expo-router';
-import NutritionistScreen from '../../components/NutritionistScreen';
-import TrainerScreen from '../../components/TrainerScreen';
+import NutritionistScreen from '../../../components/NutritionistScreen';
+import TrainerScreen from '../../../components/TrainerScreen';
 
 export default function CoachIndex() {
   const params = useLocalSearchParams();

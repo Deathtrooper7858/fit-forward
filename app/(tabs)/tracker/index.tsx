@@ -72,7 +72,7 @@ export default function TrackerScreen() {
     todayLogs, fetchLogs, selectedDate, setDate, streakDays, 
     addWater, dailyWater, dailySteps, setSteps, addActivityLog,
     removeActivityLog, updateActivityLog,
-    addSteps, neatLevel, exerciseLevel, activityLogs, totals
+    addSteps, dailyNeat, dailyExercise, activityLogs, totals
   } = useNutritionStore();
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [isFetching, setIsFetching] = useState(false);
@@ -125,7 +125,10 @@ export default function TrackerScreen() {
   const pct = Math.min(calories / Math.max(target, 1), 1);
   const strokeDashoffset = ARC_CIRCUMFERENCE - pct * ARC_CIRCUMFERENCE;
 
-  const baseline = (NEAT_CALORIES[neatLevel] || 0) + (EXERCISE_CALORIES[exerciseLevel] || 0);
+  const currentNeat = dailyNeat[selectedDate] || 'standing_sometimes';
+  const currentExercise = dailyExercise[selectedDate] || '5-6';
+
+  const baseline = (NEAT_CALORIES[currentNeat] || 0) + (EXERCISE_CALORIES[currentExercise] || 0);
   
   const dayActivities = useMemo(() => {
     return activityLogs.filter(a => a.loggedAt.startsWith(selectedDate));
@@ -369,11 +372,11 @@ export default function TrackerScreen() {
               <Text style={{ fontSize: 24 }}>🔥</Text>
               <View>
                 <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>{t('tracker.activity')}</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t(`exercise.${exerciseLevel}`)}</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t(`exercise.${currentExercise}`)}</Text>
               </View>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>{EXERCISE_CALORIES[exerciseLevel] || 0} {t('tracker.kcal')}</Text>
+              <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>{EXERCISE_CALORIES[currentExercise] || 0} {t('tracker.kcal')}</Text>
               <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t('tracker.weeklyAverage')}</Text>
             </View>
           </TouchableOpacity>
@@ -383,10 +386,10 @@ export default function TrackerScreen() {
               <Text style={{ fontSize: 24 }}>🏃</Text>
               <View>
                 <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>{t('tracker.lifestyle')}</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t(`neat.${neatLevel}`)}</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t(`neat.${currentNeat}`)}</Text>
               </View>
             </View>
-            <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>{NEAT_CALORIES[neatLevel] || 0} kcal</Text>
+            <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>{NEAT_CALORIES[currentNeat] || 0} kcal</Text>
           </TouchableOpacity>
 
           {dayActivities.map(act => (

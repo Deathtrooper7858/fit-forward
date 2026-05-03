@@ -153,8 +153,6 @@ interface NutritionState {
   dailySteps:    Record<string, number>; // date -> steps
   dailySleep:    Record<string, number>; // date -> hours
   activityCals:  number;
-  neatLevel:     string;
-  exerciseLevel: string;
   activityLogs: ActivityLog[];
   addLog:       (log: FoodLog) => void;
   removeLog:    (id: string) => void;
@@ -172,6 +170,8 @@ interface NutritionState {
   removeActivityLog: (id: string) => void;
   updateActivityLog: (id: string, updates: Partial<ActivityLog>) => void;
   setActivityLogs: (activities: ActivityLog[]) => void;
+  dailyNeat:     Record<string, string>;
+  dailyExercise: Record<string, string>;
   setNeat:      (level: string) => void;
   setExerciseLevel: (level: string) => void;
   addFavorite:  (food: FoodItem) => void;
@@ -181,6 +181,7 @@ interface NutritionState {
     sugar: number; fiber: number; sodium: number; iron: number; saturatedFat: number; transFat: number;
   };
   fetchLogs: (userId: string, date: string) => Promise<void>;
+  reset: () => void;
 }
 
 export const useNutritionStore = create<NutritionState>()(
@@ -194,8 +195,8 @@ export const useNutritionStore = create<NutritionState>()(
       dailySteps:   {},
       dailySleep:   {},
       activityCals: 0,
-      neatLevel:     'standing_sometimes',
-      exerciseLevel: '5-6',
+      dailyNeat:     {},
+      dailyExercise: {},
       activityLogs: [],
       favoriteFoods: [],
 
@@ -223,8 +224,8 @@ export const useNutritionStore = create<NutritionState>()(
         activityLogs: s.activityLogs.map(a => a.id === id ? { ...a, ...updates } : a)
       })),
       setActivityLogs: (activityLogs) => set({ activityLogs }),
-      setNeat:     (neatLevel) => set({ neatLevel }),
-      setExerciseLevel: (exerciseLevel) => set({ exerciseLevel }),
+      setNeat:     (level) => set((s) => ({ dailyNeat: { ...s.dailyNeat, [s.selectedDate]: level } })),
+      setExerciseLevel: (level) => set((s) => ({ dailyExercise: { ...s.dailyExercise, [s.selectedDate]: level } })),
       addFavorite: (food) => set((s) => ({
         favoriteFoods: s.favoriteFoods.find(f => f.id === food.id)
           ? s.favoriteFoods
@@ -296,6 +297,19 @@ export const useNutritionStore = create<NutritionState>()(
         set({ todayLogs: formattedLogs as any });
       }
       },
+      reset: () => set({
+        todayLogs: [],
+        waterIntake: 0,
+        streakDays: 0,
+        dailyWater: {},
+        dailySteps: {},
+        dailySleep: {},
+        activityCals: 0,
+        dailyNeat: {},
+        dailyExercise: {},
+        activityLogs: [],
+        favoriteFoods: [],
+      }),
     }),
     {
       name: 'ff-nutrition',
@@ -306,8 +320,8 @@ export const useNutritionStore = create<NutritionState>()(
         dailySteps:    s.dailySteps,
         dailySleep:    s.dailySleep,
         activityCals:  s.activityCals,
-        neatLevel:     s.neatLevel,
-        exerciseLevel: s.exerciseLevel,
+        dailyNeat:     s.dailyNeat,
+        dailyExercise: s.dailyExercise,
         activityLogs:  s.activityLogs,
         favoriteFoods: s.favoriteFoods,
         // todayLogs: intentionally NOT persisted — reloaded from Supabase on mount
@@ -341,6 +355,7 @@ interface CoachState {
   incrementCount: () => void;
   resetMessages:  (type: 'nutritionist' | 'trainer') => void;
   checkAndResetDaily: () => void;
+  resetAll: () => void;
 }
 
 export const useCoachStore = create<CoachState>()(
@@ -382,6 +397,15 @@ export const useCoachStore = create<CoachState>()(
           set({ msgCount: 0, lastResetDate: today });
         }
       },
+      resetAll: () => set({
+        nutritionistMessages: [],
+        trainerMessages: [],
+        nutritionistSessions: [],
+        trainerSessions: [],
+        currentNutritionistSessionId: null,
+        currentTrainerSessionId: null,
+        msgCount: 0,
+      }),
     }),
     {
       name: 'ff-coach',
@@ -397,6 +421,7 @@ interface BodyState {
   addMeasurement: (m: BodyMeasurement) => void;
   setMeasurements:(ms: BodyMeasurement[]) => void;
   latest:         () => BodyMeasurement | null;
+  reset:          () => void;
 }
 
 export const useBodyStore = create<BodyState>()(
@@ -408,6 +433,7 @@ export const useBodyStore = create<BodyState>()(
       })),
       setMeasurements: (measurements) => set({ measurements }),
       latest: () => get().measurements[0] ?? null,
+      reset: () => set({ measurements: [] }),
     }),
     {
       name: 'ff-body',
@@ -422,6 +448,7 @@ interface RecipesState {
   favorites:   string[]; // IDs
   setRecipes:  (recipes: Recipe[]) => void;
   toggleFav:   (id: string) => void;
+  reset:       () => void;
 }
 
 export const useRecipesStore = create<RecipesState>()(
@@ -435,6 +462,7 @@ export const useRecipesStore = create<RecipesState>()(
           ? s.favorites.filter(fid => fid !== id)
           : [...s.favorites, id],
       })),
+      reset: () => set({ recipes: [], favorites: [] }),
     }),
     {
       name: 'ff-recipes',
@@ -448,6 +476,7 @@ interface ProgressState {
   photos:     ProgressPhoto[];
   addPhoto:   (p: ProgressPhoto) => void;
   setPhotos:  (ps: ProgressPhoto[]) => void;
+  reset:      () => void;
 }
 
 export const useProgressStore = create<ProgressState>()(
@@ -456,6 +485,7 @@ export const useProgressStore = create<ProgressState>()(
       photos:   [],
       addPhoto: (p) => set((s) => ({ photos: [p, ...s.photos] })),
       setPhotos:(photos) => set({ photos }),
+      reset: () => set({ photos: [] }),
     }),
     {
       name: 'ff-progress',

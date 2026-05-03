@@ -1,8 +1,8 @@
 import React from 'react';
 import { View, Text, StyleSheet, Modal, ScrollView, TouchableOpacity } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '../../hooks/useTheme';
-import { Radius } from '../../constants';
+import { useTheme } from '../hooks/useTheme';
+import { Radius } from '../constants';
 
 interface LanguageModalProps {
   visible: boolean;
@@ -11,7 +11,7 @@ interface LanguageModalProps {
   onClose: () => void;
 }
 
-export function LanguageModal({
+export default function LanguageModal({
   visible, currentLang, onSelect, onClose,
 }: LanguageModalProps) {
   const { t } = useTranslation();

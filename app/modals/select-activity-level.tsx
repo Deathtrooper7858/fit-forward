@@ -18,7 +18,8 @@ const ACTIVITY_OPTIONS = [
 export default function SelectActivityLevelModal() {
   const { t } = useTranslation();
   const colors = useTheme();
-  const { exerciseLevel, setExerciseLevel } = useNutritionStore();
+  const { dailyExercise, setExerciseLevel, selectedDate } = useNutritionStore();
+  const exerciseLevel = dailyExercise[selectedDate] || '5-6';
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
@@ -32,7 +33,8 @@ export default function SelectActivityLevelModal() {
 
       <ScrollView contentContainerStyle={s.content}>
         {ACTIVITY_OPTIONS.map(opt => {
-          const isSelected = exerciseLevel === t(opt.label);
+          const optKey = opt.label.replace('exercise.', '');
+          const isSelected = exerciseLevel === optKey;
           return (
             <TouchableOpacity 
               key={opt.label} 

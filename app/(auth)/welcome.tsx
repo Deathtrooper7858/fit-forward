@@ -6,7 +6,7 @@ import { Spacing, Radius } from '../../constants';
 import { useTheme } from '../../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '../../store';
-import { LanguageModal } from '../components/LanguageModal';
+import LanguageModal from '../../components/LanguageModal';
 import { Settings } from 'lucide-react-native';
 
 export default function WelcomeScreen() {

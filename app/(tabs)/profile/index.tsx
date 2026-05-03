@@ -8,13 +8,16 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import { Colors, Spacing, Radius } from '../../../constants';
-import { useAuthStore, useBodyStore, useSettingsStore } from '../../../store';
+import { 
+  useAuthStore, useBodyStore, useSettingsStore, 
+  useNutritionStore, useCoachStore, useRecipesStore, useProgressStore 
+} from '../../../store';
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '../../../services/supabase';
 import { calculateTDEE, calculateMacros } from '../../../services/foodDatabase';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../hooks/useTheme';
-import { LanguageModal } from '../../components/LanguageModal';
+import LanguageModal from '../../../components/LanguageModal';
 
 // ─── Inline edit modal (cross-platform, replaces Alert.prompt) ────────────────
 function EditModal({
@@ -304,6 +307,13 @@ export default function ProfileScreen() {
       {
         text: t('profile.signOut'), style: 'destructive',
         onPress: async () => {
+          // Deep clear all stores on sign out
+          useNutritionStore.getState().reset();
+          useCoachStore.getState().resetAll();
+          useBodyStore.getState().reset();
+          useRecipesStore.getState().reset();
+          useProgressStore.getState().reset();
+
           await supabase.auth.signOut();
           clearAuth();
           router.replace('/(auth)/welcome');

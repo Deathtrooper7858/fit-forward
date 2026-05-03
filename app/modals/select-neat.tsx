@@ -18,7 +18,8 @@ const NEAT_OPTIONS = [
 export default function SelectNeatModal() {
   const { t } = useTranslation();
   const colors = useTheme();
-  const { neatLevel, setNeat } = useNutritionStore();
+  const { dailyNeat, setNeat, selectedDate } = useNutritionStore();
+  const neatLevel = dailyNeat[selectedDate] || 'standing_sometimes';
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>

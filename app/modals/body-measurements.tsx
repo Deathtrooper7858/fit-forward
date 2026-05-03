@@ -106,16 +106,16 @@ export default function BodyMeasurementsModal() {
         }
 
         await supabase.from('body_measurements').insert({
-          user_id:  profile.id,
-          date:     today,
-          weight:   measurement.weight,
-          body_fat: measurement.bodyFat,
-          waist:    measurement.waist,
-          hips:     measurement.hips,
-          chest:    measurement.chest,
-          arms:     measurement.arms,
-          legs:     measurement.legs,
-          neck:     measurement.neck,
+          user_id:      profile.id,
+          measured_at:  today,
+          weight:       measurement.weight,
+          body_fat_pct: measurement.bodyFat,
+          waist_cm:     measurement.waist,
+          hip_cm:       measurement.hips,
+          chest_cm:     measurement.chest,
+          arms_cm:      measurement.arms,
+          legs_cm:      measurement.legs,
+          neck_cm:      measurement.neck,
         });
       }
 
