@@ -38,7 +38,7 @@ function NavigationGuard() {
     } else {
       const allSegments = segments as string[];
       if (inAuthGroup || inOnboarding || allSegments.length === 0) {
-        router.replace('/(tabs)/dashboard');
+        router.replace('/(tabs)/tracker');
       }
     }
   }, [session, profile, isLoading, segments]);
@@ -165,6 +165,10 @@ export default function RootLayout() {
         />
         <Stack.Screen
           name="modals/body-measurements"
+          options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
+        />
+        <Stack.Screen
+          name="modals/sleep"
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
       </Stack>

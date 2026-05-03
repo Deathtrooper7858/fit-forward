@@ -14,6 +14,7 @@ import { supabase } from '../../../services/supabase';
 import { calculateTDEE, calculateMacros } from '../../../services/foodDatabase';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from '../../../hooks/useTheme';
+import { LanguageModal } from '../../components/LanguageModal';
 
 // ─── Inline edit modal (cross-platform, replaces Alert.prompt) ────────────────
 function EditModal({
@@ -72,51 +73,6 @@ const em = StyleSheet.create({
   saveText:  { color: '#fff', fontWeight: '700' },
 });
 
-// ─── Language Modal ───────────────────────────────────────────────────────────
-function LanguageModal({
-  visible, currentLang, onSelect, onClose,
-}: {
-  visible: boolean; currentLang: string; onSelect: (lang: any) => void; onClose: () => void;
-}) {
-  const { t } = useTranslation();
-  const colors = useTheme();
-  
-  const languages = [
-    { id: 'en', name: 'English' },
-    { id: 'es', name: 'Español' },
-    { id: 'fr', name: 'Français' },
-    { id: 'pt', name: 'Português' },
-    { id: 'it', name: 'Italiano' },
-    { id: 'de', name: 'Deutsch' },
-    { id: 'ru', name: 'Русский' },
-  ];
-
-  return (
-    <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
-      <View style={em.overlay}>
-        <View style={[em.box, { backgroundColor: colors.surface, borderColor: colors.border, padding: 0 }]}>
-          <Text style={[em.title, { color: colors.textPrimary, margin: 24, marginBottom: 16 }]}>{t('profile.language')}</Text>
-          <ScrollView style={{ maxHeight: 300 }}>
-            {languages.map((l) => (
-              <TouchableOpacity
-                key={l.id}
-                style={{ padding: 16, paddingHorizontal: 24, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: currentLang === l.id ? colors.primary + '22' : 'transparent' }}
-                onPress={() => { onSelect(l.id); onClose(); }}
-              >
-                <Text style={{ fontSize: 16, color: currentLang === l.id ? colors.primary : colors.textPrimary, fontWeight: currentLang === l.id ? '700' : '400' }}>{l.name}</Text>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-          <View style={{ padding: 16, borderTopWidth: 1, borderTopColor: colors.border, flexDirection: 'row' }}>
-            <TouchableOpacity style={[em.cancelBtn, { borderColor: colors.border }]} onPress={onClose}>
-              <Text style={[em.cancelText, { color: colors.textSecondary }]}>{t('common.cancel')}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-    </Modal>
-  );
-}
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 function StatCard({ label, value, unit, color, onPress }: {
@@ -412,13 +368,13 @@ export default function ProfileScreen() {
               <Text style={s.proBadgeText}>🛡️ Administrator</Text>
             </LinearGradient>
           ) : profile?.isPro ? (
-            <LinearGradient colors={['#F59E0B', '#D97706']} style={s.proBadge}>
+            <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.proBadge}>
               <Text style={s.proBadgeText}>⭐ Pro Member</Text>
             </LinearGradient>
           ) : (
             <TouchableOpacity style={s.upgradeBtn} onPress={() => router.push('/modals/paywall')}>
-              <LinearGradient colors={['#F59E0B', '#D97706']} style={s.upgradeGrad}>
-                <Text style={s.upgradeText}>Upgrade to Pro 🚀</Text>
+              <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.upgradeGrad}>
+                <Text style={s.upgradeText}>{t('profile.upgradePro')} 🚀</Text>
               </LinearGradient>
             </TouchableOpacity>
           )}
@@ -426,9 +382,9 @@ export default function ProfileScreen() {
 
         {/* Stats */}
         <View style={s.statsRow}>
-          <StatCard label={t('profile.weight')}  value={profile?.weight ?? '--'}         unit="kg"   color={colors.primary}   onPress={() => openEdit('weight', t('profile.weight'), t('profile.enterWeight'), 'numeric')} />
-          <StatCard label={t('profile.calories') || 'Calories'} value={profile?.targetCalories ?? '--'} unit="kcal" color={colors.accent} />
-          <StatCard label={t('profile.bmi') || 'BMI'}      value={bmi}                             unit="bmi"  color={colors.secondary} />
+          <StatCard label={t('profile.weight')}  value={profile?.weight ?? '--'}         unit={t('profile.kg')}   color={colors.primary}   onPress={() => openEdit('weight', t('profile.weight'), t('profile.enterWeight'), 'numeric')} />
+          <StatCard label={t('profile.calories')} value={profile?.targetCalories ?? '--'} unit={t('tracker.kcal')} color={colors.accent} />
+          <StatCard label={t('profile.bmi')}      value={bmi}                             unit={t('profile.bmi')}  color={colors.secondary} />
         </View>
 
         {/* Goal banner */}
@@ -455,19 +411,19 @@ export default function ProfileScreen() {
         {/* Settings sections */}
         <View style={[s.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[s.sectionTitle, { color: colors.textMuted }]}>{t('profile.bodyHealth')}</Text>
-          <MenuRow icon="📏" label={t('profile.height')}       value={`${profile?.height ?? '--'} cm`} onPress={() => openEdit('height', t('profile.height'), t('profile.enterHeight'), 'numeric')} />
-          <MenuRow icon="⚖️" label={t('profile.weight')}       value={`${profile?.weight ?? '--'} kg`} onPress={() => openEdit('weight', t('profile.weight'), t('profile.enterWeight'), 'numeric')} />
-          <MenuRow icon="🎂" label={t('profile.age')}          value={`${profile?.age ?? '--'} yrs`}  onPress={() => openEdit('age', t('profile.age'), t('profile.enterAge'), 'numeric')} />
+          <MenuRow icon="📏" label={t('profile.height')}       value={`${profile?.height ?? '--'} ${t('profile.cm')}`} onPress={() => openEdit('height', t('profile.height'), t('profile.enterHeight'), 'numeric')} />
+          <MenuRow icon="⚖️" label={t('profile.weight')}       value={`${profile?.weight ?? '--'} ${t('profile.kg')}`} onPress={() => openEdit('weight', t('profile.weight'), t('profile.enterWeight'), 'numeric')} />
+          <MenuRow icon="🎂" label={t('profile.age')}          value={`${profile?.age ?? '--'} ${t('profile.ageYears')}`}  onPress={() => openEdit('age', t('profile.age'), t('profile.enterAge'), 'numeric')} />
           <MenuRow icon="⚧️" label={t('profile.sex')}          value={profile?.sex ? (profile.sex === 'male' ? t('profile.male') : t('profile.female')) : '--'} onPress={handleEditSex} />
           <MenuRow icon="🏃" label={t('profile.activity')}     value={profile?.activityLevel ? t(`profile.${profile.activityLevel}`) : '--'} onPress={handleEditActivity} />
           <MenuRow icon="📊" label={t('profile.measurements')} onPress={() => router.push('/modals/body-measurements')} />
-          <MenuRow icon="🎯" label={t('profile.recalculate')} onPress={handleEditGoal} />
+          <MenuRow icon="🔄" label={t('profile.recalculate')} onPress={handleEditGoal} />
         </View>
 
         <View style={[s.section, { backgroundColor: colors.surface, borderColor: colors.border }]}>
           <Text style={[s.sectionTitle, { color: colors.textMuted }]}>{t('profile.accountApp')}</Text>
           <MenuRow icon="👤" label={t('profile.editName')} onPress={() => openEdit('name', t('profile.editName'), t('profile.enterName'))} />
-          <MenuRow icon="🍽️" label={t('profile.dietary')} value={profile?.restrictions?.join(', ') || 'None'} onPress={() => openEdit('restrictions', t('profile.dietary'), 'e.g. Vegan, Nut-free', 'default')} />
+          <MenuRow icon="🍽️" label={t('profile.dietary')} value={profile?.restrictions?.join(', ') || t('profile.none')} onPress={() => openEdit('restrictions', t('profile.dietary'), t('profile.dietarySub'), 'default')} />
           <MenuRow icon="🌙" label={t('profile.appearance')} value={theme === 'dark' ? t('profile.dark') : t('profile.lightMode')} onPress={() => setTheme(theme === 'dark' ? 'light' : 'dark')} />
           <MenuRow icon="🌐" label={t('profile.language')} value={language.toUpperCase()} onPress={handleEditLanguage} />
           <MenuRow icon="🔔" label={t('profile.notifications')} onPress={handleNotImplemented} />

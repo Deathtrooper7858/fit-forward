@@ -26,19 +26,19 @@ const MEALS = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 type Meal = typeof MEALS[number];
 
 const NEAT_CALORIES: Record<string, number> = {
-  'Mayormente Sentado': 200,
-  'A veces de pie': 439,
-  'Mayormente de pie': 600,
-  'En movimiento todo el día': 850,
-  'Trabajo físico intenso': 1200,
+  'seated': 200,
+  'standing_sometimes': 439,
+  'standing_mostly': 600,
+  'moving': 850,
+  'physical_work': 1200,
 };
 
 const EXERCISE_CALORIES: Record<string, number> = {
-  'No Hago Ejercicio': 0,
-  '1-2 Días por Semana': 150,
-  '3-4 días por Semana': 300,
-  '5-6 días por Semana': 450,
-  'Diario': 700,
+  'none': 0,
+  '1-2': 150,
+  '3-4': 300,
+  '5-6': 450,
+  'daily': 700,
 };
 
 function MacroBar({ label, current, target, color }: { label: string; current: number; target: number; color: string; }) {
@@ -70,9 +70,9 @@ export default function TrackerScreen() {
   const { profile } = useAuthStore();
   const { 
     todayLogs, fetchLogs, selectedDate, setDate, streakDays, 
-    addWater, waterIntake, steps, setSteps, addActivityLog,
+    addWater, dailyWater, dailySteps, setSteps, addActivityLog,
     removeActivityLog, updateActivityLog,
-    addSteps, neatLevel, exerciseLevel, activityLogs 
+    addSteps, neatLevel, exerciseLevel, activityLogs, totals
   } = useNutritionStore();
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [isFetching, setIsFetching] = useState(false);
@@ -96,10 +96,7 @@ export default function TrackerScreen() {
     fat: profile?.macros?.fat || 65,
   };
 
-  const calories = Math.round(todayLogs.reduce((sum, log) => sum + (log.calories || 0), 0));
-  const protein  = Math.round(todayLogs.reduce((sum, log) => sum + (log.protein || 0), 0));
-  const carbs    = Math.round(todayLogs.reduce((sum, log) => sum + (log.carbs || 0), 0));
-  const fat      = Math.round(todayLogs.reduce((sum, log) => sum + (log.fat || 0), 0));
+  const { calories, protein, carbs, fat, sugar, fiber, sodium, iron, saturatedFat, transFat } = totals();
 
   const grouped = MEALS.reduce((acc, m) => {
     acc[m] = todayLogs.filter((l) => l.meal === m);
@@ -107,7 +104,7 @@ export default function TrackerScreen() {
   }, {} as Record<Meal, typeof todayLogs>);
 
   const handleAddMeal = (meal: Meal) => {
-    router.push({ pathname: '/modals/scan', params: { initialMeal: meal } } as any);
+    router.push({ pathname: '/modals/scan', params: { initialMeal: meal, date: selectedDate } } as any);
   };
 
   const days = useMemo(() => {
@@ -119,7 +116,7 @@ export default function TrackerScreen() {
       arr.push({
         label: d.toLocaleDateString(language, { weekday: 'narrow' }).toUpperCase(),
         dayNum: d.getDate(),
-        full: d.toISOString().split('T')[0],
+        full: d.toLocaleDateString('en-CA'),
       });
     }
     return arr;
@@ -136,14 +133,17 @@ export default function TrackerScreen() {
 
   const totalBurned = baseline + dayActivities.reduce((acc, a) => acc + a.calories, 0);
 
+  const waterIntake = dailyWater[selectedDate] || 0;
+  const steps = dailySteps[selectedDate] || 0;
+
   const handleActivityPress = (act: any) => {
     Alert.alert(
       act.name,
-      '¿Qué deseas hacer con esta actividad?',
+      t('tracker.holdToRemove'),
       [
-        { text: 'Editar', onPress: () => router.push({ pathname: '/modals/add-activity', params: { id: act.id } } as any) },
-        { text: 'Eliminar', onPress: () => removeActivityLog(act.id), style: 'destructive' },
-        { text: 'Cancelar', style: 'cancel' }
+        { text: t('common.save'), onPress: () => router.push({ pathname: '/modals/add-activity', params: { id: act.id } } as any) },
+        { text: t('common.remove'), onPress: () => removeActivityLog(act.id), style: 'destructive' },
+        { text: t('common.cancel'), style: 'cancel' }
       ]
     );
   };
@@ -165,7 +165,7 @@ export default function TrackerScreen() {
           <Text style={s.streakText}>🔥 {streakDays}</Text>
           <TouchableOpacity onPress={() => router.push('/modals/calendar' as any)}>
             <Text style={s.dateText}>
-              🗓️ {selectedDate === new Date().toISOString().split('T')[0] ? 'Hoy' : new Date(selectedDate + 'T12:00:00').toLocaleDateString(language, { month: 'short', day: 'numeric' })} ▾
+              🗓️ {selectedDate === new Date().toLocaleDateString('en-CA') ? t('tracker.today') : new Date(selectedDate + 'T12:00:00').toLocaleDateString(t('common.locale'), { month: 'short', day: 'numeric' })} ▾
             </Text>
           </TouchableOpacity>
         </View>
@@ -194,14 +194,14 @@ export default function TrackerScreen() {
 
         {/* Empty Plan Banner */}
         {todayLogs.length === 0 && (
-          <View style={[s.emptyBanner, { backgroundColor: '#423812' }]}>
+          <View style={[s.emptyBanner, { backgroundColor: '#7C5CFC15' }]}>
             <View style={{ flex: 1 }}>
-              <Text style={s.emptyBannerTitle}>Tu Plan de Comida{'\n'}Está Vacío</Text>
+              <Text style={s.emptyBannerTitle}>{t('tracker.planEmptyTitle')}</Text>
               <TouchableOpacity 
                 style={[s.planificarBtn, { backgroundColor: colors.primary }]}
-                onPress={() => profile?.isPro ? Alert.alert('Planificador', 'Próximamente') : router.push('/modals/paywall' as any)}
+                onPress={() => profile?.isPro ? Alert.alert(t('tabs.planner'), t('common.comingSoon')) : router.push('/modals/paywall' as any)}
               >
-                <Text style={s.planificarText}>Planificar {profile?.isPro ? '' : '🔒'}</Text>
+                <Text style={s.planificarText}>{t('tracker.planEmptySub')} {profile?.isPro ? '' : '🔒'}</Text>
               </TouchableOpacity>
             </View>
             <Text style={{ fontSize: 60, opacity: 0.8 }}>🥣</Text>
@@ -248,27 +248,32 @@ export default function TrackerScreen() {
             </View>
 
             <View style={s.macrosWrap}>
-              <MacroBar label="Proteínas" current={protein} target={macros.protein} color={colors.protein} />
-              <MacroBar label="Carbs" current={carbs} target={macros.carbs} color={colors.carbs} />
-              <MacroBar label="Grasas" current={fat} target={macros.fat} color={colors.fat} />
+              <MacroBar label={t('profile.protein')} current={protein} target={macros.protein} color={colors.protein} />
+              <MacroBar label={t('profile.carbs')} current={carbs} target={macros.carbs} color={colors.carbs} />
+              <MacroBar label={t('profile.fat')} current={fat} target={macros.fat} color={colors.fat} />
             </View>
 
             <TouchableOpacity style={[s.endDayBtn, { backgroundColor: colors.border }]}>
-              <Text style={[s.endDayText, { color: colors.textMuted }]}>Terminar Día</Text>
+              <Text style={[s.endDayText, { color: colors.textMuted }]}>{t('tracker.endDay')}</Text>
             </TouchableOpacity>
           </View>
 
           {/* Other Nutrients Card */}
           <View style={[s.card, { backgroundColor: colors.surface, width: Dimensions.get('window').width - 32 }]}>
             <View style={s.cardHeader}>
-              <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Otros Nutrientes</Text>
-              <Text style={{ color: colors.textSecondary }}>✎</Text>
+              <Text style={[s.cardTitle, { color: colors.textPrimary }]}>{t('tracker.otherNutrients')}</Text>
             </View>
-            {['Azúcares', 'Fibra', 'Gras. Saturadas', 'Grasas Trans', 'Sodio'].map((nut) => (
-              <View key={nut} style={s.nutrientRow}>
-                <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>🔹 {nut}</Text>
+            {[
+              { label: t('tracker.sugar'), val: `${Math.round(sugar)} g` },
+              { label: t('tracker.fiber'), val: `${Math.round(fiber)} g` },
+              { label: t('tracker.saturatedFat'), val: `${Math.round(saturatedFat)} g` },
+              { label: t('tracker.sodium'), val: `${Math.round(sodium)} mg` },
+              { label: t('tracker.iron'), val: `${Math.round(iron)} mg` },
+            ].map((nut) => (
+              <View key={nut.label} style={s.nutrientRow}>
+                <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>🔹 {nut.label}</Text>
                 {profile?.isPro ? (
-                   <Text style={{ color: colors.textMuted }}>0 g</Text>
+                   <Text style={{ color: colors.textMuted }}>{nut.val}</Text>
                 ) : (
                    <Text style={{ color: colors.textMuted }}>🔒</Text>
                 )}
@@ -298,15 +303,27 @@ export default function TrackerScreen() {
             <View key={m} style={[s.mealCard, { backgroundColor: colors.surface }]}>
               <View style={s.cardHeader}>
                 <Text style={[s.cardTitle, { color: colors.textPrimary }]}>{t(`tracker.${m}`, m)}</Text>
-                <Text style={{ color: colors.textSecondary }}>•••</Text>
               </View>
               <Text style={[s.mealSub, { color: colors.textSecondary }]}>🔥 {mealCals} kcal</Text>
               
               {mealLogs.map(log => (
-                <View key={log.id} style={s.logItem}>
+                <TouchableOpacity 
+                  key={log.id} 
+                  style={s.logItem}
+                  onPress={() => router.push({ 
+                    pathname: '/modals/food-detail', 
+                    params: { 
+                      foodJson: JSON.stringify(log.foodItem), 
+                      logId: log.id,
+                      initialGrams: String(log.grams),
+                      meal: log.meal,
+                      date: selectedDate
+                    } 
+                  } as any)}
+                >
                   <Text style={[s.logName, { color: colors.textPrimary }]}>{log.foodItem.name}</Text>
                   <Text style={[s.logCal, { color: colors.textSecondary }]}>{log.calories} kcal</Text>
-                </View>
+                </TouchableOpacity>
               ))}
 
               <TouchableOpacity style={[s.addBtn, { backgroundColor: colors.surfaceAlt }]} onPress={() => handleAddMeal(m)}>
@@ -321,11 +338,11 @@ export default function TrackerScreen() {
         
         <View style={[s.card, { backgroundColor: colors.surface }]}>
           <View style={s.cardHeader}>
-            <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Agua</Text>
+            <Text style={[s.cardTitle, { color: colors.textPrimary }]}>{t('tracker.water')}</Text>
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline', marginTop: 10 }}>
             <Text style={[s.waterVal, { color: colors.textPrimary }]}>💧 {(waterIntake / 1000).toFixed(1)} <Text style={{fontSize: 16, color: colors.textSecondary}}>/ 3.5 L</Text></Text>
-            <Text style={[s.waterSub, { color: colors.textSecondary }]}>{Math.floor(waterIntake / 250)} de 14 vasos</Text>
+            <Text style={[s.waterSub, { color: colors.textSecondary }]}>{Math.floor(waterIntake / 250)} {t('tracker.of')} 14 {t('tracker.glasses')}</Text>
           </View>
           <View style={s.waterControls}>
             <TouchableOpacity style={[s.waterBtn, { backgroundColor: colors.surfaceAlt }]} onPress={() => addWater(-250)}>
@@ -340,7 +357,7 @@ export default function TrackerScreen() {
         {/* Activity Section */}
         <View style={[s.card, { backgroundColor: colors.surface }]}>
           <View style={s.cardHeader}>
-            <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Actividad</Text>
+            <Text style={[s.cardTitle, { color: colors.textPrimary }]}>{t('tracker.activity')}</Text>
           </View>
           <View style={s.activitySummary}>
             <Text style={{ fontSize: 20 }}>🔥</Text>
@@ -351,13 +368,13 @@ export default function TrackerScreen() {
             <View style={s.nutrientRowLeft}>
               <Text style={{ fontSize: 24 }}>🔥</Text>
               <View>
-                <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>Actividad</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{exerciseLevel}</Text>
+                <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>{t('tracker.activity')}</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t(`exercise.${exerciseLevel}`)}</Text>
               </View>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
-              <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>{EXERCISE_CALORIES[exerciseLevel] || 0} kcal</Text>
-              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>Promedio Semanal</Text>
+              <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>{EXERCISE_CALORIES[exerciseLevel] || 0} {t('tracker.kcal')}</Text>
+              <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t('tracker.weeklyAverage')}</Text>
             </View>
           </TouchableOpacity>
 
@@ -365,8 +382,8 @@ export default function TrackerScreen() {
             <View style={s.nutrientRowLeft}>
               <Text style={{ fontSize: 24 }}>🏃</Text>
               <View>
-                <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>Estilo de vida</Text>
-                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{neatLevel}</Text>
+                <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>{t('tracker.lifestyle')}</Text>
+                <Text style={{ color: colors.textSecondary, fontSize: 12 }}>{t(`neat.${neatLevel}`)}</Text>
               </View>
             </View>
             <Text style={[s.nutrientLabel, { color: colors.textPrimary }]}>{NEAT_CALORIES[neatLevel] || 0} kcal</Text>
@@ -393,15 +410,15 @@ export default function TrackerScreen() {
         {/* Steps Section */}
         <View style={[s.card, { backgroundColor: colors.surface }]}>
           <View style={s.cardHeader}>
-            <Text style={[s.cardTitle, { color: colors.textPrimary }]}>Pasos</Text>
+            <Text style={[s.cardTitle, { color: colors.textPrimary }]}>{t('tracker.steps')}</Text>
             <TouchableOpacity onPress={() => setSteps(0)}>
-              <Text style={{ color: colors.textMuted }}>Reiniciar</Text>
+              <Text style={{ color: colors.textMuted }}>{t('tracker.reset')}</Text>
             </TouchableOpacity>
           </View>
           <View style={s.stepsRow}>
             <Text style={{ fontSize: 24 }}>👟</Text>
             <Text style={[s.stepsVal, { color: colors.textPrimary }]}>
-              {steps} <Text style={{ fontSize: 16, color: colors.textSecondary }}>/ 6000 pasos</Text>
+              {steps} <Text style={{ fontSize: 16, color: colors.textSecondary }}>/ 6000 {t('tracker.steps').toLowerCase()}</Text>
             </Text>
           </View>
           <View style={[s.progressBar, { backgroundColor: colors.border }]}>

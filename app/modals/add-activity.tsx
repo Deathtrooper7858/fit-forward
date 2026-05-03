@@ -5,20 +5,22 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '../../hooks/useTheme';
 import { useNutritionStore } from '../../store';
 import { Radius, Spacing } from '../../constants';
+import { useTranslation } from 'react-i18next';
 
 const EXERCISES = [
-  { id: '1', name: 'Ejercicios con pesas o máquinas', icon: '🏋️', kcalPer30m: 179 },
-  { id: '2', name: 'Entrenamiento HIIT', icon: '❤️', kcalPer30m: 348 },
-  { id: '3', name: 'Baile', icon: '📻', kcalPer30m: 223 },
-  { id: '4', name: 'Yoga', icon: '🧘', kcalPer30m: 91 },
-  { id: '5', name: 'Natación, recreativo', icon: '🏊', kcalPer30m: 220 },
-  { id: '6', name: 'Fútbol', icon: '⚽', kcalPer30m: 256 },
-  { id: '7', name: 'Baloncesto', icon: '🏀', kcalPer30m: 238 },
-  { id: '8', name: 'Tenis', icon: '🎾', kcalPer30m: 267 },
-  { id: '9', name: 'Boxeo, entrenamiento', icon: '🥊', kcalPer30m: 201 },
+  { id: '1', name: 'activities.weightlifting', icon: '🏋️', kcalPer30m: 179 },
+  { id: '2', name: 'activities.hiit', icon: '❤️', kcalPer30m: 348 },
+  { id: '3', name: 'activities.dancing', icon: '📻', kcalPer30m: 223 },
+  { id: '4', name: 'activities.yoga', icon: '🧘', kcalPer30m: 91 },
+  { id: '5', name: 'activities.swimming', icon: '🏊', kcalPer30m: 220 },
+  { id: '6', name: 'activities.soccer', icon: '⚽', kcalPer30m: 256 },
+  { id: '7', name: 'activities.basketball', icon: '🏀', kcalPer30m: 238 },
+  { id: '8', name: 'activities.tennis', icon: '🎾', kcalPer30m: 267 },
+  { id: '9', name: 'activities.boxing', icon: '🥊', kcalPer30m: 201 },
 ];
 
 export default function AddActivityModal() {
+  const { t } = useTranslation();
   const colors = useTheme();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { addActivityLog, updateActivityLog, activityLogs, selectedDate } = useNutritionStore();
@@ -26,15 +28,15 @@ export default function AddActivityModal() {
   const editingAct = id ? activityLogs.find(a => a.id === id) : null;
 
   const [selected, setSelected] = useState<typeof EXERCISES[0] | null>(
-    editingAct ? (EXERCISES.find(e => e.name === editingAct.name) || null) : null
+    editingAct ? (EXERCISES.find(e => t(e.name) === editingAct.name) || null) : null
   );
   const [duration, setDuration] = useState(editingAct ? editingAct.duration.toString() : '30');
-  const [unit, setUnit] = useState<'minutos' | 'horas'>('minutos');
+  const [unit, setUnit] = useState<'minutes' | 'hours'>(editingAct && editingAct.duration >= 60 ? 'hours' : 'minutes');
 
   const calculateKcal = () => {
     if (!selected) return 0;
     let mins = parseFloat(duration) || 0;
-    if (unit === 'horas') mins *= 60;
+    if (unit === 'hours') mins *= 60;
     return Math.round((selected.kcalPer30m / 30) * mins);
   };
 
@@ -44,7 +46,7 @@ export default function AddActivityModal() {
         <View style={s.header}>
           <View style={s.headerRow}>
             <Text style={{ fontSize: 24 }}>{selected.icon}</Text>
-            <Text style={[s.title, { color: colors.textPrimary, flex: 1, marginLeft: 12 }]}>{selected.name}</Text>
+            <Text style={[s.title, { color: colors.textPrimary, flex: 1, marginLeft: 12 }]}>{t(selected.name)}</Text>
             <TouchableOpacity onPress={() => setSelected(null)}>
               <Text style={{ color: colors.textPrimary, fontSize: 24 }}>✕</Text>
             </TouchableOpacity>
@@ -52,7 +54,7 @@ export default function AddActivityModal() {
         </View>
 
         <View style={s.detailContent}>
-          <Text style={[s.label, { color: colors.textPrimary }]}>Duración</Text>
+          <Text style={[s.label, { color: colors.textPrimary }]}>{t('activities.duration')}</Text>
           <View style={s.inputRow}>
             <TextInput
               style={[s.input, { backgroundColor: colors.surface, color: colors.textPrimary, borderColor: colors.border }]}
@@ -62,14 +64,14 @@ export default function AddActivityModal() {
             />
             <TouchableOpacity 
               style={[s.inputUnit, { backgroundColor: colors.surface, borderColor: colors.border }]}
-              onPress={() => setUnit(unit === 'minutos' ? 'horas' : 'minutos')}
+              onPress={() => setUnit(unit === 'minutes' ? 'hours' : 'minutes')}
             >
-              <Text style={{ color: colors.textSecondary }}>{unit} ▾</Text>
+              <Text style={{ color: colors.textSecondary }}>{t(`activities.${unit}`)} ▾</Text>
             </TouchableOpacity>
           </View>
 
           <Text style={[s.label, { color: colors.textPrimary, marginTop: 24 }]}>
-            Calorías quemadas en {duration} {unit}
+            {t('activities.burnedIn')} {duration} {t(`activities.${unit}`)}
           </Text>
           <View style={[s.resultBox, { backgroundColor: colors.surfaceAlt, borderColor: colors.primary }]}>
             <Text style={{ color: colors.primary, fontWeight: '800', fontSize: 20 }}>{calculateKcal()} kcal</Text>
@@ -79,7 +81,7 @@ export default function AddActivityModal() {
             style={[s.saveBtn, { backgroundColor: colors.primary, marginTop: 40 }]}
             onPress={() => {
               const cals = calculateKcal();
-              const dur = unit === 'horas' ? (parseFloat(duration) || 0) * 60 : (parseFloat(duration) || 0);
+              const dur = unit === 'hours' ? (parseFloat(duration) || 0) * 60 : (parseFloat(duration) || 0);
               
               if (editingAct) {
                 updateActivityLog(editingAct.id, {
@@ -89,17 +91,17 @@ export default function AddActivityModal() {
               } else {
                 addActivityLog({
                   id: Math.random().toString(36).substr(2, 9),
-                  name: selected.name,
+                  name: t(selected.name),
                   icon: selected.icon,
                   calories: cals,
                   duration: dur,
-                  loggedAt: new Date(selectedDate + 'T' + new Date().toLocaleTimeString('en-GB')).toISOString(),
+                  loggedAt: `${selectedDate}T${new Date().toLocaleTimeString('en-GB')}`,
                 });
               }
               router.back();
             }}
           >
-            <Text style={[s.saveText, { color: colors.background }]}>Guardar</Text>
+            <Text style={[s.saveText, { color: colors.background }]}>{t('common.save')}</Text>
           </TouchableOpacity>
         </View>
       </SafeAreaView>
@@ -110,19 +112,19 @@ export default function AddActivityModal() {
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
       <View style={s.header}>
         <View style={s.headerRow}>
-          <Text style={[s.title, { color: colors.textPrimary, textAlign: 'center', flex: 1 }]}>Agregar actividad</Text>
+          <Text style={[s.title, { color: colors.textPrimary, textAlign: 'center', flex: 1 }]}>{t('activities.addActivity')}</Text>
           <TouchableOpacity onPress={() => router.back()} style={s.closeBtn}>
             <Text style={{ color: colors.textPrimary, fontSize: 24 }}>✕</Text>
           </TouchableOpacity>
         </View>
         <View style={[s.searchBar, { backgroundColor: colors.surface }]}>
           <Text style={{ color: colors.textMuted, marginRight: 8 }}>🔍</Text>
-          <TextInput placeholder="Buscar" placeholderTextColor={colors.textMuted} style={{ flex: 1, color: colors.textPrimary }} />
+          <TextInput placeholder={t('activities.search')} placeholderTextColor={colors.textMuted} style={{ flex: 1, color: colors.textPrimary }} />
         </View>
         <View style={s.tabRow}>
-          <Text style={[s.tab, { color: colors.textSecondary }]}>Reciente</Text>
-          <View style={[s.tabActive, { backgroundColor: '#423812' }]}>
-            <Text style={[s.tab, { color: colors.primary }]}>Popular</Text>
+          <Text style={[s.tab, { color: colors.textSecondary }]}>{t('activities.recent')}</Text>
+          <View style={[s.tabActive, { backgroundColor: '#7C5CFC15' }]}>
+            <Text style={[s.tab, { color: colors.primary }]}>{t('activities.popular')}</Text>
           </View>
         </View>
       </View>
@@ -132,7 +134,7 @@ export default function AddActivityModal() {
           <TouchableOpacity key={ex.id} style={s.item} onPress={() => setSelected(ex)}>
             <Text style={{ fontSize: 24, marginRight: 16 }}>{ex.icon}</Text>
             <View style={{ flex: 1 }}>
-              <Text style={[s.itemName, { color: colors.textPrimary }]}>{ex.name}</Text>
+              <Text style={[s.itemName, { color: colors.textPrimary }]}>{t(ex.name)}</Text>
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={[s.itemKcal, { color: colors.textPrimary }]}>{ex.kcalPer30m} kcal</Text>

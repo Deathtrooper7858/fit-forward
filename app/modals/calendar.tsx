@@ -5,15 +5,17 @@ import { router } from 'expo-router';
 import { useTheme } from '../../hooks/useTheme';
 import { useAuthStore, useNutritionStore } from '../../store';
 import { Radius, Spacing } from '../../constants';
+import { useTranslation } from 'react-i18next';
 
 export default function CalendarModal() {
+  const { t } = useTranslation();
   const colors = useTheme();
   const { streakDays, selectedDate, setDate } = useNutritionStore();
   const { profile } = useAuthStore();
 
   const [viewDate, setViewDate] = useState(new Date(selectedDate));
 
-  const daysHeader = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+  const daysHeader = [t('planner.mon')[0], t('planner.tue')[0], t('planner.wed')[0], t('planner.thu')[0], t('planner.fri')[0], t('planner.sat')[0], t('planner.sun')[0]];
 
   const calendarData = useMemo(() => {
     const year = viewDate.getFullYear();
@@ -25,7 +27,7 @@ export default function CalendarModal() {
     
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     
-    const monthName = viewDate.toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+    const monthName = viewDate.toLocaleDateString(t('common.locale') || 'en-US', { month: 'long', year: 'numeric' });
     
     return {
       monthName: monthName.charAt(0).toUpperCase() + monthName.slice(1),
@@ -43,7 +45,7 @@ export default function CalendarModal() {
 
   const handleSelectDay = (day: number) => {
     const newDate = new Date(calendarData.year, calendarData.month, day);
-    const dateString = newDate.toISOString().split('T')[0];
+    const dateString = newDate.toLocaleDateString('en-CA');
     setDate(dateString);
     router.back();
   };
@@ -54,7 +56,7 @@ export default function CalendarModal() {
         <TouchableOpacity onPress={() => router.back()} style={s.closeBtn}>
           <Text style={[s.closeText, { color: colors.textPrimary }]}>✕</Text>
         </TouchableOpacity>
-        <Text style={[s.title, { color: colors.textPrimary }]}>Mis Rachas</Text>
+        <Text style={[s.title, { color: colors.textPrimary }]}>{t('planner.myStreaks')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -64,9 +66,9 @@ export default function CalendarModal() {
             <View style={s.iconCircle}>
               <Text style={{ fontSize: 40 }}>🔥</Text>
             </View>
-            <Text style={[s.flameLabel, { color: colors.textPrimary }]}>Días Registrados</Text>
+            <Text style={[s.flameLabel, { color: colors.textPrimary }]}>{t('dashboard.streak').replace('{{count}}', '')}</Text>
             <Text style={[s.flameNum, { color: colors.primary }]}>{streakDays}</Text>
-            <Text style={[s.flameSub, { color: colors.textSecondary }]}>racha actual</Text>
+            <Text style={[s.flameSub, { color: colors.textSecondary }]}>{t('planner.currentStreak')}</Text>
             <View style={[s.divider, { backgroundColor: colors.border }]} />
             <Text style={[s.flameBest, { color: colors.textPrimary }]}>🏆 Récord: {streakDays}</Text>
           </View>
@@ -75,9 +77,9 @@ export default function CalendarModal() {
             <View style={[s.iconCircle, { backgroundColor: '#102A1E' }]}>
               <Text style={{ fontSize: 40 }}>🔥</Text>
             </View>
-            <Text style={[s.flameLabel, { color: colors.textPrimary }]}>Días en los que se llegó a la meta</Text>
+            <Text style={[s.flameLabel, { color: colors.textPrimary }]}>{t('planner.planned')}</Text>
             <Text style={[s.flameNum, { color: '#22C55E' }]}>0</Text>
-            <Text style={[s.flameSub, { color: colors.textSecondary }]}>racha actual</Text>
+            <Text style={[s.flameSub, { color: colors.textSecondary }]}>{t('planner.currentStreak')}</Text>
             <View style={[s.divider, { backgroundColor: colors.border }]} />
             <Text style={[s.flameBest, { color: colors.textPrimary }]}>🏆 Récord: 0</Text>
           </View>
@@ -106,7 +108,7 @@ export default function CalendarModal() {
             ))}
             {Array.from({ length: calendarData.daysInMonth }).map((_, i) => {
               const day = i + 1;
-              const dayDate = new Date(calendarData.year, calendarData.month, day).toISOString().split('T')[0];
+              const dayDate = new Date(calendarData.year, calendarData.month, day).toLocaleDateString('en-CA');
               const isSelected = dayDate === selectedDate;
               
               return (
@@ -163,11 +165,11 @@ const s = StyleSheet.create({
     justifyContent: 'center',
     marginBottom: 12,
   },
-  flameLabel: { fontSize: 12, fontWeight: '600', marginBottom: 8, textAlign: 'center', height: 32 },
+  flameLabel: { fontSize: 13, fontWeight: '700', marginBottom: 4, textAlign: 'center' },
   flameNum: { fontSize: 32, fontWeight: '800', marginBottom: 2 },
   flameSub: { fontSize: 11, fontWeight: '500', marginBottom: 12 },
   divider: { width: '100%', height: 1, marginBottom: 12 },
-  flameBest: { fontSize: 12, fontWeight: '600' },
+  flameBest: { fontSize: 11, fontWeight: '600', color: '#999' },
 
   calendarCard: {
     borderRadius: Radius.xl,

@@ -421,7 +421,7 @@ export default function NutritionistScreen() {
               onPress={() => router.push('/modals/paywall')}
               activeOpacity={0.8}
             >
-              <LinearGradient colors={['#F59E0B', '#D97706']} style={s.upgradeGrad}>
+              <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.upgradeGrad}>
                 <Text style={s.upgradeText}>{t('profile.upgrade')}</Text>
               </LinearGradient>
             </TouchableOpacity>

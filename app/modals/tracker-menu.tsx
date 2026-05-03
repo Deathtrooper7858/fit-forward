@@ -3,18 +3,20 @@ import { View, Text, StyleSheet, TouchableOpacity, Pressable } from 'react-nativ
 import { router } from 'expo-router';
 import { useTheme } from '../../hooks/useTheme';
 import { Radius, Spacing } from '../../constants';
+import { useTranslation } from 'react-i18next';
 
 export default function TrackerMenuModal() {
+  const { t } = useTranslation();
   const colors = useTheme();
 
   const options = [
-    { label: 'Copiar Día', icon: '👯', color: colors.textPrimary },
-    { label: 'Pegar Día', icon: '📋', color: colors.textMuted },
-    { label: 'Vaciar Día', icon: '🗑️', color: '#EF4444' },
-    { label: 'Ajustar porciones', icon: '🍎', color: colors.textPrimary },
-    { label: 'Recalcular Comidas', icon: '🔄', color: colors.textPrimary },
-    { label: 'Exportar plan', icon: '📄', color: colors.textPrimary },
-    { label: 'Exportar día', icon: '📤', color: colors.textPrimary },
+    { label: 'tracker.copyDay', icon: '👯', color: colors.textPrimary },
+    { label: 'tracker.pasteDay', icon: '📋', color: colors.textMuted },
+    { label: 'tracker.emptyDay', icon: '🗑️', color: '#EF4444' },
+    { label: 'tracker.adjustPortions', icon: '🍎', color: colors.textPrimary },
+    { label: 'tracker.recalculateMeals', icon: '🔄', color: colors.textPrimary },
+    { label: 'tracker.exportPlan', icon: '📄', color: colors.textPrimary },
+    { label: 'tracker.exportDay', icon: '📤', color: colors.textPrimary },
   ];
 
   return (
@@ -29,7 +31,7 @@ export default function TrackerMenuModal() {
               router.back();
             }}
           >
-            <Text style={[s.label, { color: opt.color }]}>{opt.label}</Text>
+            <Text style={[s.label, { color: opt.color }]}>{t(opt.label)}</Text>
             <Text style={s.icon}>{opt.icon}</Text>
           </TouchableOpacity>
         ))}

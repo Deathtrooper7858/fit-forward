@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, Image, ScrollView, TextInput } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Spacing, Radius } from '../../constants';
@@ -11,22 +11,29 @@ import { useTheme } from '../../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 
 type ScanMode = 'barcode' | 'photo';
+type Meal = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
 export default function ScanModal() {
   const { t } = useTranslation();
+  const { initialMeal, date } = useLocalSearchParams<{ initialMeal?: Meal, date?: string }>();
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned]           = useState(false);
   const [loading, setLoading]           = useState(false);
   const [mode, setMode]                 = useState<ScanMode>('barcode');
   const [photoResult, setPhotoResult]   = useState<{
-    foods: { name: string; grams: number; calories: number; protein: number; carbs: number; fat: number }[];
+    foods: { 
+      name: string; grams: number; calories: number; protein: number; carbs: number; fat: number;
+      sugar?: number; fiber?: number; sodium?: number; iron?: number; saturatedFat?: number; transFat?: number;
+    }[];
     totalCalories: number;
     confidence: 'high' | 'medium' | 'low';
     notes: string;
   } | null>(null);
   const [editedFoods, setEditedFoods] = useState<{
     name: string; grams: number; calories: number; protein: number; carbs: number; fat: number;
+    sugar?: number; fiber?: number; sodium?: number; iron?: number; saturatedFat?: number; transFat?: number;
     originalGrams: number; originalCal: number; originalProt: number; originalCarbs: number; originalFat: number;
+    originalSugar?: number; originalFiber?: number; originalSodium?: number; originalIron?: number; originalSatFat?: number; originalTransFat?: number;
   }[]>([]);
   const [capturedUri, setCapturedUri]    = useState<string | null>(null);
   const cameraRef = useRef<any>(null);
@@ -63,7 +70,11 @@ export default function ScanModal() {
       // Navigate to food detail to confirm and add
       router.replace({
         pathname: '/modals/food-detail',
-        params: { foodJson: JSON.stringify(food) },
+        params: { 
+          foodJson: JSON.stringify(food),
+          meal: initialMeal || getAutoMeal(),
+          date: date
+        },
       });
     } catch {
       setLoading(false);
@@ -98,6 +109,12 @@ export default function ScanModal() {
         originalProt: f.protein,
         originalCarbs: f.carbs,
         originalFat: f.fat,
+        originalSugar: f.sugar,
+        originalFiber: f.fiber,
+        originalSodium: f.sodium,
+        originalIron: f.iron,
+        originalSatFat: f.saturatedFat,
+        originalTransFat: f.transFat,
       })));
     } catch (err: any) {
       console.error('Analysis Error:', err);
@@ -121,6 +138,12 @@ export default function ScanModal() {
         protein:  Math.round(f.originalProt * ratio),
         carbs:    Math.round(f.originalCarbs * ratio),
         fat:      Math.round(f.originalFat * ratio),
+        sugar:    f.originalSugar ? Math.round(f.originalSugar * ratio) : undefined,
+        fiber:    f.originalFiber ? Math.round(f.originalFiber * ratio) : undefined,
+        sodium:   f.originalSodium ? Math.round(f.originalSodium * ratio) : undefined,
+        iron:     f.originalIron ? Math.round(f.originalIron * ratio) : undefined,
+        saturatedFat: f.originalSatFat ? Math.round(f.originalSatFat * ratio) : undefined,
+        transFat:     f.originalTransFat ? Math.round(f.originalTransFat * ratio) : undefined,
       };
     }));
   };
@@ -128,6 +151,8 @@ export default function ScanModal() {
   // ─── Add all detected foods to tracker ──────────────────────────────────────
   const handleAddAllFoods = () => {
     if (!editedFoods.length) return;
+
+    const targetMeal = initialMeal || getAutoMeal();
 
     editedFoods.forEach((food) => {
       addLog({
@@ -139,26 +164,38 @@ export default function ScanModal() {
           protein:  Math.round((food.originalProt / food.originalGrams) * 100),
           carbs:    Math.round((food.originalCarbs / food.originalGrams) * 100),
           fat:      Math.round((food.originalFat / food.originalGrams) * 100),
+          sugar:    food.originalSugar ? Math.round((food.originalSugar / food.originalGrams) * 100) : undefined,
+          fiber:    food.originalFiber ? Math.round((food.originalFiber / food.originalGrams) * 100) : undefined,
+          sodium:   food.originalSodium ? Math.round((food.originalSodium / food.originalGrams) * 100) : undefined,
+          iron:     food.originalIron ? Math.round((food.originalIron / food.originalGrams) * 100) : undefined,
+          saturatedFat: food.originalSatFat ? Math.round((food.originalSatFat / food.originalGrams) * 100) : undefined,
+          transFat:     food.originalTransFat ? Math.round((food.originalTransFat / food.originalGrams) * 100) : undefined,
           source:   'custom',
         },
         grams:    food.grams,
-        meal:     getAutoMeal(),
-        loggedAt: new Date().toISOString(),
+        meal:     targetMeal,
+        loggedAt: date ? `${date}T${new Date().toISOString().split('T')[1]}` : new Date().toISOString(),
         calories: food.calories,
         protein:  food.protein,
         carbs:    food.carbs,
         fat:      food.fat,
+        sugar:    food.sugar,
+        fiber:    food.fiber,
+        sodium:   food.sodium,
+        iron:     food.iron,
+        saturatedFat: food.saturatedFat,
+        transFat:     food.transFat,
       });
     });
 
     Alert.alert(
       t('common.success') + ' ✅',
-      `${editedFoods.length} ${t('scan.itemsAdded')} ${t(`tracker.${getAutoMeal()}`)}.`,
+      `${editedFoods.length} ${t('scan.itemsAdded')} ${t(`tracker.${targetMeal}`)}.`,
       [{ text: 'OK', onPress: () => router.back() }]
     );
   };
 
-  const getAutoMeal = (): 'breakfast' | 'lunch' | 'dinner' | 'snack' => {
+  const getAutoMeal = (): Meal => {
     const h = new Date().getHours();
     if (h < 10) return 'breakfast';
     if (h < 14) return 'lunch';
@@ -272,7 +309,7 @@ export default function ScanModal() {
           </TouchableOpacity>
           <TouchableOpacity style={s.addAllBtn} onPress={handleAddAllFoods} activeOpacity={0.85}>
             <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.addAllGrad}>
-              <Text style={s.addAllText}>{t('scan.addAll', { meal: t(`tracker.${getAutoMeal()}`) })}</Text>
+              <Text style={s.addAllText}>{t('scan.addAll', { meal: t(`tracker.${initialMeal || getAutoMeal()}`) })}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>

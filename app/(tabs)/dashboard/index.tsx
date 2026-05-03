@@ -8,37 +8,30 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Svg, { Circle } from 'react-native-svg';
 import { Spacing, Radius, Shadow } from '../../../constants';
-import { useAuthStore, useNutritionStore, useSettingsStore } from '../../../store';
+import { useAuthStore, useNutritionStore, useSettingsStore, useBodyStore } from '../../../store';
 import { useTheme } from '../../../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '../../../services/supabase';
+
+const { width } = Dimensions.get('window');
+const WIDGET_WIDTH = (width - Spacing.base * 2 - Spacing.md) / 2;
 
 const RING_SIZE     = 180;
 const STROKE_WIDTH  = 15;
 const RADIUS        = (RING_SIZE - STROKE_WIDTH) / 2;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-// ─── Calorie Ring ─────────────────────────────────────────────────────────────
-const ring = StyleSheet.create({
-  container: { alignItems: 'center', justifyContent: 'center', height: RING_SIZE, width: RING_SIZE, alignSelf: 'center', marginVertical: 12 },
-  textWrap:  { position: 'absolute', alignItems: 'center', zIndex: 2 },
-  consumed:  { fontSize: 32, fontWeight: '800' },
-  label:     { fontSize: 12, marginBottom: 4 },
-  divider:   { width: 40, height: 1, marginVertical: 4 },
-  remaining: { fontSize: 13, fontWeight: '600' },
-});
-
-// ... (skipping some logic)
-
-function CalorieRing({ consumed, target }: { consumed: number; target: number }) {
+// ─── Calorie/Score Ring ─────────────────────────────────────────────────────────
+function ScoreRing({ consumed, target }: { consumed: number; target: number }) {
   const { t } = useTranslation();
   const colors = useTheme();
-  const pct             = Math.min(consumed / Math.max(target, 1), 1);
+  const pct = Math.min(consumed / Math.max(target, 1), 1);
   const strokeDashoffset = CIRCUMFERENCE - pct * CIRCUMFERENCE;
-  const remaining        = Math.max(target - consumed, 0);
 
   return (
     <View style={ring.container}>
+      <Text style={[ring.topLabel, { color: colors.textSecondary }]}>{t('tracker.today', 'Hoy')}</Text>
+      <View style={{ height: 16 }} />
       <Svg width={RING_SIZE} height={RING_SIZE}>
         <Circle cx={RING_SIZE / 2} cy={RING_SIZE / 2} r={RADIUS}
           stroke={colors.surfaceAlt} strokeWidth={STROKE_WIDTH} fill="transparent" />
@@ -52,126 +45,192 @@ function CalorieRing({ consumed, target }: { consumed: number; target: number })
       </Svg>
       <View style={ring.textWrap}>
         <Text style={[ring.consumed, { color: colors.textPrimary }]}>{consumed}</Text>
-        <Text style={[ring.label, { color: colors.textSecondary }]}>{t('dashboard.kcalEaten')}</Text>
-        <View style={[ring.divider, { backgroundColor: colors.border }]} />
-        <Text style={[ring.remaining, { color: colors.primary }]}>{remaining} {t('dashboard.kcalLeft')}</Text>
+        <Text style={[ring.label, { color: colors.textSecondary }]}>
+          {consumed < target * 0.3 ? 'Bajo' : consumed > target * 0.9 ? 'Alto' : 'Medio'}
+        </Text>
       </View>
     </View>
   );
 }
 
-// ─── Macro Bar ────────────────────────────────────────────────────────────────
-function MacroBar({ label, current, target, color }: {
-  label: string; current: number; target: number; color: string;
-}) {
-  const colors = useTheme();
-  const pct = Math.min(current / Math.max(target, 1), 1);
-  return (
-    <View style={macro.wrap}>
-      <View style={macro.row}>
-        <Text style={[macro.label, { color: colors.textSecondary }]}>{label}</Text>
-        <Text style={[macro.values, { color: colors.textMuted }]}><Text style={{ color }}>{current}</Text>/{target}g</Text>
-      </View>
-      <View style={[macro.track, { backgroundColor: colors.border }]}>
-        <View style={[macro.fill, { width: `${pct * 100}%`, backgroundColor: color }]} />
-      </View>
-    </View>
-  );
-}
-
-const macro = StyleSheet.create({
-  wrap:   { gap: 6 },
-  row:    { flexDirection: 'row', justifyContent: 'space-between' },
-  label:  { fontSize: 13, fontWeight: '500' },
-  values: { fontSize: 13, fontWeight: '500' },
-  track:  { height: 8, borderRadius: 4, overflow: 'hidden' },
-  fill:   { height: 8, borderRadius: 4 },
+const ring = StyleSheet.create({
+  container: { alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginVertical: 12 },
+  topLabel:  { fontSize: 16, fontWeight: '500', position: 'absolute', top: -10 },
+  textWrap:  { position: 'absolute', alignItems: 'center', zIndex: 2, top: RING_SIZE / 2 - 10 },
+  consumed:  { fontSize: 40, fontWeight: '800' },
+  label:     { fontSize: 16, marginTop: 4 },
 });
 
-// ─── Quick-action button ──────────────────────────────────────────────────────
-function QuickAction({ emoji, label, onPress, subValue }: {
-  emoji: string; label: string; onPress: () => void; subValue?: string;
-}) {
+// ─── Widget Card ────────────────────────────────────────────────────────────────
+function WidgetCard({ title, value, subValue, icon, onPress, customContent }: any) {
   const colors = useTheme();
   return (
-    <TouchableOpacity style={[qa.btn, { borderColor: colors.border }]} onPress={onPress} activeOpacity={0.75}>
-      <LinearGradient colors={[colors.surfaceAlt, colors.surface]} style={qa.gradient}>
-        <Text style={qa.emoji}>{emoji}</Text>
-        <Text style={[qa.label, { color: colors.textSecondary }]}>{label}</Text>
-        {subValue && <Text style={[qa.subValue, { color: colors.primary }]}>{subValue}</Text>}
-      </LinearGradient>
+    <TouchableOpacity style={[w.card, { backgroundColor: colors.surface }]} onPress={onPress} activeOpacity={0.8} delayLongPress={500} onLongPress={() => Alert.alert('Modo edición', 'Mantén presionado y arrastra para mover el widget (Próximamente)')}>
+      <View style={w.header}>
+        <Text style={w.icon}>{icon}</Text>
+        <Text style={[w.title, { color: colors.textPrimary }]}>{title}</Text>
+      </View>
+      {customContent ? customContent : (
+        <View style={w.content}>
+          <Text style={[w.value, { color: colors.textPrimary }]}>{value}</Text>
+          {subValue && <Text style={[w.subValue, { color: colors.textSecondary }]}>{subValue}</Text>}
+        </View>
+      )}
     </TouchableOpacity>
   );
 }
 
-const qa = StyleSheet.create({
-  btn:      { flex: 1, borderRadius: Radius.lg, overflow: 'hidden', borderWidth: 1 },
-  gradient: { padding: Spacing.base, alignItems: 'center', gap: 4 },
-  emoji:    { fontSize: 26 },
-  label:    { fontSize: 12, fontWeight: '500', textAlign: 'center' },
-  subValue: { fontSize: 11, fontWeight: '700' },
+const w = StyleSheet.create({
+  card: { width: WIDGET_WIDTH, height: 160, borderRadius: Radius.xl, padding: Spacing.md, ...Shadow.sm, justifyContent: 'space-between' },
+  header: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  icon: { fontSize: 16 },
+  title: { fontSize: 14, fontWeight: '600' },
+  content: { flex: 1, justifyContent: 'center' },
+  value: { fontSize: 28, fontWeight: '800' },
+  subValue: { fontSize: 12, marginTop: 4 },
 });
 
-// ─── Dashboard Screen ─────────────────────────────────────────────────────────
+// ─── Dashboard (Progreso) Screen ────────────────────────────────────────────────
 export default function DashboardScreen() {
   const { t } = useTranslation();
   const colors = useTheme();
   const { language } = useSettingsStore();
-  const { profile }                                         = useAuthStore();
-  const { todayLogs, waterIntake, addWater, setLogs, totals, streakDays, setStreak, fetchLogs } = useNutritionStore();
-  const { calories, protein, carbs, fat }                  = useMemo(() => totals(), [todayLogs]);
-
-  const target   = profile?.targetCalories ?? 2000;
-  const macros   = profile?.macros ?? { protein: 150, carbs: 200, fat: 67 };
-  const name     = profile?.name?.split(' ')[0] ?? t('dashboard.fallbackName');
-  const hour     = new Date().getHours();
+  const { profile } = useAuthStore();
+  const { todayLogs, waterIntake, dailySteps, selectedDate, totals, fetchLogs, dailySleep } = useNutritionStore();
+  const { latest } = useBodyStore();
+  
+  const { calories } = useMemo(() => totals(), [todayLogs]);
+  const target = profile?.targetCalories ?? 2000;
+  const name = profile?.name?.split(' ')[0] ?? t('dashboard.fallbackName');
+  const hour = new Date().getHours();
   const greeting = hour < 12 ? t('dashboard.greetingMorning') : hour < 17 ? t('dashboard.greetingAfternoon') : t('dashboard.greetingEvening');
 
-  // Load today's logs from Supabase
   useEffect(() => {
     async function loadTodayData() {
       if (!profile?.id) return;
-      const today = new Date().toISOString().split('T')[0];
-      
+      const today = new Date().toLocaleDateString('en-CA');
       await fetchLogs(profile.id, today);
-      calculateStreak(profile.id);
     }
-
-    async function calculateStreak(userId: string) {
-      const { data } = await supabase
-        .from('food_logs')
-        .select('logged_at')
-        .eq('user_id', userId)
-        .order('logged_at', { ascending: false });
-
-      if (!data || data.length === 0) { setStreak(0); return; }
-
-      const loggedDays = [...new Set(data.map((d: any) =>
-        (d.logged_at ?? '').substring(0, 10)
-      ))].sort().reverse();
-
-      let streak   = 0;
-      const today2 = new Date();
-      for (let i = 0; i < loggedDays.length; i++) {
-        const expected = new Date(today2);
-        expected.setDate(expected.getDate() - i);
-        const expectedStr = expected.toISOString().split('T')[0];
-        if (loggedDays[i] === expectedStr) {
-          streak++;
-        } else {
-          break;
-        }
-      }
-      setStreak(streak);
-    }
-
     loadTodayData();
   }, [profile?.id]);
 
-  const handleAddWater = () => addWater(250);
+  const currentWeight = latest()?.weight || profile?.weight || 0;
+  const targetWeight = profile?.goal === 'lose' ? currentWeight - 5 : profile?.goal === 'gain' ? currentWeight + 5 : currentWeight; // placeholder logic
+  const steps = dailySteps[selectedDate] || 0;
+  const sleepHours = dailySleep[selectedDate] || 0;
 
-  const waterGlasses    = Math.floor(waterIntake / 250);
-  const waterTarget     = 8; // 8 glasses = 2L
+  // Widget Order State (Mock for now, to support future drag drop)
+  const [widgetsOrder, setWidgetsOrder] = useState(['weight', 'bodyFat', 'sleep', 'calories', 'steps', 'water', 'macros', 'measurements', 'photos']);
+
+  const getGoalInfo = () => {
+    switch (profile?.goal) {
+      case 'lose': return { label: t('profile.loseWeight', 'Pérdida de Peso'), icon: '📉' };
+      case 'gain': return { label: t('profile.gainMuscle', 'Ganancia Muscular'), icon: '💪' };
+      default: return { label: t('profile.maintain', 'Mantenimiento'), icon: '⚖️' };
+    }
+  };
+  const goalInfo = getGoalInfo();
+
+  const renderWidget = (id: string) => {
+    switch (id) {
+      case 'weight':
+        return (
+          <WidgetCard key="weight" title="Peso Balanza" icon="⚖️"
+            value={`${currentWeight}`} subValue="kg"
+            onPress={() => router.push('/modals/body-measurements')}
+          />
+        );
+      case 'sleep':
+        return (
+          <WidgetCard key="sleep" title="Sueño" icon="🌙"
+            customContent={
+              <View style={w.content}>
+                 <Text style={[w.value, { color: colors.textPrimary }]}>{sleepHours > 0 ? `${sleepHours}h` : '--'}</Text>
+                 <Text style={[w.subValue, { color: colors.textSecondary }]}>{sleepHours > 0 ? 'Registrado hoy' : 'Toca para añadir'}</Text>
+              </View>
+            }
+            onPress={() => router.push('/modals/sleep' as any)}
+          />
+        );
+      case 'calories':
+        return (
+          <WidgetCard key="calories" title="Calorías" icon="⚡"
+            customContent={
+              <View style={w.content}>
+                <Text style={{fontSize: 24, fontWeight: '800', color: colors.textPrimary}}>{calories}</Text>
+                <Text style={[w.subValue, { color: colors.textSecondary }]}>Registra tu comida</Text>
+              </View>
+            }
+            onPress={() => router.push('/(tabs)/tracker')}
+          />
+        );
+      case 'steps':
+        return (
+          <WidgetCard key="steps" title="Pasos" icon="👟"
+            customContent={
+              <View style={w.content}>
+                <Text style={{fontSize: 24, fontWeight: '800', color: colors.textPrimary}}>{steps}</Text>
+                <Text style={[w.subValue, { color: colors.textSecondary }]}>Sincroniza Health</Text>
+              </View>
+            }
+            onPress={() => router.push('/(tabs)/tracker')}
+          />
+        );
+      case 'water':
+        return (
+          <WidgetCard key="water" title="Agua" icon="💧"
+            customContent={
+              <View style={w.content}>
+                <Text style={{fontSize: 24, fontWeight: '800', color: colors.textPrimary}}>{(waterIntake / 1000).toFixed(1)} L 🚩</Text>
+                <Text style={[w.subValue, { color: colors.textSecondary }]}>Promedio Semanal</Text>
+              </View>
+            }
+            onPress={() => router.push('/(tabs)/tracker')}
+          />
+        );
+      case 'bodyFat':
+        return (
+          <WidgetCard key="bodyFat" title="Grasa Corporal" icon="🔥"
+            value={latest()?.bodyFat ? `${latest()?.bodyFat}%` : '--'} subValue="Toca para actualizar"
+            onPress={() => router.push('/modals/body-measurements')}
+          />
+        );
+      case 'macros':
+        return (
+          <WidgetCard key="macros" title="Macros" icon="🥗"
+            customContent={
+              <View style={[w.content, { gap: 4 }]}>
+                <Text style={{ fontSize: 13, color: colors.protein }}>P: {totals().protein}g</Text>
+                <Text style={{ fontSize: 13, color: colors.carbs }}>C: {totals().carbs}g</Text>
+                <Text style={{ fontSize: 13, color: colors.fat }}>G: {totals().fat}g</Text>
+              </View>
+            }
+            onPress={() => router.push('/(tabs)/tracker')}
+          />
+        );
+      case 'measurements':
+        return (
+          <WidgetCard key="measurements" title="Medidas" icon="📏"
+            value="Ver historial" subValue="Cintura, pecho, etc."
+            onPress={() => router.push('/modals/body-measurements')}
+          />
+        );
+      case 'photos':
+        return (
+          <WidgetCard key="photos" title="" icon=""
+            customContent={
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 32, color: colors.textSecondary }}>📷</Text>
+                <Text style={{ fontSize: 14, fontWeight: '600', color: colors.textPrimary, marginTop: 8 }}>Añadir fotos</Text>
+                <Text style={[w.subValue, { color: colors.textSecondary }]}>para ver el progreso</Text>
+              </View>
+            }
+            onPress={() => Alert.alert('Fotos', 'Añadir fotos (Próximamente)')}
+          />
+        );
+      default: return null;
+    }
+  };
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
@@ -180,7 +239,7 @@ export default function DashboardScreen() {
         <View style={s.header}>
           <View>
             <Text style={[s.greeting, { color: colors.textPrimary }]}>{greeting}, {name} 👋</Text>
-            <Text style={[s.date, { color: colors.textSecondary }]}>{new Date().toLocaleDateString(language, { weekday: 'long', month: 'long', day: 'numeric' })}</Text>
+            <Text style={[s.date, { color: colors.textSecondary }]}>{new Date().toLocaleDateString(language, { weekday: 'long', day: 'numeric', month: 'long' })}</Text>
           </View>
           <TouchableOpacity style={s.avatar} onPress={() => router.push('/(tabs)/profile')}>
             <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.avatarGrad}>
@@ -193,103 +252,72 @@ export default function DashboardScreen() {
           </TouchableOpacity>
         </View>
 
-        {/* Calorie card */}
-        <View style={[s.card, { backgroundColor: colors.surface }]}>
-          <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>{t('dashboard.todayProgress')}</Text>
-          <CalorieRing consumed={calories} target={target} />
-          <View style={s.macros}>
-            <MacroBar label={t('profile.protein') || 'Protein'}       current={protein} target={macros.protein} color={colors.protein} />
-            <MacroBar label={t('profile.carbs') || 'Carbohydrates'} current={carbs}   target={macros.carbs}   color={colors.carbs}   />
-            <MacroBar label={t('profile.fat') || 'Fat'}           current={fat}     target={macros.fat}     color={colors.fat}     />
+        {/* Nutritional Score Card */}
+        <View style={s.sectionHeader}>
+          <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>Score Nutricional</Text>
+          <Text style={{ color: colors.textPrimary }}>→</Text>
+        </View>
+        <View style={[s.cardFull, { backgroundColor: colors.surface }]}>
+          <ScoreRing consumed={calories} target={target} />
+        </View>
+
+        {/* Phase Card */}
+        <View style={s.sectionHeader}>
+          <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>Fase</Text>
+          <Text style={{ color: colors.textPrimary }}>→</Text>
+        </View>
+        <View style={[s.cardFull, { backgroundColor: colors.surface }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+            <Text style={{ fontSize: 20 }}>{goalInfo.icon}</Text>
+            <Text style={{ fontSize: 18, fontWeight: '600', color: colors.textPrimary }}>{goalInfo.label}</Text>
           </View>
-        </View>
-
-        {/* Quick actions */}
-        <Text style={[s.sectionTitle, { color: colors.textPrimary, marginHorizontal: Spacing.base, marginTop: Spacing.lg }]}>
-          {t('dashboard.quickActions')}
-        </Text>
-        <View style={s.actions}>
-          <QuickAction emoji="🍽️" label={t('dashboard.logMeal')}  onPress={() => router.push('/(tabs)/tracker')} />
-          <QuickAction emoji="📷" label={t('dashboard.scanFood')} onPress={() => router.push('/modals/scan')} />
-          <QuickAction emoji="🍎" label={t('tabs.nutritionist')}  onPress={() => router.push({ pathname: '/(tabs)/coach', params: { initialTab: 'nutritionist' } } as any)} />
-          <QuickAction emoji="💪" label={t('tabs.trainer')}       onPress={() => router.push({ pathname: '/(tabs)/coach', params: { initialTab: 'trainer' } } as any)} />
-        </View>
-
-        {/* Streak + water row */}
-        <View style={s.bannerRow}>
-          <LinearGradient colors={[colors.surfaceAlt + '44', colors.surface + '22']} style={[s.banner, { flex: 3, borderColor: colors.border }]}>
-            <Text style={s.bannerEmoji}>🔥</Text>
-            <View>
-              <Text style={[s.bannerTitle, { color: colors.textPrimary }]}>
-                {streakDays > 0 ? t('dashboard.streak', { count: streakDays }) : t('dashboard.startStreak')}
-              </Text>
-              <Text style={[s.bannerSub, { color: colors.textSecondary }]}>
-                {streakDays > 0 ? t('dashboard.streakKeep') : t('dashboard.streakStart')}
-              </Text>
-            </View>
-          </LinearGradient>
-          <TouchableOpacity style={[s.banner, s.waterBanner, { flex: 1, borderColor: colors.border }]} onPress={handleAddWater} activeOpacity={0.8}>
-            <Text style={s.bannerEmoji}>💧</Text>
-            <Text style={[s.waterNum, { color: colors.secondary }]}>{(waterIntake / 1000).toFixed(1)}L</Text>
-            <Text style={[s.bannerSub, { color: colors.textSecondary }]}>{t('dashboard.of2L')}</Text>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+            <Text style={{ fontSize: 20, fontWeight: '700', color: colors.textPrimary }}>{currentWeight} kg</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.secondary }}>🎯 {targetWeight} kg</Text>
+          </View>
+          <View style={[s.progressBar, { backgroundColor: colors.border }]}>
+            <View style={[s.progressFill, { backgroundColor: colors.secondary, width: '30%' }]} />
+          </View>
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, marginBottom: 24 }}>
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>📅 Llegarás en</Text>
+            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>11 semanas</Text>
+          </View>
+          <TouchableOpacity style={[s.updateBtn, { backgroundColor: '#7C5CFC' }]} onPress={() => router.push('/modals/body-measurements')}>
+            <Text style={[s.updateBtnText, { color: '#FFF' }]}>Actualizar Progreso</Text>
           </TouchableOpacity>
         </View>
 
-        {/* Recent logs */}
-        {todayLogs.length > 0 && (
-          <View style={s.recentWrap}>
-            <View style={s.recentHeader}>
-            <Text style={[s.sectionTitle, { color: colors.textPrimary, marginBottom: 0 }]}>{t('dashboard.recentLogs')}</Text>
-            <TouchableOpacity onPress={() => router.push('/(tabs)/tracker')}>
-              <Text style={[s.seeAll, { color: colors.primary }]}>{t('dashboard.seeAll')} ›</Text>
-            </TouchableOpacity>
-          </View>
-            {todayLogs.slice(-3).reverse().map((log) => (
-              <View key={log.id} style={[s.logRow, { borderBottomColor: colors.border }]}>
-                <View>
-                  <Text style={[s.logName, { color: colors.textPrimary }]}>{log.foodItem.name}</Text>
-                  <Text style={[s.logMeal, { color: colors.textSecondary }]}>
-                    {log.meal} · {log.grams}g · {new Date(log.loggedAt).toLocaleTimeString(language, { hour: '2-digit', minute: '2-digit', hour12: true })}
-                  </Text>
-                </View>
-                <Text style={[s.logCal, { color: colors.accent }]}>{log.calories} kcal</Text>
-              </View>
-            ))}
-          </View>
-        )}
+        {/* Statistics Grid */}
+        <View style={s.sectionHeader}>
+          <Text style={[s.sectionTitle, { color: colors.textPrimary }]}>Estadísticas</Text>
+          <Text style={{ color: colors.textPrimary }}>→</Text>
+        </View>
+        <View style={s.widgetGrid}>
+          {widgetsOrder.map(id => renderWidget(id))}
+        </View>
 
-        <View style={{ height: 32 }} />
+        <View style={{ height: 40 }} />
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const s = StyleSheet.create({
-  safe:         { flex: 1 },
-  scroll:       { flex: 1 },
-  header:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: Spacing.base, paddingTop: Spacing.lg },
-  greeting:     { fontSize: 22, fontWeight: '700' },
-  date:         { fontSize: 13, marginTop: 2 },
-  avatar:       { width: 44, height: 44, borderRadius: 22, overflow: 'hidden' },
-  avatarGrad:   { flex: 1, justifyContent: 'center', alignItems: 'center' },
-  avatarText:   { fontSize: 18, fontWeight: '700', color: '#fff' },
-  avatarImage:  { width: 44, height: 44, borderRadius: 22 },
-  card:         { margin: Spacing.base, borderRadius: Radius.xl, padding: Spacing.base, ...Shadow.md },
-  sectionTitle: { fontSize: 16, fontWeight: '700', marginBottom: Spacing.md },
-  macros:       { gap: Spacing.md, marginTop: Spacing.lg },
-  actions:      { flexDirection: 'row', gap: 10, paddingHorizontal: Spacing.base, marginTop: 8 },
-  bannerRow:    { flexDirection: 'row', gap: 10, margin: Spacing.base },
-  banner:       { borderRadius: Radius.lg, padding: Spacing.base, flexDirection: 'row', alignItems: 'center', gap: 10, borderWidth: 1 },
-  waterBanner:  { flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 },
-  bannerEmoji:  { fontSize: 28 },
-  bannerTitle:  { fontSize: 14, fontWeight: '700' },
-  bannerSub:    { fontSize: 11 },
-  waterNum:     { fontSize: 20, fontWeight: '800' },
-  recentWrap:   { marginHorizontal: Spacing.base, marginTop: Spacing.md },
-  recentHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: Spacing.md },
-  seeAll:       { fontSize: 13, fontWeight: '600' },
-  logRow:       { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: 12, borderBottomWidth: 1 },
-  logName:      { fontSize: 14, fontWeight: '500' },
-  logMeal:      { fontSize: 12, textTransform: 'capitalize', marginTop: 2 },
-  logCal:       { fontSize: 14, fontWeight: '700' },
+  safe: { flex: 1 },
+  scroll: { flex: 1, paddingHorizontal: Spacing.base },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingVertical: Spacing.lg },
+  greeting: { fontSize: 24, fontWeight: '800' },
+  date: { fontSize: 14, marginTop: 4, textTransform: 'capitalize' },
+  avatar: { width: 48, height: 48, borderRadius: 24, overflow: 'hidden' },
+  avatarGrad: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  avatarText: { fontSize: 18, fontWeight: '700', color: '#fff' },
+  avatarImage: { width: 48, height: 48, borderRadius: 24 },
+  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: Spacing.lg, marginBottom: Spacing.md },
+  sectionTitle: { fontSize: 20, fontWeight: '700' },
+  cardFull: { borderRadius: Radius.xl, padding: Spacing.lg, ...Shadow.md },
+  progressBar: { height: 8, borderRadius: 4, overflow: 'hidden' },
+  progressFill: { height: '100%', borderRadius: 4 },
+  updateBtn: { height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center' },
+  updateBtnText: { fontSize: 16, fontWeight: '700' },
+  widgetGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.md, justifyContent: 'space-between' },
 });

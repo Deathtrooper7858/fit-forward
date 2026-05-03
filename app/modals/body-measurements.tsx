@@ -12,6 +12,7 @@ import { useBodyStore, useAuthStore, BodyMeasurement, useProgressStore } from '.
 import { decode } from 'base64-arraybuffer';
 import { supabase } from '../../services/supabase';
 import { useTheme } from '../../hooks/useTheme';
+import { useTranslation } from 'react-i18next';
 
 interface Field {
   key: keyof BodyMeasurement;
@@ -21,17 +22,18 @@ interface Field {
 }
 
 const FIELDS: Field[] = [
-  { key: 'weight',  label: 'Weight',    unit: 'kg',  emoji: '⚖️' },
-  { key: 'bodyFat', label: 'Body Fat',  unit: '%',   emoji: '📊' },
-  { key: 'waist',   label: 'Waist',     unit: 'cm',  emoji: '📏' },
-  { key: 'hips',    label: 'Hips',      unit: 'cm',  emoji: '🦵' },
-  { key: 'chest',   label: 'Chest',     unit: 'cm',  emoji: '💪' },
-  { key: 'arms',    label: 'Arms',      unit: 'cm',  emoji: '💪' },
-  { key: 'legs',    label: 'Legs',      unit: 'cm',  emoji: '🦵' },
-  { key: 'neck',    label: 'Neck',      unit: 'cm',  emoji: '📏' },
+  { key: 'weight',  label: 'profile.weight',    unit: 'kg',  emoji: '⚖️' },
+  { key: 'bodyFat', label: 'profile.bodyFat',   unit: '%',   emoji: '📊' },
+  { key: 'waist',   label: 'profile.waist',     unit: 'cm',  emoji: '📏' },
+  { key: 'hips',    label: 'profile.hips',      unit: 'cm',  emoji: '🦵' },
+  { key: 'chest',   label: 'profile.chest',     unit: 'cm',  emoji: '💪' },
+  { key: 'arms',    label: 'profile.arms',      unit: 'cm',  emoji: '💪' },
+  { key: 'legs',    label: 'profile.legs',      unit: 'cm',  emoji: '🦵' },
+  { key: 'neck',    label: 'profile.neck',      unit: 'cm',  emoji: '📏' },
 ];
 
 export default function BodyMeasurementsModal() {
+  const { t } = useTranslation();
   const colors = useTheme();
   const { profile } = useAuthStore();
   const { measurements, addMeasurement } = useBodyStore();
@@ -43,7 +45,7 @@ export default function BodyMeasurementsModal() {
   const pickImage = async () => {
     const { granted } = await ImagePicker.requestCameraPermissionsAsync();
     if (!granted) {
-      Alert.alert('Permission needed', 'Please allow camera access to take progress photos.');
+      Alert.alert(t('tracker.micPermission'), t('scan.noPermission'));
       return;
     }
     
@@ -60,13 +62,13 @@ export default function BodyMeasurementsModal() {
   const handleSave = async () => {
     const hasAtLeastOne = FIELDS.some(f => values[f.key]?.trim());
     if (!hasAtLeastOne) {
-      Alert.alert('No data', 'Please enter at least one measurement.');
+      Alert.alert(t('common.error'), t('foodDetail.invalidAmount'));
       return;
     }
 
     setSaving(true);
     try {
-      const today = new Date().toISOString().split('T')[0];
+      const today = new Date().toLocaleDateString('en-CA');
       const measurement: BodyMeasurement = {
         id:      `bm-${Date.now()}`,
         date:    today,
@@ -117,7 +119,7 @@ export default function BodyMeasurementsModal() {
         });
       }
 
-      Alert.alert('✅ Saved', 'Your measurements have been recorded!', [
+      Alert.alert('✅ ' + t('common.success'), t('planner.planReady'), [
         { text: 'OK', onPress: () => router.back() },
       ]);
     } catch (err) {
@@ -149,17 +151,17 @@ export default function BodyMeasurementsModal() {
           <TouchableOpacity onPress={() => router.back()} style={[s.closeBtn, { backgroundColor: colors.surfaceAlt }]}>
             <Text style={[s.closeText, { color: colors.textSecondary }]}>✕</Text>
           </TouchableOpacity>
-          <Text style={[s.title, { color: colors.textPrimary }]}>Body Measurements</Text>
+          <Text style={[s.title, { color: colors.textPrimary }]}>{t('profile.bodyMeasurements')}</Text>
           <TouchableOpacity onPress={handleSave} disabled={saving} style={s.saveBtn}>
             <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.saveGrad}>
-              <Text style={s.saveText}>{saving ? '...' : 'Save'}</Text>
+              <Text style={s.saveText}>{saving ? '...' : t('common.save')}</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>
 
         <ScrollView contentContainerStyle={s.content} showsVerticalScrollIndicator={false}>
           <Text style={[s.subtitle, { color: colors.textSecondary }]}>
-            {last ? `Last logged: ${last.date}` : 'First measurement — establish your baseline!'}
+            {last ? `${t('profile.lastMeasurement')}: ${last.date}` : t('profile.bodyMeasurements')}
           </Text>
 
           {FIELDS.map((field) => {
@@ -169,9 +171,9 @@ export default function BodyMeasurementsModal() {
                 <View style={s.fieldLeft}>
                   <Text style={s.fieldEmoji}>{field.emoji}</Text>
                   <View>
-                    <Text style={[s.fieldLabel, { color: colors.textPrimary }]}>{field.label}</Text>
+                    <Text style={[s.fieldLabel, { color: colors.textPrimary }]}>{t(field.label)}</Text>
                     {last?.[field.key] !== undefined && (
-                      <Text style={[s.fieldPrev, { color: colors.textMuted }]}>Previous: {last[field.key]} {field.unit}</Text>
+                      <Text style={[s.fieldPrev, { color: colors.textMuted }]}>{t('dashboard.recentLogs')}: {last[field.key]} {field.unit}</Text>
                     )}
                   </View>
                 </View>
@@ -197,7 +199,7 @@ export default function BodyMeasurementsModal() {
 
           {/* Photo Section */}
           <View style={s.photoSection}>
-            <Text style={[s.historyTitle, { color: colors.textPrimary }]}>Progress Photo</Text>
+            <Text style={[s.historyTitle, { color: colors.textPrimary }]}>{t('profile.progressPhoto')}</Text>
             <TouchableOpacity style={[s.photoBtn, { borderColor: colors.border, backgroundColor: colors.surface }]} onPress={pickImage}>
               {photo ? (
                 <View style={{ position: 'relative' }}>
@@ -207,7 +209,7 @@ export default function BodyMeasurementsModal() {
               ) : (
                 <View style={{ alignItems: 'center' }}>
                   <Text style={{ fontSize: 32 }}>📷</Text>
-                  <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 4 }}>Add Today's Photo</Text>
+                  <Text style={{ fontSize: 13, color: colors.textSecondary, marginTop: 4 }}>{t('profile.progressPhoto')}</Text>
                 </View>
               )}
             </TouchableOpacity>
@@ -216,7 +218,7 @@ export default function BodyMeasurementsModal() {
           {/* History */}
           {measurements.length > 0 && (
             <View style={[s.historySection, { borderTopColor: colors.border }]}>
-              <Text style={[s.historyTitle, { color: colors.textPrimary }]}>Recent History</Text>
+              <Text style={[s.historyTitle, { color: colors.textPrimary }]}>{t('profile.recentHistory')}</Text>
               {measurements.slice(0, 5).map((m) => (
                 <View key={m.id} style={[s.historyRow, { borderBottomColor: colors.border }]}>
                   <Text style={[s.historyDate, { color: colors.textSecondary }]}>{m.date}</Text>

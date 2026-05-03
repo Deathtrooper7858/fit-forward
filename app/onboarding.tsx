@@ -96,9 +96,9 @@ function StatsStep({ data, onChange }: { data: Partial<OnboardingData>; onChange
 
         {/* Numeric fields */}
         {[
-          { label: t('profile.age'), key: 'age', unit: 'years', min: 15, max: 80 },
-          { label: t('profile.weight'), key: 'weight', unit: 'kg', min: 30, max: 250 },
-          { label: t('profile.height'), key: 'height', unit: 'cm', min: 100, max: 250 },
+          { label: t('profile.age'), key: 'age', unit: t('profile.ageYears'), min: 15, max: 80 },
+          { label: t('profile.weight'), key: 'weight', unit: t('profile.kg'), min: 30, max: 250 },
+          { label: t('profile.height'), key: 'height', unit: t('profile.cm'), min: 100, max: 250 },
         ].map(({ label, key, unit, min, max }) => (
           <View key={key} style={step.field}>
             <Text style={[step.fieldLabel, { color: colors.textSecondary }]}>{label}</Text>
@@ -140,10 +140,10 @@ function ActivityStep({ data, onChange }: { data: Partial<OnboardingData>; onCha
 
   const ACTIVITY_LEVELS = [
     { id: 'sedentary',   label: t('profile.sedentary'),    sub: t('onboarding.activitySedentary'),     icon: '🛋️' },
-    { id: 'light',       label: t('profile.light'),        sub: t('onboarding.activityLight'),            icon: '🚶' },
-    { id: 'moderate',    label: t('profile.moderate'),     sub: t('onboarding.activityModerate'),         icon: '🏃' },
-    { id: 'active',      label: t('profile.active'),       sub: t('onboarding.activityActive'),              icon: '🏋️' },
-    { id: 'very_active', label: t('profile.very_active'),  sub: t('onboarding.activityVeryActive'),icon: '⚡' },
+    { id: 'light',       label: t('profile.lightlyActive'), sub: t('onboarding.activityLight'),            icon: '🚶' },
+    { id: 'moderate',    label: t('profile.moderatelyActive'), sub: t('onboarding.activityModerate'),         icon: '🏃' },
+    { id: 'active',      label: t('profile.veryActive'),    sub: t('onboarding.activityActive'),              icon: '🏋️' },
+    { id: 'very_active', label: t('profile.very_active') || 'Athlete',  sub: t('onboarding.activityVeryActive'),icon: '⚡' },
   ] as const;
 
   return (

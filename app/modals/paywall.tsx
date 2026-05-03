@@ -80,7 +80,7 @@ export default function PaywallModal() {
               activeOpacity={0.8}
             >
               {p.badge && (
-                <LinearGradient colors={['#F59E0B', '#D97706']} style={s.planBadge}>
+                <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.planBadge}>
                   <Text style={s.planBadgeText}>{p.badge}</Text>
                 </LinearGradient>
               )}
@@ -110,7 +110,7 @@ export default function PaywallModal() {
 
         {/* CTA */}
         <TouchableOpacity style={s.cta} activeOpacity={0.85}>
-          <LinearGradient colors={['#F59E0B', '#D97706']} style={s.ctaGrad}>
+          <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.ctaGrad}>
             <Text style={s.ctaText}>{t('paywall.startTrial')}</Text>
           </LinearGradient>
         </TouchableOpacity>

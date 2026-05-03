@@ -8,10 +8,10 @@ function TabIcon({ Icon, label, focused }: { Icon: any; label: string; focused: 
   const colors = useTheme();
   return (
     <View style={styles.tabItem}>
-      <View style={[styles.iconPill, focused && { backgroundColor: '#EAB308' }]}>
+      <View style={[styles.iconPill, focused && { backgroundColor: '#7C5CFC' }]}>
         <Icon size={24} color={focused ? '#000000' : colors.tabInactive} strokeWidth={focused ? 2.5 : 2} />
       </View>
-      <Text style={[styles.tabLabel, { color: focused ? colors.tabActive : colors.tabInactive }]} numberOfLines={1}>{label}</Text>
+      <Text style={[styles.tabLabel, { color: focused ? colors.tabActive : colors.tabInactive }]}>{label}</Text>
     </View>
   );
 }
@@ -88,13 +88,14 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   iconPill: {
-    paddingHorizontal: 20,
+    paddingHorizontal: 16,
     paddingVertical: 4,
     borderRadius: 20,
     marginBottom: 2,
   },
   tabLabel: { 
     fontSize: 10, 
-    fontWeight: '600' 
+    fontWeight: '600',
+    marginTop: 2,
   },
 });

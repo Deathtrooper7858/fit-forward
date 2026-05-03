@@ -5,16 +5,18 @@ import { router } from 'expo-router';
 import { useTheme } from '../../hooks/useTheme';
 import { useNutritionStore } from '../../store';
 import { Radius } from '../../constants';
+import { useTranslation } from 'react-i18next';
 
 const ACTIVITY_OPTIONS = [
-  { label: 'No Hago Ejercicio', icon: '🚫' },
-  { label: '1-2 Días por Semana', icon: '🔥' },
-  { label: '3-4 días por Semana', icon: '🔥' },
-  { label: '5-6 días por Semana', icon: '🔥' },
-  { label: 'Diario', icon: '🔥' },
+  { label: 'exercise.none', icon: '🚫' },
+  { label: 'exercise.1-2', icon: '🔥' },
+  { label: 'exercise.3-4', icon: '🔥' },
+  { label: 'exercise.5-6', icon: '🔥' },
+  { label: 'exercise.daily', icon: '🔥' },
 ];
 
 export default function SelectActivityLevelModal() {
+  const { t } = useTranslation();
   const colors = useTheme();
   const { exerciseLevel, setExerciseLevel } = useNutritionStore();
 
@@ -24,24 +26,24 @@ export default function SelectActivityLevelModal() {
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Text style={{ color: colors.textPrimary, fontSize: 24 }}>←</Text>
         </TouchableOpacity>
-        <Text style={[s.title, { color: colors.textPrimary }]}>Ejercicio</Text>
+        <Text style={[s.title, { color: colors.textPrimary }]}>{t('exercise.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={s.content}>
         {ACTIVITY_OPTIONS.map(opt => {
-          const isSelected = exerciseLevel === opt.label;
+          const isSelected = exerciseLevel === t(opt.label);
           return (
             <TouchableOpacity 
               key={opt.label} 
-              style={[s.option, { backgroundColor: isSelected ? '#423812' : colors.surface, borderColor: isSelected ? colors.primary : 'transparent' }]}
+              style={[s.option, { backgroundColor: isSelected ? '#7C5CFC15' : colors.surface, borderColor: isSelected ? colors.primary : 'transparent' }]}
               onPress={() => {
-                setExerciseLevel(opt.label);
+                setExerciseLevel(opt.label.replace('exercise.', ''));
                 router.back();
               }}
             >
               <Text style={{ fontSize: 24, marginRight: 16 }}>{opt.icon}</Text>
-              <Text style={[s.optLabel, { color: isSelected ? colors.primary : colors.textPrimary }]}>{opt.label}</Text>
+              <Text style={[s.optLabel, { color: isSelected ? colors.primary : colors.textPrimary }]}>{t(opt.label)}</Text>
             </TouchableOpacity>
           );
         })}

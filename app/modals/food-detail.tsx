@@ -25,7 +25,16 @@ export default function FoodDetailModal() {
 
   const food: FoodItem        = JSON.parse(foodJson ?? '{}');
   const [grams, setGrams]     = useState(initialGrams || '100');
-  const [meal, setMeal]       = useState<Meal>(initialMeal || 'lunch');
+  
+  const getAutoMeal = (): Meal => {
+    const h = new Date().getHours();
+    if (h < 10) return 'breakfast';
+    if (h < 14) return 'lunch';
+    if (h < 18) return 'snack';
+    return 'dinner';
+  };
+
+  const [meal, setMeal]       = useState<Meal>(initialMeal || getAutoMeal());
   const { addLog, updateLog, removeLog } = useNutritionStore();
   const { profile }           = useAuthStore();
 
@@ -35,6 +44,12 @@ export default function FoodDetailModal() {
   const pro    = Math.round(food.protein  * factor);
   const carb   = Math.round(food.carbs    * factor);
   const fat    = Math.round(food.fat      * factor);
+  const sugar  = food.sugar ? Math.round(food.sugar * factor) : 0;
+  const fiber  = food.fiber ? Math.round(food.fiber * factor) : 0;
+  const sodium = food.sodium ? Math.round(food.sodium * factor) : 0;
+  const iron   = food.iron ? Math.round(food.iron * factor) : 0;
+  const satFat = food.saturatedFat ? Math.round(food.saturatedFat * factor) : 0;
+  const transFat = food.transFat ? Math.round(food.transFat * factor) : 0;
 
   const handleSave = async () => {
     if (!g || g <= 0) {
@@ -51,6 +66,12 @@ export default function FoodDetailModal() {
         protein:  pro,
         carbs:    carb,
         fat,
+        sugar,
+        fiber,
+        sodium,
+        iron,
+        saturatedFat: satFat,
+        transFat,
       });
 
       if (profile?.id) {
@@ -61,6 +82,12 @@ export default function FoodDetailModal() {
           protein:  pro,
           carbs:    carb,
           fat,
+          sugar,
+          fiber,
+          sodium,
+          iron,
+          saturated_fat: satFat,
+          trans_fat: transFat,
         }).eq('id', logId);
       }
     } else {
@@ -77,6 +104,12 @@ export default function FoodDetailModal() {
         protein:  pro,
         carbs:    carb,
         fat,
+        sugar,
+        fiber,
+        sodium,
+        iron,
+        saturatedFat: satFat,
+        transFat,
       });
 
       if (profile?.id) {
@@ -89,14 +122,18 @@ export default function FoodDetailModal() {
           fat,
           grams:     g,
           meal,
-          logged_at: date || new Date().toISOString().split('T')[0],
+          logged_at: date || new Date().toLocaleDateString('en-CA'),
+          sugar,
+          fiber,
+          sodium,
+          iron,
+          saturated_fat: satFat,
+          trans_fat: transFat,
         }).select().single();
 
         if (data && !error) {
           // Replace the temporary ID with the real one from Supabase
           const { fetchLogs, selectedDate } = useNutritionStore.getState();
-          // We could write a specific "replaceId" function, but re-fetching is safer 
-          // and ensures everything is in sync.
           fetchLogs(profile.id, selectedDate);
         }
       }

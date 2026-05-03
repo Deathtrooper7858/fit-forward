@@ -41,6 +41,12 @@ export interface FoodLog {
   protein:    number;
   carbs:      number;
   fat:        number;
+  sugar?:     number;
+  fiber?:     number;
+  sodium?:    number;
+  iron?:      number;
+  saturatedFat?: number;
+  transFat?:     number;
 }
 
 export interface ActivityLog {
@@ -143,9 +149,10 @@ interface NutritionState {
   selectedDate: string;
   streakDays:   number;
   favoriteFoods: FoodItem[];
-  steps:         number;
+  dailyWater:    Record<string, number>; // date -> ml
+  dailySteps:    Record<string, number>; // date -> steps
+  dailySleep:    Record<string, number>; // date -> hours
   activityCals:  number;
-  neatLevel:     string;
   neatLevel:     string;
   exerciseLevel: string;
   activityLogs: ActivityLog[];
@@ -159,6 +166,7 @@ interface NutritionState {
   setStreak:    (days: number) => void;
   setSteps:     (steps: number) => void;
   addSteps:     (steps: number) => void;
+  setSleep:     (hours: number) => void;
   setActivity:  (cals: number) => void;
   addActivityLog: (activity: ActivityLog) => void;
   removeActivityLog: (id: string) => void;
@@ -168,7 +176,10 @@ interface NutritionState {
   setExerciseLevel: (level: string) => void;
   addFavorite:  (food: FoodItem) => void;
   removeFavorite: (id: string) => void;
-  totals: () => { calories: number; protein: number; carbs: number; fat: number };
+  totals: () => { 
+    calories: number; protein: number; carbs: number; fat: number;
+    sugar: number; fiber: number; sodium: number; iron: number; saturatedFat: number; transFat: number;
+  };
   fetchLogs: (userId: string, date: string) => Promise<void>;
 }
 
@@ -177,13 +188,14 @@ export const useNutritionStore = create<NutritionState>()(
     (set, get) => ({
       todayLogs:    [],
       waterIntake:  0,
-      selectedDate: new Date().toISOString().split('T')[0],
+      selectedDate: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD in local time
       streakDays:   0,
-      steps:        0,
+      dailyWater:   {},
+      dailySteps:   {},
+      dailySleep:   {},
       activityCals: 0,
-      neatLevel:     'A veces de pie',
-      neatLevel:     'A veces de pie',
-      exerciseLevel: '5-6 días por Semana',
+      neatLevel:     'standing_sometimes',
+      exerciseLevel: '5-6',
       activityLogs: [],
       favoriteFoods: [],
 
@@ -193,12 +205,17 @@ export const useNutritionStore = create<NutritionState>()(
         todayLogs: s.todayLogs.map((l) => (l.id === id ? { ...l, ...updates } : l)),
       })),
       setLogs:   (logs) => set({ todayLogs: logs }),
-      setWater:  (waterIntake) => set({ waterIntake }),
-      addWater:  (ml) => set((s) => ({ waterIntake: s.waterIntake + ml })),
+      setWater:  (ml) => set((s) => ({ dailyWater: { ...s.dailyWater, [s.selectedDate]: ml } })),
+      addWater:  (ml) => set((s) => ({ 
+        dailyWater: { ...s.dailyWater, [s.selectedDate]: (s.dailyWater[s.selectedDate] || 0) + ml } 
+      })),
       setDate:   (date) => set({ selectedDate: date }),
       setStreak: (streakDays) => set({ streakDays }),
-      setSteps:  (steps) => set({ steps }),
-      addSteps:  (steps) => set((s) => ({ steps: Math.max(0, s.steps + steps) })),
+      setSteps:  (steps) => set((s) => ({ dailySteps: { ...s.dailySteps, [s.selectedDate]: steps } })),
+      addSteps:  (steps) => set((s) => ({ 
+        dailySteps: { ...s.dailySteps, [s.selectedDate]: Math.max(0, (s.dailySteps[s.selectedDate] || 0) + steps) } 
+      })),
+      setSleep:  (hours) => set((s) => ({ dailySleep: { ...s.dailySleep, [s.selectedDate]: hours } })),
       setActivity: (activityCals) => set({ activityCals }),
       addActivityLog: (activity) => set((s) => ({ activityLogs: [...s.activityLogs, activity] })),
       removeActivityLog: (id) => set((s) => ({ activityLogs: s.activityLogs.filter(a => a.id !== id) })),
@@ -225,8 +242,14 @@ export const useNutritionStore = create<NutritionState>()(
             protein:  acc.protein  + l.protein,
             carbs:    acc.carbs    + l.carbs,
             fat:      acc.fat      + l.fat,
+            sugar:    acc.sugar    + (l.sugar || 0),
+            fiber:    acc.fiber    + (l.fiber || 0),
+            sodium:   acc.sodium   + (l.sodium || 0),
+            iron:     acc.iron     + (l.iron || 0),
+            saturatedFat: acc.saturatedFat + (l.saturatedFat || 0),
+            transFat:     acc.transFat     + (l.transFat || 0),
           }),
-          { calories: 0, protein: 0, carbs: 0, fat: 0 }
+          { calories: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, fiber: 0, sodium: 0, iron: 0, saturatedFat: 0, transFat: 0 }
         );
       },
 
@@ -238,37 +261,50 @@ export const useNutritionStore = create<NutritionState>()(
           .eq('user_id', userId)
           .eq('logged_at', date);
 
-        if (data && !error) {
-          const formattedLogs = data.map((d: any) => ({
-            id:        d.id,
-            foodItem:  {
-              id:       d.food_id ?? d.id,
-              name:     d.food_name,
-              calories: d.grams > 0 ? Math.round((d.calories / d.grams) * 100) : d.calories,
-              protein:  d.grams > 0 ? Math.round((d.protein  / d.grams) * 100) : d.protein,
-              carbs:    d.grams > 0 ? Math.round((d.carbs    / d.grams) * 100) : d.carbs,
-              fat:      d.grams > 0 ? Math.round((d.fat      / d.grams) * 100) : d.fat,
-              source:   'custom',
-            },
-            grams:    d.grams,
-            meal:     d.meal,
-            loggedAt: d.created_at || d.logged_at,
-            calories: d.calories,
-            protein:  d.protein,
-            carbs:    d.carbs,
-            fat:      d.fat,
-          }));
-          set({ todayLogs: formattedLogs as any });
-        }
+      if (data && !error) {
+        const formattedLogs = data.map((d: any) => ({
+          id:        d.id,
+          foodItem:  {
+            id:       d.food_id ?? d.id,
+            name:     d.food_name,
+            calories: d.grams > 0 ? Math.round((d.calories / d.grams) * 100) : d.calories,
+            protein:  d.grams > 0 ? Math.round((d.protein  / d.grams) * 100) : d.protein,
+            carbs:    d.grams > 0 ? Math.round((d.carbs    / d.grams) * 100) : d.carbs,
+            fat:      d.grams > 0 ? Math.round((d.fat      / d.grams) * 100) : d.fat,
+            sugar:    d.grams > 0 ? Math.round((d.sugar    / d.grams) * 100) : d.sugar,
+            fiber:    d.grams > 0 ? Math.round((d.fiber    / d.grams) * 100) : d.fiber,
+            sodium:   d.grams > 0 ? Math.round((d.sodium   / d.grams) * 100) : d.sodium,
+            iron:     d.grams > 0 ? Math.round((d.iron     / d.grams) * 100) : d.iron,
+            saturatedFat: d.grams > 0 ? Math.round((d.saturated_fat / d.grams) * 100) : d.saturated_fat,
+            transFat:     d.grams > 0 ? Math.round((d.trans_fat     / d.grams) * 100) : d.trans_fat,
+            source:   'custom',
+          },
+          grams:    d.grams,
+          meal:     d.meal,
+          loggedAt: d.created_at || d.logged_at,
+          calories: d.calories,
+          protein:  d.protein,
+          carbs:    d.carbs,
+          fat:      d.fat,
+          sugar:    d.sugar,
+          fiber:    d.fiber,
+          sodium:   d.sodium,
+          iron:     d.iron,
+          saturatedFat: d.saturated_fat,
+          transFat:     d.trans_fat,
+        }));
+        set({ todayLogs: formattedLogs as any });
+      }
       },
     }),
     {
       name: 'ff-nutrition',
       storage: createJSONStorage(() => AsyncStorage),
       partialize: (s) => ({
-        waterIntake:   s.waterIntake,
         streakDays:    s.streakDays,
-        steps:         s.steps,
+        dailyWater:    s.dailyWater,
+        dailySteps:    s.dailySteps,
+        dailySleep:    s.dailySleep,
         activityCals:  s.activityCals,
         neatLevel:     s.neatLevel,
         exerciseLevel: s.exerciseLevel,

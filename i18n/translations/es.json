@@ -1,4 +1,44 @@
 {
+  "exercise": {
+    "title": "Ejercicio",
+    "none": "No Hago Ejercicio",
+    "1-2": "1-2 Días por Semana",
+    "3-4": "3-4 Días por Semana",
+    "5-6": "5-6 Días por Semana",
+    "daily": "Diario"
+  },
+  "neat": {
+    "title": "Estilo de vida",
+    "seated": "Mayormente Sentado",
+    "seatedSub": "Pasas la mayor parte del tiempo sentado",
+    "standing_sometimes": "A veces de pie",
+    "standing_sometimesSub": "Mezcla de estar sentado y moverte",
+    "standing_mostly": "Mayormente de pie",
+    "standing_mostlySub": "Pasas la mayor parte del tiempo de pie",
+    "moving": "En movimiento todo el día",
+    "movingSub": "Trabajo activo o movimiento constante",
+    "physical_work": "Trabajo físico intenso",
+    "physical_workSub": "Cargas pesadas o esfuerzo físico continuo"
+  },
+  "activities": {
+    "weightlifting": "Ejercicios con pesas o máquinas",
+    "hiit": "Entrenamiento HIIT",
+    "dancing": "Baile",
+    "yoga": "Yoga",
+    "swimming": "Natación, recreativo",
+    "soccer": "Fútbol",
+    "basketball": "Baloncesto",
+    "tennis": "Tenis",
+    "boxing": "Boxeo, entrenamiento",
+    "duration": "Duración",
+    "minutes": "minutos",
+    "hours": "horas",
+    "burnedIn": "Calorías quemadas en",
+    "addActivity": "Añadir Actividad",
+    "recent": "Recientes",
+    "popular": "Populares",
+    "search": "Buscar actividad..."
+  },
   "common": {
     "save": "Guardar",
     "cancel": "Cancelar",
@@ -11,7 +51,8 @@
     "tapToEdit": "Toca para editar",
     "or": "o",
     "back": "Atrás",
-    "remove": "Eliminar"
+    "remove": "Eliminar",
+    "locale": "es-ES"
   },
   "welcome": {
     "motto": "Fit-Go: Tu mejor versión",
@@ -52,7 +93,14 @@
     "passwordShort": "La contraseña debe tener al menos 8 caracteres.",
     "startTransformation": "Comienza tu transformación hoy",
     "creatingAccount": "Creando cuenta...",
-    "continueGoogle": "Continuar con Google"
+    "continueGoogle": "Continuar con Google",
+    "checkEmail": "Revisa tu correo",
+    "resetPassword": "Restablecer Contraseña",
+    "resetPasswordSub": "Ingresa el correo electrónico asociado a tu cuenta",
+    "sendResetLink": "Enviar Enlace",
+    "sending": "Enviando...",
+    "emailSentSub": "Enviamos un enlace de restablecimiento a",
+    "backToLogin": "Volver al Login"
   },
   "tabs": {
     "dashboard": "Panel",
@@ -108,7 +156,35 @@
     "removeEntry": "Eliminar entrada",
     "removeConfirm": "¿Eliminar \"{{name}}\" del registro de hoy?",
     "holdToRemove": "Mantén para eliminar",
-    "favorites": "Favoritos"
+    "favorites": "Favoritos",
+    "otherNutrients": "Otros Nutrientes",
+    "water": "Agua",
+    "activity": "Actividad",
+    "steps": "Pasos",
+    "reset": "Reiniciar",
+    "weeklyAverage": "Promedio Semanal",
+    "lifestyle": "Estilo de vida",
+    "kcal": "kcal",
+    "sugar": "Azúcares",
+    "fiber": "Fibra",
+    "saturatedFat": "Gras. Saturadas",
+    "sodium": "Sodio",
+    "iron": "Hierro",
+    "today": "Hoy",
+    "planMeal": "Planificar Comida",
+    "planEmptyTitle": "Tu Plan de Comida\nEstá Vacío",
+    "planEmptySub": "Planificar",
+    "endDay": "Terminar Día",
+    "glass": "vaso",
+    "glasses": "vasos",
+    "of": "de",
+    "copyDay": "Copiar Día",
+    "pasteDay": "Pegar Día",
+    "emptyDay": "Vaciar Día",
+    "adjustPortions": "Ajustar porciones",
+    "recalculateMeals": "Recalculate Comidas",
+    "exportPlan": "Exportar plan",
+    "exportDay": "Exportar día"
   },
   "planner": {
     "title": "Planificador",
@@ -145,7 +221,9 @@
     "thu": "Jue",
     "fri": "Vie",
     "sat": "Sáb",
-    "sun": "Dom"
+    "sun": "Dom",
+    "myStreaks": "Mis Rachas",
+    "currentStreak": "racha actual"
   },
   "profile": {
     "title": "Perfil",
@@ -176,6 +254,10 @@
     "bodyFat": "Grasa Corporal",
     "waist": "Cintura",
     "hips": "Cadera",
+    "chest": "Pecho",
+    "arms": "Brazos",
+    "legs": "Piernas",
+    "neck": "Cuello",
     "loseWeight": "Perder Peso",
     "gainMuscle": "Ganar Músculo",
     "maintain": "Mantener",
@@ -207,7 +289,18 @@
     "enterAge": "Ingresa tu edad",
     "dark": "Oscuro",
     "lightMode": "Claro",
-    "unlockPro": "Desbloquea FitGO Pro"
+    "upgradePro": "Mejorar a Pro",
+    "ageYears": "años",
+    "cm": "cm",
+    "kg": "kg",
+    "dietarySub": "ej. Vegano, Sin nueces",
+    "none": "Ninguno",
+    "editName": "Editar Nombre",
+    "enterName": "Ingresa tu nombre",
+    "bodyHealth": "Cuerpo y Salud",
+    "accountApp": "Cuenta y Aplicación",
+    "measurements": "Medidas",
+    "recalculate": "Recalcular Macros"
   },
   "recipes": {
     "title": "Recetas IA",
@@ -268,7 +361,12 @@
     "dietNutFree": "Sin frutos secos",
     "dietHalal": "Halal",
     "dietKosher": "Kosher",
-    "dietKeto": "Keto"
+    "dietKeto": "Keto",
+    "statsTitle": "Cuéntanos sobre ti",
+    "statsSub": "Esto nos ayuda a calcular tus necesidades calóricas",
+    "sexLabel": "Soy",
+    "activityTitle": "¿Qué tan activo eres?",
+    "activitySub": "Selecciona el nivel que mejor describe tu rutina semanal"
   },
   "scan": {
     "title": "Escanear Alimento",

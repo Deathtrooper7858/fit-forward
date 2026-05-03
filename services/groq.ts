@@ -145,7 +145,10 @@ export async function sendCoachMessage(
 
 // ─── Food photo analysis ───────────────────────────────────────────────────────
 export async function analyzeFoodPhoto(base64Image: string, language: string = 'en'): Promise<{
-  foods: { name: string; grams: number; calories: number; protein: number; carbs: number; fat: number }[];
+  foods: { 
+    name: string; grams: number; calories: number; protein: number; carbs: number; fat: number;
+    sugar?: number; fiber?: number; sodium?: number; iron?: number; saturatedFat?: number; transFat?: number;
+  }[];
   totalCalories: number;
   confidence: 'high' | 'medium' | 'low';
   notes: string;
@@ -159,7 +162,7 @@ IMPORTANT: Return ONLY a valid JSON object. Do not include markdown blocks or ex
 Structure:
 {
   "foods": [
-    { "name": "food name", "grams": 150, "calories": 250, "protein": 20, "carbs": 30, "fat": 8 }
+    { "name": "food name", "grams": 150, "calories": 250, "protein": 20, "carbs": 30, "fat": 8, "sugar": 5, "fiber": 3, "sodium": 120, "iron": 2, "saturatedFat": 2, "transFat": 0 }
   ],
   "totalCalories": 250,
   "confidence": "high",
@@ -381,8 +384,8 @@ IMPORTANT: Extract the food names in ${targetLang}.
 Return ONLY valid JSON. Structure:
 {
   "items": [
-    { "name": "Apple", "grams": 180, "calories": 95, "protein": 0, "carbs": 25, "fat": 0 },
-    { "name": "Black Coffee", "grams": 250, "calories": 2, "protein": 0, "carbs": 0, "fat": 0 }
+    { "name": "Apple", "grams": 180, "calories": 95, "protein": 0, "carbs": 25, "fat": 0, "sugar": 19, "fiber": 4, "sodium": 2, "iron": 0.2, "saturatedFat": 0, "transFat": 0 },
+    { "name": "Black Coffee", "grams": 250, "calories": 2, "protein": 0, "carbs": 0, "fat": 0, "sugar": 0, "fiber": 0, "sodium": 5, "iron": 0, "saturatedFat": 0, "transFat": 0 }
   ]
 }`;
 

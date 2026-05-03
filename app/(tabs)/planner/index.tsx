@@ -89,7 +89,7 @@ export default function PlannerScreen() {
       const { data: planData } = await supabase.from('meal_plans').insert({
         user_id:    profile.id,
         title:      'Weekly AI Plan',
-        week_start: new Date().toISOString().split('T')[0],
+        week_start: new Date().toLocaleDateString('en-CA'),
       }).select().single();
 
       if (planData) {
@@ -222,7 +222,7 @@ export default function PlannerScreen() {
               </Text>
               {!isPro && !loading && (
                 <TouchableOpacity style={s.proBtn} activeOpacity={0.8} onPress={() => router.push('/modals/paywall')}>
-                  <LinearGradient colors={['#F59E0B', '#D97706']} style={s.proGrad}>
+                  <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.proGrad}>
                     <Text style={s.proText}>{t('planner.unlockPro')}</Text>
                   </LinearGradient>
                 </TouchableOpacity>
@@ -233,7 +233,7 @@ export default function PlannerScreen() {
 
         {/* Shopping list teaser */}
         <TouchableOpacity onPress={handleShoppingList} activeOpacity={0.8}>
-          <LinearGradient colors={colors.theme === 'dark' ? ['#F59E0B11', '#D9770611'] : [colors.pro + '15', colors.pro + '08']} style={[s.teaser, { borderColor: colors.pro + '33' }]}>
+          <LinearGradient colors={colors.theme === 'dark' ? ['#7C5CFC11', '#4338CA11'] : [colors.pro + '15', colors.pro + '08']} style={[s.teaser, { borderColor: colors.pro + '33' }]}>
             <Text style={s.teaserEmoji}>🛒</Text>
             <View style={{ flex: 1 }}>
               <Text style={[s.teaserTitle, { color: colors.textPrimary }]}>{t('planner.autoShoppingList')}</Text>
@@ -278,7 +278,7 @@ function MealCard({ name, meal, cal, protein, carbs, fat }: {
     <View style={[mc.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       <View style={[mc.mealDot, { backgroundColor: colors.primary }]} />
       <View style={mc.info}>
-        <Text style={[mc.mealLabel, { color: colors.textMuted }]}>{meal}</Text>
+        <Text style={[mc.mealLabel, { color: colors.textMuted }]}>{(`common.${meal}`)}</Text>
         <Text style={[mc.name, { color: colors.textPrimary }]}>{name}</Text>
         {(protein !== undefined) && (
           <View style={mc.macroRow}>

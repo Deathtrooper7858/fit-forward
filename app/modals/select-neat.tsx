@@ -5,16 +5,18 @@ import { router } from 'expo-router';
 import { useTheme } from '../../hooks/useTheme';
 import { useNutritionStore } from '../../store';
 import { Radius } from '../../constants';
+import { useTranslation } from 'react-i18next';
 
 const NEAT_OPTIONS = [
-  { label: 'Mayormente Sentado', icon: '🪑', sub: 'Pasas la mayor parte del tiempo sentado' },
-  { label: 'A veces de pie', icon: '🧍', sub: 'Mezcla de estar sentado y moverte' },
-  { label: 'Mayormente de pie', icon: '🚶', sub: 'Pasas la mayor parte del tiempo de pie' },
-  { label: 'En movimiento todo el día', icon: '🏃', sub: 'Trabajo activo o movimiento constante' },
-  { label: 'Trabajo físico intenso', icon: '🏗️', sub: 'Cargas pesadas o esfuerzo físico continuo' },
+  { key: 'seated', icon: '🪑' },
+  { key: 'standing_sometimes', icon: '🧍' },
+  { key: 'standing_mostly', icon: '🚶' },
+  { key: 'moving', icon: '🏃' },
+  { key: 'physical_work', icon: '🏗️' },
 ];
 
 export default function SelectNeatModal() {
+  const { t } = useTranslation();
   const colors = useTheme();
   const { neatLevel, setNeat } = useNutritionStore();
 
@@ -24,26 +26,26 @@ export default function SelectNeatModal() {
         <TouchableOpacity onPress={() => router.back()} style={s.backBtn}>
           <Text style={{ color: colors.textPrimary, fontSize: 24 }}>←</Text>
         </TouchableOpacity>
-        <Text style={[s.title, { color: colors.textPrimary }]}>Estilo de vida (NEAT)</Text>
+        <Text style={[s.title, { color: colors.textPrimary }]}>{t('neat.title')}</Text>
         <View style={{ width: 40 }} />
       </View>
 
       <ScrollView contentContainerStyle={s.content}>
         {NEAT_OPTIONS.map(opt => {
-          const isSelected = neatLevel === opt.label;
+          const isSelected = neatLevel === opt.key;
           return (
             <TouchableOpacity 
-              key={opt.label} 
-              style={[s.option, { backgroundColor: isSelected ? '#423812' : colors.surface, borderColor: isSelected ? colors.primary : 'transparent' }]}
+              key={opt.key} 
+              style={[s.option, { backgroundColor: isSelected ? '#7C5CFC15' : colors.surface, borderColor: isSelected ? colors.primary : 'transparent' }]}
               onPress={() => {
-                setNeat(opt.label);
+                setNeat(opt.key);
                 router.back();
               }}
             >
               <Text style={{ fontSize: 24, marginRight: 16 }}>{opt.icon}</Text>
               <View style={{ flex: 1 }}>
-                <Text style={[s.optLabel, { color: isSelected ? colors.primary : colors.textPrimary }]}>{opt.label}</Text>
-                <Text style={[s.optSub, { color: isSelected ? colors.primary : colors.textSecondary }]}>{opt.sub}</Text>
+                <Text style={[s.optLabel, { color: isSelected ? colors.primary : colors.textPrimary }]}>{t(`neat.${opt.key}`)}</Text>
+                <Text style={[s.optSub, { color: isSelected ? colors.primary : colors.textSecondary }]}>{t(`neat.${opt.key}Sub`)}</Text>
               </View>
             </TouchableOpacity>
           );
