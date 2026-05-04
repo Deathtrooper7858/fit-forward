@@ -15,6 +15,7 @@ import { supabase } from '../services/supabase';
 import { Spacing, Radius } from '../constants';
 import { useTheme } from '../hooks/useTheme';
 import { useTranslation } from 'react-i18next';
+import { safe } from '../utils/sanitize';
 
 const FREE_MSG_LIMIT = 10;
 
@@ -25,9 +26,8 @@ function MessageBubble({ msg }: { msg: CoachMessage }) {
   const colors = useTheme();
   const isUser = msg.role === 'user';
 
-  // Format bold markdown **text** simply
   const formatContent = (content: string) =>
-    content.replace(/\*\*(.*?)\*\*/g, '$1');
+    safe(content.replace(/\*\*(.*?)\*\*/g, '$1'));
 
   return (
     <View style={[bubble.row, isUser && bubble.rowUser]}>
@@ -355,7 +355,7 @@ export default function NutritionistScreen() {
   const showSuggestions = messages.length <= 1 && !isTyping;
 
   return (
-    <SafeAreaView edges={['bottom']} style={[s.safe, { backgroundColor: colors.background }]}>
+    <View style={[s.safe, { backgroundColor: colors.background }]}>
       {/* Header */}
       <View style={[s.header, { borderBottomColor: colors.border }]}>
         <Image source={require('../assets/fitgo.jpeg')} style={s.headerAvatar} resizeMode="cover" />
@@ -379,7 +379,7 @@ export default function NutritionistScreen() {
 
       <KeyboardAvoidingView
         style={{ flex: 1 }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
         keyboardVerticalOffset={Platform.OS === 'ios' ? 90 : 0}
       >
         <FlatList<CoachMessage>
@@ -491,7 +491,7 @@ export default function NutritionistScreen() {
           </View>
         )}
       </KeyboardAvoidingView>
-    </SafeAreaView>
+    </View>
   );
 }
 

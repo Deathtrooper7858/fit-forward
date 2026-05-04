@@ -23,7 +23,12 @@ export default function FoodDetailModal() {
     date?: string;
   }>();
 
-  const food: FoodItem        = JSON.parse(foodJson ?? '{}');
+  let food: FoodItem = {} as FoodItem;
+  try {
+    food = JSON.parse(foodJson ?? '{}');
+  } catch (err) {
+    console.error('Error parsing food JSON:', err);
+  }
   const [grams, setGrams]     = useState(initialGrams || '100');
   
   const getAutoMeal = (): Meal => {

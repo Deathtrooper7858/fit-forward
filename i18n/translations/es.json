@@ -71,7 +71,8 @@
     "tiktok": "TikTok",
     "instagram": "Instagram",
     "email": "Correo de Soporte",
-    "hashtag": "Hashtags"
+    "hashtag": "Hashtags",
+    "moreInfo": "Más información"
   },
   "auth": {
     "login": "Bienvenido de nuevo",
@@ -207,7 +208,7 @@
     "pasteDay": "Pegar Día",
     "emptyDay": "Vaciar Día",
     "adjustPortions": "Ajustar porciones",
-    "recalculateMeals": "Recalculate Comidas",
+    "recalculateMeals": "Recalcular Comidas",
     "exportPlan": "Exportar plan",
     "exportDay": "Exportar día",
     "text": "Texto"
@@ -320,7 +321,17 @@
     "cm": "cm",
     "kg": "kg",
     "dietarySub": "ej. Vegano, Sin nueces",
-    "none": "Ninguno"
+    "none": "Ninguno",
+    "updateGoals": "Actualizar objetivos",
+    "mealPlanFoods": "Plan de Comidas y Alimentos",
+    "reminders": "Recordatorios",
+    "interface": "Interfaz",
+    "dark": "Oscuro",
+    "lightMode": "Claro",
+    "syncMeals": "Sincronizar Comidas",
+    "account": "Cuenta",
+    "sendFeedback": "Enviar Sugerencia",
+    "settings": "Configuración"
   },
   "recipes": {
     "title": "Recetas IA",

@@ -313,7 +313,7 @@ export async function transcribeAudio(uri: string): Promise<string> {
     throw new Error('Groq API Key is missing. Please add EXPO_PUBLIC_GROQ_API_KEY to your .env and restart Metro.');
   }
 
-  console.log('[Groq] Transcribing:', uri, 'with key length:', apiKey.length);
+  if (__DEV__) console.log('[Groq] Transcribing:', uri);
   const response = await fetch('https://api.groq.com/openai/v1/audio/transcriptions', {
     method: 'POST',
     headers: {

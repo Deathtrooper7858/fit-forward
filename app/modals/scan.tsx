@@ -97,12 +97,12 @@ export default function ScanModal() {
       });
 
       recordingStatus.current = 'starting';
-      console.log('[Audio] Preparing...');
+      if (__DEV__) console.log('[Audio] Preparing...');
       await recorder.prepareToRecordAsync();
-      console.log('[Audio] Starting...');
+      if (__DEV__) console.log('[Audio] Starting...');
       recorder.record();
       recordingStatus.current = 'recording';
-      console.log('[Audio] Recording active');
+      if (__DEV__) console.log('[Audio] Recording active');
     } catch (err) {
       recordingStatus.current = 'idle';
       console.error('Start error:', err);
@@ -127,7 +127,7 @@ export default function ScanModal() {
     recordingStatus.current = 'stopping';
     try {
       setLoading(true);
-      console.log('[Audio] Stopping...');
+      if (__DEV__) console.log('[Audio] Stopping...');
       await recorder.stop();
       
       let audioUri = recorder.uri;

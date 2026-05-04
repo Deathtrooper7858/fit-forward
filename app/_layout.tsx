@@ -147,10 +147,7 @@ export default function RootLayout() {
           name="modals/calendar"
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}
         />
-        <Stack.Screen
-          name="modals/tracker-menu"
-          options={{ presentation: 'transparentModal', animation: 'fade' }}
-        />
+
         <Stack.Screen
           name="modals/add-activity"
           options={{ presentation: 'modal', animation: 'slide_from_bottom' }}

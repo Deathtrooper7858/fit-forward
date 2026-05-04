@@ -5,7 +5,8 @@
     "tiktok": "TikTok",
     "instagram": "Instagram",
     "email": "Support Email",
-    "hashtag": "Hashtags"
+    "hashtag": "Hashtags",
+    "moreInfo": "More information"
   },
   "exercise": {
     "title": "Exercise",
@@ -320,7 +321,17 @@
     "cm": "cm",
     "kg": "kg",
     "dietarySub": "e.g. Vegan, Nut-free",
-    "none": "None"
+    "none": "None",
+    "updateGoals": "Update Goals",
+    "mealPlanFoods": "Meal Plan & Foods",
+    "reminders": "Reminders",
+    "interface": "Interface",
+    "dark": "Dark",
+    "lightMode": "Light",
+    "syncMeals": "Sync Meals",
+    "account": "Account",
+    "sendFeedback": "Send Feedback",
+    "settings": "Settings"
   },
   "recipes": {
     "title": "AI Recipes",

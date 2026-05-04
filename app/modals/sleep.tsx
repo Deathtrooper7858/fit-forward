@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { router } from 'expo-router';
 import { useTheme } from '../../hooks/useTheme';
 import { useNutritionStore } from '../../store';
 import { Spacing, Radius } from '../../constants';
+import { useTranslation } from 'react-i18next';
+import { useState } from 'react';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function SleepModal() {
+  const { t } = useTranslation();
   const colors = useTheme();
   const { setSleep } = useNutritionStore();
   const [bedtime, setBedtime] = useState('23:00');
@@ -33,25 +37,42 @@ export default function SleepModal() {
   };
 
   const hours = calculateHours();
+  const sleepQuality = hours >= 7 && hours <= 9 ? '😴' : hours < 6 ? '😵' : '😐';
+  const qualityColor = hours >= 7 && hours <= 9 ? '#22C55E' : hours < 6 ? '#EF4444' : '#F59E0B';
 
   return (
     <SafeAreaView style={[s.safe, { backgroundColor: colors.background }]}>
+      {/* Header */}
       <View style={s.header}>
-        <Text style={[s.title, { color: colors.textPrimary }]}>Registrar Sueño</Text>
+        <Text style={[s.title, { color: colors.textPrimary }]}>
+          {t('dashboard.sleepWidget', 'Sueño')}
+        </Text>
         <TouchableOpacity onPress={() => router.back()} style={s.closeBtn}>
-          <Text style={{ color: colors.textPrimary, fontSize: 24 }}>✕</Text>
+          <Text style={{ color: colors.textSecondary, fontSize: 20 }}>✕</Text>
         </TouchableOpacity>
       </View>
 
       <View style={s.content}>
-        <Text style={{ fontSize: 48, textAlign: 'center', marginBottom: 20 }}>🌙</Text>
-        <Text style={[s.desc, { color: colors.textSecondary }]}>Ingresa tu hora de acostarte y levantarte.</Text>
-        
+        {/* Hero */}
+        <View style={[s.heroCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={s.heroEmoji}>{sleepQuality}</Text>
+          <Text style={[s.hoursText, { color: qualityColor }]}>
+            {hours > 0 ? `${hours}h` : '--'}
+          </Text>
+          <Text style={[s.hoursLabel, { color: colors.textSecondary }]}>
+            {t('profile.settings', 'Total registrado')}
+          </Text>
+        </View>
+
+        {/* Time inputs */}
         <View style={s.row}>
-          <View style={s.inputContainer}>
-            <Text style={[s.label, { color: colors.textPrimary }]}>Hora de dormir</Text>
+          <View style={[s.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={s.inputEmoji}>🌙</Text>
+            <Text style={[s.label, { color: colors.textSecondary }]}>
+              {t('sleep.bedtime', 'Hora de dormir')}
+            </Text>
             <TextInput
-              style={[s.input, { backgroundColor: colors.surface, color: colors.textPrimary }]}
+              style={[s.input, { color: colors.textPrimary }]}
               value={bedtime}
               onChangeText={setBedtime}
               keyboardType="numbers-and-punctuation"
@@ -59,10 +80,13 @@ export default function SleepModal() {
               placeholderTextColor={colors.textMuted}
             />
           </View>
-          <View style={s.inputContainer}>
-            <Text style={[s.label, { color: colors.textPrimary }]}>Hora de despertar</Text>
+          <View style={[s.inputContainer, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <Text style={s.inputEmoji}>☀️</Text>
+            <Text style={[s.label, { color: colors.textSecondary }]}>
+              {t('sleep.waketime', 'Hora de despertar')}
+            </Text>
             <TextInput
-              style={[s.input, { backgroundColor: colors.surface, color: colors.textPrimary }]}
+              style={[s.input, { color: colors.textPrimary }]}
               value={waketime}
               onChangeText={setWaketime}
               keyboardType="numbers-and-punctuation"
@@ -72,13 +96,18 @@ export default function SleepModal() {
           </View>
         </View>
 
-        <View style={[s.resultBox, { backgroundColor: colors.surfaceAlt }]}>
-          <Text style={[s.resultLabel, { color: colors.textSecondary }]}>Total de horas dormidas</Text>
-          <Text style={[s.resultValue, { color: colors.primary }]}>{hours > 0 ? `${hours}h` : '--'}</Text>
+        {/* Tip */}
+        <View style={[s.tipBox, { backgroundColor: 'rgba(124,92,252,0.08)', borderColor: 'rgba(124,92,252,0.2)' }]}>
+          <Text style={{ fontSize: 14, color: colors.textSecondary, lineHeight: 20 }}>
+            💡 {t('sleep.tip', 'Los adultos necesitan entre 7 y 9 horas de sueño para una recuperación óptima.')}
+          </Text>
         </View>
 
-        <TouchableOpacity style={[s.saveBtn, { backgroundColor: '#7C5CFC' }]} onPress={handleSave}>
-          <Text style={s.saveText}>Guardar Sueño</Text>
+        {/* Save button */}
+        <TouchableOpacity style={s.saveBtn} onPress={handleSave} activeOpacity={0.85}>
+          <LinearGradient colors={['#7C5CFC', '#4338CA']} style={s.saveGrad}>
+            <Text style={s.saveText}>{t('common.save', 'Guardar')}</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
     </SafeAreaView>
@@ -86,19 +115,22 @@ export default function SleepModal() {
 }
 
 const s = StyleSheet.create({
-  safe: { flex: 1 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: Spacing.lg },
-  title: { fontSize: 18, fontWeight: '700' },
-  closeBtn: { position: 'absolute', right: Spacing.lg },
-  content: { padding: Spacing.lg },
-  desc: { textAlign: 'center', fontSize: 16, marginBottom: 32 },
-  row: { flexDirection: 'row', gap: 16, marginBottom: 32 },
-  inputContainer: { flex: 1 },
-  label: { fontSize: 14, fontWeight: '600', marginBottom: 8 },
-  input: { height: 50, borderRadius: Radius.lg, paddingHorizontal: 16, fontSize: 16, textAlign: 'center' },
-  resultBox: { padding: 24, borderRadius: Radius.lg, alignItems: 'center', marginBottom: 32 },
-  resultLabel: { fontSize: 14, marginBottom: 8 },
-  resultValue: { fontSize: 32, fontWeight: '800' },
-  saveBtn: { height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center' },
-  saveText: { color: '#FFF', fontSize: 16, fontWeight: '700' }
+  safe:           { flex: 1 },
+  header:         { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingHorizontal: Spacing.lg, paddingVertical: 14 },
+  title:          { fontSize: 18, fontWeight: '700' },
+  closeBtn:       { position: 'absolute', right: Spacing.lg },
+  content:        { padding: Spacing.lg, gap: 20 },
+  heroCard:       { alignItems: 'center', padding: 28, borderRadius: Radius.xl, borderWidth: 1, gap: 6 },
+  heroEmoji:      { fontSize: 40 },
+  hoursText:      { fontSize: 48, fontWeight: '900' },
+  hoursLabel:     { fontSize: 14 },
+  row:            { flexDirection: 'row', gap: 12 },
+  inputContainer: { flex: 1, borderRadius: Radius.xl, borderWidth: 1, padding: 16, alignItems: 'center', gap: 6 },
+  inputEmoji:     { fontSize: 24 },
+  label:          { fontSize: 12, fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 },
+  input:          { fontSize: 22, fontWeight: '800', textAlign: 'center' },
+  tipBox:         { borderRadius: Radius.lg, padding: 14, borderWidth: 1 },
+  saveBtn:        { borderRadius: Radius.xl, overflow: 'hidden', marginTop: 4 },
+  saveGrad:       { paddingVertical: 16, alignItems: 'center' },
+  saveText:       { color: '#FFF', fontSize: 16, fontWeight: '700' },
 });

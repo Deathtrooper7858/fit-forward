@@ -43,8 +43,8 @@ export default function TabsLayout() {
         const { dx } = gestureState;
         const { currentIndex: currentIdx, isPro: pro } = stateRef.current;
         
-        if (dx > -50) {
-          // Swipe Right -> Next Tab
+        if (dx < -50) {
+          // Swipe Left -> Next Tab
           if (currentIdx !== -1 && currentIdx < tabs.length - 1) {
             const next = tabs[currentIdx + 1];
             if (next === '/planner' && !pro) {
@@ -53,8 +53,8 @@ export default function TabsLayout() {
               router.push(next as any);
             }
           }
-        } else if (dx < 50) {
-          // Swipe Left -> Previous Tab
+        } else if (dx > 50) {
+          // Swipe Right -> Previous Tab
           if (currentIdx > 0) {
             router.push(tabs[currentIdx - 1] as any);
           }
@@ -72,6 +72,7 @@ export default function TabsLayout() {
         tabBarShowLabel: false,
         tabBarActiveTintColor: colors.tabActive,
         tabBarInactiveTintColor: colors.tabInactive,
+        tabBarHideOnKeyboard: true,
       }}
     >
       <Tabs.Screen

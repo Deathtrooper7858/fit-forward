@@ -26,7 +26,7 @@ function ScoreRing({ consumed, target }: { consumed: number; target: number }) {
   const { t } = useTranslation();
   const colors = useTheme();
   const pct = Math.min(consumed / Math.max(target, 1), 1);
-  const strokeDashoffset = CIRCUMFERENCE - pct * CIRCUMFERENCE;
+  const strokeDashoffset = useMemo(() => CIRCUMFERENCE - pct * CIRCUMFERENCE, [pct]);
 
   return (
     <View style={ring.container}>
@@ -127,7 +127,8 @@ export default function DashboardScreen() {
   const { todayLogs, dailySleep, selectedDate, totals, fetchLogs } = useNutritionStore();
   const { latest } = useBodyStore();
   
-  const { calories } = useMemo(() => totals(), [todayLogs]);
+  const totalsData = useMemo(() => totals(), [todayLogs]);
+  const { calories } = totalsData;
   const target = profile?.targetCalories ?? 2000;
   const name = profile?.name?.split(' ')[0] ?? t('dashboard.fallbackName');
 
@@ -140,9 +141,25 @@ export default function DashboardScreen() {
     loadTodayData();
   }, [profile?.id]);
 
+  const initialWeight = profile?.startingWeight || profile?.weight || 0;
   const currentWeight = latest()?.weight || profile?.weight || 0;
-  const targetWeight = profile?.goal === 'lose' ? currentWeight - 5 : profile?.goal === 'gain' ? currentWeight + 5 : currentWeight; // placeholder logic
+  const targetWeight  = profile?.targetWeight || currentWeight;
   const sleepHours = dailySleep[selectedDate] || 0;
+
+  let progressPct = 0;
+  if (profile?.goal === 'lose') {
+    const totalToLose = initialWeight - targetWeight;
+    const lostSoFar = initialWeight - currentWeight;
+    progressPct = totalToLose > 0 ? Math.max(0, Math.min(100, (lostSoFar / totalToLose) * 100)) : 100;
+  } else if (profile?.goal === 'gain') {
+    const totalToGain = targetWeight - initialWeight;
+    const gainedSoFar = currentWeight - initialWeight;
+    progressPct = totalToGain > 0 ? Math.max(0, Math.min(100, (gainedSoFar / totalToGain) * 100)) : 100;
+  } else {
+    // Maintain: 100% as long as they are within 1.5kg of target
+    const diff = Math.abs(currentWeight - targetWeight);
+    progressPct = diff <= 1.5 ? 100 : Math.max(0, 100 - (diff * 10));
+  }
 
   const [isEditing, setIsEditing] = useState(false);
   const [widgetsOrder, setWidgetsOrder] = useState(
@@ -231,9 +248,9 @@ export default function DashboardScreen() {
           <WidgetCard key={id} {...commonProps} title={t('dashboard.macrosWidget')} icon="🥗"
             customContent={
               <View style={[w.content, { gap: 4 }]}>
-                <Text style={{ fontSize: 13, color: colors.protein }}>P: {totals().protein}g</Text>
-                <Text style={{ fontSize: 13, color: colors.carbs }}>C: {totals().carbs}g</Text>
-                <Text style={{ fontSize: 13, color: colors.fat }}>G: {totals().fat}g</Text>
+                <Text style={{ fontSize: 13, color: colors.protein }}>P: {totalsData.protein}g</Text>
+                <Text style={{ fontSize: 13, color: colors.carbs }}>C: {totalsData.carbs}g</Text>
+                <Text style={{ fontSize: 13, color: colors.fat }}>G: {totalsData.fat}g</Text>
               </View>
             }
             onPress={() => router.push('/(tabs)/tracker')}
@@ -314,15 +331,12 @@ export default function DashboardScreen() {
           </View>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
             <Text style={{ fontSize: 20, fontWeight: '700', color: colors.textPrimary }}>{currentWeight} kg</Text>
-            <Text style={{ fontSize: 16, fontWeight: '600', color: colors.secondary }}>🎯 {targetWeight} kg</Text>
+            <Text style={{ fontSize: 16, fontWeight: '600', color: '#7C5CFC' }}>🎯 {targetWeight} kg</Text>
           </View>
           <View style={[s.progressBar, { backgroundColor: colors.border }]}>
-            <View style={[s.progressFill, { backgroundColor: colors.secondary, width: '30%' }]} />
+            <View style={[s.progressFill, { backgroundColor: '#7C5CFC', width: `${progressPct}%` }]} />
           </View>
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 12, marginBottom: 24 }}>
-            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>📅 {t('dashboard.targetDate', 'Llegarás en')}</Text>
-            <Text style={{ color: colors.textSecondary, fontSize: 13 }}>{t('dashboard.weeksLeft', { count: 11 })}</Text>
-          </View>
+          <View style={{ height: 24 }} />
           <TouchableOpacity style={[s.updateBtn, { backgroundColor: '#7C5CFC' }]} onPress={() => router.push('/modals/body-measurements')}>
             <Text style={[s.updateBtnText, { color: '#FFF' }]}>{t('dashboard.updateProgress')}</Text>
           </TouchableOpacity>

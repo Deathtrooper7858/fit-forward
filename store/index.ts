@@ -21,6 +21,8 @@ export interface UserProfile {
   height:          number;   // cm
   activityLevel:   'sedentary' | 'light' | 'moderate' | 'active' | 'very_active';
   goal:            'lose' | 'maintain' | 'gain';
+  targetWeight?:   number;
+  startingWeight?: number;
   tdee:            number;
   targetCalories:  number;
   macros:          { protein: number; carbs: number; fat: number };
@@ -315,28 +317,31 @@ export const useNutritionStore = create<NutritionState>()(
         const logs = get().todayLogs;
         return logs.reduce(
           (acc, l) => ({
-            calories: acc.calories + l.calories,
-            protein:  acc.protein  + l.protein,
-            carbs:    acc.carbs    + l.carbs,
-            fat:      acc.fat      + l.fat,
-            sugar:    acc.sugar    + (l.sugar || 0),
-            fiber:    acc.fiber    + (l.fiber || 0),
-            sodium:   acc.sodium   + (l.sodium || 0),
-            iron:     acc.iron     + (l.iron || 0),
-            saturatedFat: acc.saturatedFat + (l.saturatedFat || 0),
-            transFat:     acc.transFat     + (l.transFat || 0),
+            calories: acc.calories + (Number(l.calories) || 0),
+            protein:  acc.protein  + (Number(l.protein) || 0),
+            carbs:    acc.carbs    + (Number(l.carbs) || 0),
+            fat:      acc.fat      + (Number(l.fat) || 0),
+            sugar:    acc.sugar    + (Number(l.sugar) || 0),
+            fiber:    acc.fiber    + (Number(l.fiber) || 0),
+            sodium:   acc.sodium   + (Number(l.sodium) || 0),
+            iron:     acc.iron     + (Number(l.iron) || 0),
+            saturatedFat: acc.saturatedFat + (Number(l.saturatedFat) || 0),
+            transFat:     acc.transFat     + (Number(l.transFat) || 0),
           }),
           { calories: 0, protein: 0, carbs: 0, fat: 0, sugar: 0, fiber: 0, sodium: 0, iron: 0, saturatedFat: 0, transFat: 0 }
         );
       },
 
       fetchLogs: async (userId, date) => {
+        const start = `${date}T00:00:00Z`;
+        const end   = `${date}T23:59:59Z`;
         const { supabase } = await import('../services/supabase');
         const { data, error } = await supabase
           .from('food_logs')
           .select('*')
           .eq('user_id', userId)
-          .eq('logged_at', date);
+          .gte('logged_at', start)
+          .lte('logged_at', end);
 
       if (data && !error) {
         const formattedLogs = data.map((d: any) => ({

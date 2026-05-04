@@ -125,8 +125,28 @@ export default function TrackerScreen() {
   const pct = Math.min(calories / Math.max(target, 1), 1);
   const strokeDashoffset = ARC_CIRCUMFERENCE - pct * ARC_CIRCUMFERENCE;
 
-  const currentNeat = dailyNeat[selectedDate] || 'standing_sometimes';
-  const currentExercise = dailyExercise[selectedDate] || '5-6';
+  const getDefaultNeat = (level: string) => {
+    switch (level) {
+      case 'sedentary': return 'seated';
+      case 'light': return 'standing_sometimes';
+      case 'moderate': return 'standing_mostly';
+      case 'active': return 'moving';
+      default: return 'standing_sometimes';
+    }
+  };
+
+  const getDefaultExercise = (level: string) => {
+    switch (level) {
+      case 'sedentary': return 'none';
+      case 'light': return '1-2';
+      case 'moderate': return '3-4';
+      case 'active': return '5-6';
+      default: return '3-4';
+    }
+  };
+
+  const currentNeat = dailyNeat[selectedDate] || getDefaultNeat(profile?.activityLevel || 'light');
+  const currentExercise = dailyExercise[selectedDate] || getDefaultExercise(profile?.activityLevel || 'light');
 
   const baseline = (NEAT_CALORIES[currentNeat] || 0) + (EXERCISE_CALORIES[currentExercise] || 0);
   
@@ -172,9 +192,7 @@ export default function TrackerScreen() {
             </Text>
           </TouchableOpacity>
         </View>
-        <TouchableOpacity onPress={() => router.push('/modals/tracker-menu' as any)}>
-          <Text style={{ color: colors.textPrimary, fontSize: 20 }}>•••</Text>
-        </TouchableOpacity>
+        <View style={{ width: 36 }} />
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={s.scrollContent}>

@@ -43,19 +43,10 @@
     },
     "plugins": [
       "expo-router",
-      "expo-barcode-scanner",
-      "expo-font",
       [
         "expo-camera",
         {
           "cameraPermission": "Allow FitGO to access your camera to scan food barcodes and take progress photos."
-        }
-      ],
-      [
-        "expo-notifications",
-        {
-          "icon": "./assets/notification-icon.png",
-          "color": "#7C5CFC"
         }
       ],
       [
@@ -64,7 +55,7 @@
           "microphonePermission": "Allow FitGO to access your microphone to log food and talk with your AI coach."
         }
       ],
-      "expo-video"
+      "expo-secure-store"
     ],
     "experiments": {
       "typedRoutes": true
